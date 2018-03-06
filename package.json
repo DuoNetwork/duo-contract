@@ -5,7 +5,8 @@
   "description": "israfel",
   "author": "FinBook Pte Ltd",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "./node_modules/.bin/truffle.cmd compile"
   },
   "devDependencies": {
     "truffle": "^4.1.0"
