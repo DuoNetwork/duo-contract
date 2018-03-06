@@ -28,6 +28,7 @@ contract TokenA is owned{
     uint256 public buyPrice;
     // 18 decimals is the strongly suggested default, avoid changing it
     uint256 public totalSupply;
+	bool public transferable=true;
 
     // This creates an array with all balances
     mapping (address => uint256) public balanceOf;
@@ -42,6 +43,10 @@ contract TokenA is owned{
 
     // This notifies clients about the amount burnt
     event Burn(address indexed from, uint256 value);
+
+	// This generates a public event on the blockchain that will lock or unlock token transfer
+	event Lock(bool locking);
+
 
     /**
      * Constrctor function
@@ -65,6 +70,8 @@ contract TokenA is owned{
      * Internal transfer, only can be called by this contract
      */
     function _transfer(address _from, address _to, uint _value) internal {
+		// check whether token transfer is allowed
+		require(transferable);
         // Prevent transfer to 0x0 address. Use burn() instead
         require(_to != 0x0);
         // Check if the sender has enough
@@ -196,6 +203,13 @@ contract TokenA is owned{
     function freezeAccount(address target, bool freeze) onlyOwner public {
         frozenAccount[target] = freeze;
         FrozenFunds(target, freeze);
+    }
+
+	/// @notice Lock and Unlock token transfer
+    /// @param a bool type to indicate lock or unlock
+	function lockToken(bool locking) onlyOwner public {
+        transferable=locking;
+        Lock(locking);
     }
 
     /// @notice Allow users to buy tokens for `newBuyPrice` eth and sell tokens for `newSellPrice` eth
