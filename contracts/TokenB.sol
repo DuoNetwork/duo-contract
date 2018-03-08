@@ -19,7 +19,7 @@ contract TokenB{
 	 *
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
-	function TokenA(
+	function TokenB(
 
 		string tokenName,
 		string tokenSymbol
