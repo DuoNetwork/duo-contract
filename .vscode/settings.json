@@ -4,6 +4,7 @@
 	"editor.tabSize": 4,
 	// Insert spaces when pressing Tab.
 	"editor.insertSpaces": false,
-	"vsicons.presets.angular": false
+	"vsicons.presets.angular": false,
 	//"eslint.run": "onSave"
+	"solidity.validationDelay": 500
 }
