@@ -16,6 +16,8 @@ contract Duo {
 
 	mapping(address => uint256) balancesA;
 	mapping(address => uint256) balancesB;
+	mapping (address => mapping (address => uint256)) public allowanceA;
+	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] addressesA;
 	address[] addressesB;
 	uint resetPriceInWei;
@@ -25,6 +27,7 @@ contract Duo {
 	uint limitPeriodic;
 	uint limitUpper;
 	uint limitLower;
+
 
 	modifier inState(State _state) {
         require(state == _state);
@@ -68,12 +71,10 @@ contract Duo {
 		return balancesB[addr];
 	}
 
-    function transferA(address to, uint tokens) public returns (bool success);
-	function transferB(address to, uint tokens) public returns (bool success);
-	function allowanceA(address tokenOwner, address spender) public constant returns (uint remaining);
-	function allowanceB(address tokenOwner, address spender) public constant returns (uint remaining);
+    function transferA(address to, uint tokens) public inState(State.Trading) returns (bool success);
+	function transferB(address to, uint tokens) public inState(State.Trading) returns (bool success);
 	function approveA(address spender, uint tokens) public returns (bool success);
 	function approveB(address spender, uint tokens) public returns (bool success);
-    function transferAFrom(address from, address to, uint tokens) public returns (bool success);
-	function transferBFrom(address from, address to, uint tokens) public returns (bool success);
+    function transferAFrom(address from, address to, uint tokens) public inState(State.Trading) returns (bool success);
+	function transferBFrom(address from, address to, uint tokens) public inState(State.Trading) returns (bool success);
 }
