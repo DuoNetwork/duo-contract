@@ -2,7 +2,7 @@ pragma solidity ^0.4.17;
 
 
 
-contract TokenA{
+contract TokenB{
 	// Public variables of the token
 	string public name;
 	string public symbol;
@@ -36,17 +36,17 @@ contract TokenA{
 
 
 	function transfer(address _to, uint256 _value) public {
-		//call to DUO contract transferA
+		//call to DUO contract transferB
 	
 	}
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-		//call to DUO contract transferAFrom
+		//call to DUO contract transferBFrom
 		return true;
 	}
 
 	function approve(address _spender, uint256 _value) public returns (bool success) {
-		//call to DUO contract approveA
+		//call to DUO contract approveB
 		return true;
 	}
 
