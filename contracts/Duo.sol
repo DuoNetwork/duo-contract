@@ -20,13 +20,15 @@ contract Duo {
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] addressesA;
 	address[] addressesB;
-	uint resetPriceInWei;
-	uint currentPriceInWei;
+	uint resetPriceInWei; //P0
+	uint currentPriceInWei; //P1
 	uint alpha;
 	uint dailyCouponInBP;
 	uint limitPeriodic;
 	uint limitUpper;
 	uint limitLower;
+	uint commissionRate;   // divided by 100 by default
+	uint lastResetDay;  //or Seconds ?
 
 
 	modifier inState(State _state) {
