@@ -8,7 +8,7 @@ contract TokenA{
 	string public symbol;
 	uint8 public decimals = 18;
 	uint256 public totalSupply;
-	address duoAdd=0xb87213121fb89cbd8b877cb1bb3ff84dd2869cfa;   //Addres of DUO contract
+	address public duoAdd;  //address of DUO contract
 
 	// This creates an array with all balances
 	mapping (address => uint256) public balanceOf;
@@ -23,7 +23,8 @@ contract TokenA{
 	function TokenA(
 
 		string tokenName,
-		string tokenSymbol
+		string tokenSymbol,
+		address duoAddress
 		
 	) public 
 	{
@@ -32,6 +33,7 @@ contract TokenA{
 		// balanceOf[msg.sender] = totalSupply;				// Give the creator all initial tokens
 		name = tokenName;								   // Set the name for display purposes
 		symbol = tokenSymbol;							   // Set the symbol for display purposes
+		duoAdd=duoAddress;
 	}
 
 
