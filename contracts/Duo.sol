@@ -14,6 +14,7 @@ contract Duo {
 	address priceFeed2; 
 	address priceFeed3;
 
+	uint totalSupply;
 	mapping(address => uint256) balancesA;
 	mapping(address => uint256) balancesB;
 	mapping (address => mapping (address => uint256)) public allowanceA;
@@ -68,8 +69,6 @@ contract Duo {
 	function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
 
 	// ERC20
-	function totalSupply() public constant returns (uint);
-
 	function _transferA(address _from, address _to, uint _value) internal {
 
 		// Prevent transfer to 0x0 address. Use burn() instead
@@ -110,18 +109,29 @@ contract Duo {
 		assert(balancesB[_from] + balancesB[_to] == previousBalances);
 	}
 
-    function transferA(address _from, address _to, uint _tokenValue) public returns (bool success){
+    function transferA(address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
         _transferA(_from,_to,_tokenValue);
         return true;
     }
-	function transferB(address _from, address _to, uint _tokenValue) public returns (bool success){
+	function transferB(address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
         _transferB(_from,_to,_tokenValue);
         return true;
     }
 
-	function transferB(address to, uint tokens) public inState(State.Trading) returns (bool success);
 	function approveA(address spender, uint tokens) public returns (bool success);
 	function approveB(address spender, uint tokens) public returns (bool success);
-    function transferAFrom(address from, address to, uint tokens) public inState(State.Trading) returns (bool success);
-	function transferBFrom(address from, address to, uint tokens) public inState(State.Trading) returns (bool success);
+
+    function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
+		require(_tokenValue <= allowanceA[_from][_spender]);	 // Check allowance
+		allowanceA[_from][_spender] -= _tokenValue;
+		_transferA(_from, _to, _tokenValue);
+		return true;
+	}
+	
+	function transferBFrom(address _spender, address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
+		require(_tokenValue <= allowanceB[_from][_spender]);	 // Check allowance
+		allowanceB[_from][_spender] -= _tokenValue;
+		_transferB(_from, _to, _tokenValue);
+		return true;
+	}
 }

@@ -44,9 +44,10 @@ contract TokenB{
         duoContract.transferB(msg.sender,_to, _value);
 	
 	}
-
-	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-		//call to DUO contract transferBFrom
+function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+		//call to DUO contract transferAFrom
+		DUO duoContract = DUO(duoAdd);
+        duoContract.transferBFrom(msg.sender,_from, _to, _value);
 		return true;
 	}
 
@@ -59,4 +60,5 @@ contract TokenB{
 
 contract DUO{
     function transferB(address _from, address _to, uint _tokenValue) returns (bool success);
+	function transferBFrom(address _spender, address _from, address _to, uint _tokenValue) returns (bool success);
 }

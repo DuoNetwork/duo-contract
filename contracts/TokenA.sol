@@ -47,6 +47,8 @@ contract TokenA{
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 		//call to DUO contract transferAFrom
+		DUO duoContract = DUO(duoAdd);
+        duoContract.transferAFrom(msg.sender,_from, _to, _value);
 		return true;
 	}
 
@@ -59,4 +61,5 @@ contract TokenA{
 
 contract DUO{
     function transferA(address _from, address to, uint _tokenValue) returns (bool success);
+	function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) returns (bool success);
 }
