@@ -53,6 +53,10 @@ contract Duo {
 
 	event ResetRequired();
 
+		// This generates a public event on the blockchain that will notify clients
+	event TransferA(address indexed from, address indexed to, uint256 value);
+	event TransferB(address indexed from, address indexed to, uint256 value);
+
 	function updatePrice(uint priceInWei) 
 		public 
 		inState(State.Trading) 
@@ -65,15 +69,56 @@ contract Duo {
 
 	// ERC20
 	function totalSupply() public constant returns (uint);
-	function balanceOfA(address addr) public constant returns (uint) {
-		return balancesA[addr];
+
+	function _transferA(address _from, address _to, uint _value) internal {
+
+		// Prevent transfer to 0x0 address. Use burn() instead
+		require(_to != 0x0);
+		// Check if the sender has enough
+		require(balancesA[_from] >= _value);
+		// Check for overflows
+		require(balancesA[_to] + _value > balancesA[_to]);
+
+		// Save this for an assertion in the future
+		uint previousBalances = balancesA[_from] + balancesA[_to];
+		// Subtract from the sender
+		balancesA[_from] -= _value;
+		// Add the same to the recipient
+		balancesA[_to] += _value;
+		TransferA(_from, _to, _value);
+		// Asserts are used to use static analysis to find bugs in your code. They should never fail
+		assert(balancesA[_from] + balancesA[_to] == previousBalances);
 	}
 
-	function balanceOfB(address addr) public constant returns (uint) {
-		return balancesB[addr];
+	function _transferB(address _from, address _to, uint _value) internal {
+
+		// Prevent transfer to 0x0 address. Use burn() instead
+		require(_to != 0x0);
+		// Check if the sender has enough
+		require(balancesB[_from] >= _value);
+		// Check for overflows
+		require(balancesB[_to] + _value > balancesB[_to]);
+
+		// Save this for an assertion in the future
+		uint previousBalances = balancesB[_from] + balancesB[_to];
+		// Subtract from the sender
+		balancesB[_from] -= _value;
+		// Add the same to the recipient
+		balancesB[_to] += _value;
+		TransferB(_from, _to, _value);
+		// Asserts are used to use static analysis to find bugs in your code. They should never fail
+		assert(balancesB[_from] + balancesB[_to] == previousBalances);
 	}
 
-    function transferA(address to, uint tokens) public inState(State.Trading) returns (bool success);
+    function transferA(address _from, address _to, uint _tokenValue) public returns (bool success){
+        _transferA(_from,_to,_tokenValue);
+        return true;
+    }
+	function transferB(address _from, address _to, uint _tokenValue) public returns (bool success){
+        _transferB(_from,_to,_tokenValue);
+        return true;
+    }
+
 	function transferB(address to, uint tokens) public inState(State.Trading) returns (bool success);
 	function approveA(address spender, uint tokens) public returns (bool success);
 	function approveB(address spender, uint tokens) public returns (bool success);

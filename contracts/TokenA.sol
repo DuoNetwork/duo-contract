@@ -8,6 +8,7 @@ contract TokenA{
 	string public symbol;
 	uint8 public decimals = 18;
 	uint256 public totalSupply;
+	address duoAdd=0xb87213121fb89cbd8b877cb1bb3ff84dd2869cfa;   //Addres of DUO contract
 
 	// This creates an array with all balances
 	mapping (address => uint256) public balanceOf;
@@ -37,6 +38,8 @@ contract TokenA{
 
 	function transfer(address _to, uint256 _value) public {
 		//call to DUO contract transferA
+		DUO duoContract = DUO(duoAdd);
+        duoContract.transferA(msg.sender,_to, _value);
 	
 	}
 
@@ -50,4 +53,8 @@ contract TokenA{
 		return true;
 	}
 
+}
+
+contract DUO{
+    function transferA(address _from, address to, uint _tokenValue) returns (bool success);
 }
