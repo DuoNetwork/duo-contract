@@ -15,6 +15,7 @@ contract DUO {
 	address priceFeed3;
 
 	uint totalSupply;
+	uint decimals;
 	mapping(address => uint256) public balancesA;
 	mapping(address => uint256) public balancesB;
 	mapping (address => mapping (address => uint256)) public allowanceA;
@@ -59,9 +60,10 @@ contract DUO {
 	event TransferB(address indexed from, address indexed to, uint256 value);
 	
 	function DUO() public{
-	    balancesA[msg.sender]=10000;
-	    balancesB[msg.sender]=10000;
-	    totalSupply=10000;
+		decimals=18;
+	    balancesA[msg.sender]=10000*10**decimals;
+	    balancesB[msg.sender]=10000*10**decimals;
+	    totalSupply=10000*10**decimals;
 	}
     
     
