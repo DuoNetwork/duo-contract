@@ -1,18 +1,11 @@
 pragma solidity ^0.4.17;
 
-
-
 contract TokenA{
 	// Public variables of the token
 	string public name;
 	string public symbol;
 	uint8 public decimals = 18;
-	uint256 public totalSupply;
-	address public duoAdd;  //address of DUO contract
-
-	// This creates an array with all balances
-	mapping (address => uint256) public balanceOf;
-	mapping (address => mapping (address => uint256)) public allowance;
+	address public duoAddress;  //address of DUO contract
 
 
 	/**
@@ -24,36 +17,49 @@ contract TokenA{
 
 		string tokenName,
 		string tokenSymbol,
-		address duoAddress
+		address duoAddr
 		
 	) public 
 	{
 
-		totalSupply = 0;
-		// balanceOf[msg.sender] = totalSupply;				// Give the creator all initial tokens
 		name = tokenName;								   // Set the name for display purposes
 		symbol = tokenSymbol;							   // Set the symbol for display purposes
-		duoAdd=duoAddress;
+		duoAddress=duoAddr;
+	}
+	
+	function totalSupply() public returns(uint total){
+	    DUO duoContract = DUO(duoAddress);
+        total=duoContract.checkTotalSupply();
+        return total;
+	}
+	
+	function balanceOf(address add) public returns(uint balance){
+	    DUO duoContract = DUO(duoAddress);
+        balance=duoContract.checkBalanceA(add);
+        return balance;
+	    
+	}
+	function allowance(address _user, address _spender) public returns(uint value){
+	    DUO duoContract = DUO(duoAddress);
+        value=duoContract.checkAllowanceA(_user,_spender);
+        return value;
 	}
 
-
-
 	function transfer(address _to, uint256 _value) public {
-		//call to DUO contract transferA
-		DUO duoContract = DUO(duoAdd);
+		DUO duoContract = DUO(duoAddress);
         duoContract.transferA(msg.sender,_to, _value);
 	
 	}
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-		//call to DUO contract transferAFrom
-		DUO duoContract = DUO(duoAdd);
+		DUO duoContract = DUO(duoAddress);
         duoContract.transferAFrom(msg.sender,_from, _to, _value);
 		return true;
 	}
 
 	function approve(address _spender, uint256 _value) public returns (bool success) {
-		//call to DUO contract approveA
+		DUO duoContract = DUO(duoAddress);
+        duoContract.approveA(msg.sender, _spender,  _value);
 		return true;
 	}
 
@@ -62,4 +68,8 @@ contract TokenA{
 contract DUO{
     function transferA(address _from, address to, uint _tokenValue) returns (bool success);
 	function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) returns (bool success);
+	function approveA(address _sender, address _spender, uint _tokenValue) public returns (bool success);
+	function checkBalanceA(address add) public returns(uint balance);
+    function checkAllowanceA(address _user, address _spender) public returns(uint value);
+    function checkTotalSupply() public returns(uint total);
 }

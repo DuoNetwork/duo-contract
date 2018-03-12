@@ -1,6 +1,6 @@
 pragma solidity ^0.4.17;
 
-contract Duo {
+contract DUO {
 	enum State {
 		Trading,
 		PreReset,
@@ -15,8 +15,8 @@ contract Duo {
 	address priceFeed3;
 
 	uint totalSupply;
-	mapping(address => uint256) balancesA;
-	mapping(address => uint256) balancesB;
+	mapping(address => uint256) public balancesA;
+	mapping(address => uint256) public balancesB;
 	mapping (address => mapping (address => uint256)) public allowanceA;
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] addressesA;
@@ -57,18 +57,49 @@ contract Duo {
 		// This generates a public event on the blockchain that will notify clients
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
+	
+	function DUO() public{
+	    balancesA[msg.sender]=10000;
+	    balancesB[msg.sender]=10000;
+	    totalSupply=10000;
+	}
+    
+    
+    //TO DO
+// 	function updatePrice(uint priceInWei) 
+// 		public 
+// 		inState(State.Trading) 
+// 		among(priceFeed1, priceFeed2, priceFeed3) 
+// 		returns (bool success);
 
-	function updatePrice(uint priceInWei) 
-		public 
-		inState(State.Trading) 
-		among(priceFeed1, priceFeed2, priceFeed3) 
-		returns (bool success);
-
-	function create() public payable inState(State.Trading) returns (bool success);
-	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
-	function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
+	//function create() public payable inState(State.Trading) returns (bool success);
+	//function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
+	//function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
+	
+	
 
 	// ERC20
+	function checkTotalSupply() public returns(uint total){
+	    return totalSupply;
+	}
+	function checkBalanceA(address add) public returns(uint balance){
+	    balance=balancesA[add];
+	    return balance;
+	}
+	
+	function checkBalanceB(address add) public returns(uint balance){
+	    balance=balancesB[add];
+	    return balance;
+	}
+	function checkAllowanceA(address _user, address _spender) public returns(uint value){
+	    value=allowanceA[_user][_spender];
+	    return value;
+	}
+	function checkAllowanceB(address _user, address _spender) public returns(uint value){
+	    value=allowanceB[_user][_spender];
+	    return value;
+	}
+	
 	function _transferA(address _from, address _to, uint _value) internal {
 
 		// Prevent transfer to 0x0 address. Use burn() instead
@@ -118,8 +149,15 @@ contract Duo {
         return true;
     }
 
-	function approveA(address spender, uint tokens) public returns (bool success);
-	function approveB(address spender, uint tokens) public returns (bool success);
+	function approveA(address _sender, address _spender, uint _tokenValue) public returns (bool success){
+	    allowanceA[_sender][_spender] = _tokenValue;
+	    return true;
+	}
+	
+    function approveB(address _sender, address _spender, uint _tokenValue) public returns (bool success){
+	    allowanceB[_sender][_spender] = _tokenValue;
+	    return true;
+	}
 
     function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
 		require(_tokenValue <= allowanceA[_from][_spender]);	 // Check allowance
