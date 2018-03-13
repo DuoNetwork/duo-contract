@@ -48,6 +48,7 @@ contract DUO {
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] addressesA;
 	address[] addressesB;
+	mapping(address => uint256) public ethPendingWithdrawal;
 
 	//DUO
 	address admin;
@@ -103,8 +104,31 @@ contract DUO {
 	// 	inState(State.Trading) 
 	// 	among(priceFeed1, priceFeed2, priceFeed3) 
 	// 	returns (bool success);
-	// function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
-	// function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
+
+	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success) {
+		require(amtInWeiA == amtInWeiB);
+		require(amtInWeiA > 0 && balancesA[msg.sender] >= amtInWeiA && balancesB[msg.sender] >=  amtInWeiB);
+		uint amountEthInWei = (amtInWeiA.add(amtInWeiB)).div(resetPriceInWei);
+		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
+		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
+		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amountEthInWei);
+		return true;
+	}
+
+	function withdrawl(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
+		require(amtEthInWei > 0 && amtEthInWei < this.balance);
+		require(amtEthInWei <= ethPendingWithdrawal[msg.sender]);
+		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].sub(amtEthInWei);
+		msg.sender.transfer(amtEthInWei);
+		return true;
+	}
+
+	function collectFee(uint amountInWei) public only(feeCollector) returns (bool success) {
+		require(amountInWei>0);
+		require(amountInWei<=feeAccumulatedInWei);
+		feeCollector.transfer(amountInWei);
+		return true;
+	}
 
 	function create() public payable inState(State.Trading) returns (uint balance) {
 		feeAccumulatedInWei += msg.value.mul(commissionRateInBP).div(10000);
@@ -121,6 +145,12 @@ contract DUO {
 
 	function setFeeAddress(address newAddress) public only(admin) {
 		feeCollector = newAddress;
+	}
+
+	function setCommission (uint newComm) public only(admin) {
+		require(newComm > 0);
+		require(newComm < 10000);
+		commissionRateInBP = newComm;
 	}
 	
 	function checkBalanceA(address add) public constant returns(uint) {
