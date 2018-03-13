@@ -29,7 +29,7 @@ contract TokenB{
 	
 	function totalSupply() public returns(uint total){
 	    DUO duoContract = DUO(duoAddress);
-        total=duoContract.checkTotalSupply();
+        total=duoContract.checkTotalSupplyB();
         return total;
 	}
 	
@@ -71,5 +71,5 @@ contract DUO{
 	function approveB(address _sender, address _spender, uint _tokenValue) public returns (bool success);
 	function checkBalanceB(address add) public returns(uint balance);
     function checkAllowanceB(address _user, address _spender) public returns(uint value);
-    function checkTotalSupply() public returns(uint total);
+    function checkTotalSupplyB() public returns(uint total);
 }

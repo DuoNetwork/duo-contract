@@ -17,7 +17,9 @@ contract DUO {
 	address priceFeed2; 
 	address priceFeed3;
 
-	uint totalSupply;
+	//ERC20 Token
+	uint totalSupplyA;
+	uint totalSupplyB;
 	uint decimals;
 	mapping(address => uint256) public balancesA;
 	mapping(address => uint256) public balancesB;
@@ -25,14 +27,17 @@ contract DUO {
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] addressesA;
 	address[] addressesB;
-	uint resetPriceInWei; //P0
+
+	//DUO
+	address admin;
+	uint resetPriceInWei; //P0   e.g 700*10**18
 	uint currentPriceInWei; //P1
 	uint alpha;
 	uint dailyCouponInBP;
 	uint limitPeriodic;
 	uint limitUpper;
 	uint limitLower;
-	uint commissionRate;   // divided by 100 by default
+	uint commissionRate;   // divided by 10000 by default
 	uint lastResetDay;  //or Seconds ?
 
 
@@ -50,6 +55,11 @@ contract DUO {
         require(msg.sender == addr1 || msg.sender == addr2 || msg.sender == addr3);
         _;
     }
+	
+	modifier onlyAdmin(){
+		require(msg.sender==admin);
+		_;
+	}
 
 	event StartTrading();
 	event StartPreReset();
@@ -58,37 +68,54 @@ contract DUO {
 
 	event ResetRequired();
 
-		// This generates a public event on the blockchain that will notify clients
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
 	
-	function DUO() public{
+	function DUO(uint ETH_Price, address feeAddress) public{
+		admin=msg.sender;
 		decimals=18;
+		feeCollector=feeAddress;
+		//below parameters are for testing 
 	    balancesA[msg.sender]=10000*10**decimals;
 	    balancesB[msg.sender]=10000*10**decimals;
-	    totalSupply=10000*10**decimals;
+	    totalSupplyA=10000*10**decimals; 
+		totalSupplyB=10000*10**decimals;
+		resetPriceInWei=ETH_Price*10**15;
 	}
     
     
     //TO DO
-// 	function updatePrice(uint priceInWei) 
-// 		public 
-// 		inState(State.Trading) 
-// 		among(priceFeed1, priceFeed2, priceFeed3) 
-// 		returns (bool success);
+	// function updatePrice(uint priceInWei) 
+	// 	public 
+	// 	inState(State.Trading) 
+	// 	among(priceFeed1, priceFeed2, priceFeed3) 
+	// 	returns (bool success);
 	// function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
 	// function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
 
-	// function create() public payable inState(State.Trading) returns (bool success){
-	// 	msg.value.mul(resetPriceInWei).div(2);
+	function create() public payable inState(State.Trading) returns (uint balance){
+		var feeAmount=msg.value.mul(commissionRate).div(10000);
+		feeCollector.transfer(feeAmount);
+		var tokenValueB=msg.value.mul(resetPriceInWei).mul(10000-commissionRate).div(10000).div(alpha.add(1));
+		var tokenValueA=tokenValueB*alpha;
+		balancesA[msg.sender]=balancesA[msg.sender].add(tokenValueA);
+		balancesB[msg.sender]=balancesB[msg.sender].add(tokenValueB);
+		totalSupplyA=totalSupplyA.add(tokenValueA);
+		totalSupplyB=totalSupplyB.add(tokenValueB);
+		return this.balance;
+	}
 
-	// }
+	function setFeeAddress(address newAddress) onlyAdmin {
+		feeCollector=newAddress;
+	}
 	
 	
-
 	// ERC20
-	function checkTotalSupply() public returns(uint total){
-	    return totalSupply;
+	function checkTotalSupplyA() public returns(uint total){
+	    return totalSupplyA;
+	}
+	function checkTotalSupplyB() public returns(uint total){
+	    return totalSupplyB;
 	}
 	function checkBalanceA(address add) public returns(uint balance){
 	    balance=balancesA[add];
