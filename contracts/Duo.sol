@@ -55,7 +55,7 @@ contract DUO {
 	uint feeAccumulatedInWei;
 	uint resetPriceInWei; //P0
 	uint currentPriceInWei; //Pt
-	uint alpha;
+	uint alphaInBP;
 	uint periodCouponInBP; // r
 	uint limitPeriodic; // H_p
 	uint limitUpper; // H_u
@@ -106,18 +106,22 @@ contract DUO {
 	// 	returns (bool success);
 
 	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success) {
-		require(amtInWeiA == amtInWeiB);
-		require(amtInWeiA > 0 && balancesA[msg.sender] >= amtInWeiA && balancesB[msg.sender] >=  amtInWeiB);
-		uint amountEthInWei = (amtInWeiA.add(amtInWeiB)).div(resetPriceInWei);
+		require(amtInWeiA > 0 && amtInWeiB > 0);
+		uint adjAmtInWeiA = amtInWeiA.mul(10000).div(alphaInBP);
+		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
+		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(10000);
+		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
+		uint amtEthInWei = (deductAmtInWeiA.add(deductAmtInWeiB)).div(resetPriceInWei);
+		uint feeInWei = amtEthInWei.mul(commissionRateInBP).div(10000);
 		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
 		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
-		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amountEthInWei);
+		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
 		return true;
 	}
 
-	function withdrawl(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
-		require(amtEthInWei > 0 && amtEthInWei < this.balance);
-		require(amtEthInWei <= ethPendingWithdrawal[msg.sender]);
+	function withdraw(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
+		require(amtEthInWei > 0 && amtEthInWei <= ethPendingWithdrawal[msg.sender] && amtEthInWei < this.balance);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].sub(amtEthInWei);
 		msg.sender.transfer(amtEthInWei);
 		return true;
@@ -131,13 +135,13 @@ contract DUO {
 	}
 
 	function create() public payable inState(State.Trading) returns (uint balance) {
-		feeAccumulatedInWei += msg.value.mul(commissionRateInBP).div(10000);
-		uint tokenValueB = msg.value
+		uint feeInWei = msg.value.mul(commissionRateInBP).div(10000);
+		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+		uint tokenValueB = msg.value.sub(feeInWei)
 							.mul(resetPriceInWei)
-							.mul(10000 - commissionRateInBP)
-							.div(10000)
-							.div(alpha.add(1));
-		uint tokenValueA = tokenValueB.mul(alpha);
+							.mul(10000)
+							.div(alphaInBP.add(10000));
+		uint tokenValueA = tokenValueB.mul(alphaInBP).div(10000);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
 		balancesB[msg.sender] = balancesB[msg.sender].add(tokenValueB);
 		return this.balance;
