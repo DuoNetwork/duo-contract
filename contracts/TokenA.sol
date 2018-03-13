@@ -63,10 +63,9 @@ contract TokenA {
 }
 
 contract DUO {
-    function transferA(address _from, address to, uint _tokenValue) returns (bool success);
-	function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) returns (bool success);
-	function approveA(address _sender, address _spender, uint _tokenValue) public returns (bool success);
+    function transferA(address _from, address _to, uint _tokens) public returns (bool success);
+	function transferAFrom(address _spender, address _from, address _to, uint _tokens) returns (bool success);
+	function approveA(address _sender, address _spender, uint _tokens) public returns (bool success);
 	function checkBalanceA(address add) public returns(uint balance);
     function checkAllowanceA(address _user, address _spender) public returns(uint value);
-    function checkTotalSupplyA() public returns(uint total);
 }
