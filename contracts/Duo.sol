@@ -1,6 +1,9 @@
 pragma solidity ^0.4.17;
 
+import "./SafeMath.sol";
+
 contract DUO {
+	using SafeMath for uint;
 	enum State {
 		Trading,
 		PreReset,
@@ -73,10 +76,13 @@ contract DUO {
 // 		inState(State.Trading) 
 // 		among(priceFeed1, priceFeed2, priceFeed3) 
 // 		returns (bool success);
+	// function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
+	// function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
 
-	//function create() public payable inState(State.Trading) returns (bool success);
-	//function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success);
-	//function collectFee(uint amountInWei) public only(feeCollector) returns (bool success);
+	// function create() public payable inState(State.Trading) returns (bool success){
+	// 	msg.value.mul(resetPriceInWei).div(2);
+
+	// }
 	
 	
 
@@ -109,17 +115,17 @@ contract DUO {
 		// Check if the sender has enough
 		require(balancesA[_from] >= _value);
 		// Check for overflows
-		require(balancesA[_to] + _value > balancesA[_to]);
+		require(balancesA[_to].add(_value) > balancesA[_to]);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balancesA[_from] + balancesA[_to];
+		uint previousBalances = balancesA[_from].add(balancesA[_to]);
 		// Subtract from the sender
-		balancesA[_from] -= _value;
+		balancesA[_from] =balancesA[_from].sub(_value);
 		// Add the same to the recipient
-		balancesA[_to] += _value;
+		balancesA[_to] =balancesA[_to].add(_value);
 		TransferA(_from, _to, _value);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balancesA[_from] + balancesA[_to] == previousBalances);
+		assert(balancesA[_from].add(balancesA[_to]) == previousBalances);
 	}
 
 	function _transferB(address _from, address _to, uint _value) internal {
@@ -129,17 +135,17 @@ contract DUO {
 		// Check if the sender has enough
 		require(balancesB[_from] >= _value);
 		// Check for overflows
-		require(balancesB[_to] + _value > balancesB[_to]);
+		require(balancesB[_to].add(_value) > balancesB[_to]);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balancesB[_from] + balancesB[_to];
+		uint previousBalances = balancesB[_from].add(balancesB[_to]);
 		// Subtract from the sender
-		balancesB[_from] -= _value;
+		balancesB[_from] =balancesB[_from].sub(_value);
 		// Add the same to the recipient
-		balancesB[_to] += _value;
-		TransferB(_from, _to, _value);
+		balancesB[_to] =balancesB[_to].add(_value);
+		TransferA(_from, _to, _value);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balancesB[_from] + balancesB[_to] == previousBalances);
+		assert(balancesB[_from].add(balancesB[_to]) == previousBalances);
 	}
 
     function transferA(address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
@@ -163,14 +169,14 @@ contract DUO {
 
     function transferAFrom(address _spender, address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
 		require(_tokenValue <= allowanceA[_from][_spender]);	 // Check allowance
-		allowanceA[_from][_spender] -= _tokenValue;
+		allowanceA[_from][_spender] =allowanceA[_from][_spender].sub(_tokenValue);
 		_transferA(_from, _to, _tokenValue);
 		return true;
 	}
 	
 	function transferBFrom(address _spender, address _from, address _to, uint _tokenValue) public inState(State.Trading) returns (bool success){
 		require(_tokenValue <= allowanceB[_from][_spender]);	 // Check allowance
-		allowanceB[_from][_spender] -= _tokenValue;
+		allowanceB[_from][_spender]=allowanceB[_from][_spender].sub(_tokenValue);
 		_transferB(_from, _to, _tokenValue);
 		return true;
 	}
