@@ -35,12 +35,11 @@ contract Custodian {
 		PostReset
 	}
 
-	struct Price{
-		uint price;
-		uint time;
+	struct Price {
+		uint priceInWei;
+		uint timeInSeconds;
 	}
 
-	bool transferrable = true;
 	State public state;
 	address feeCollector;
 	address priceFeed1; 
@@ -59,8 +58,8 @@ contract Custodian {
 	//custodian
 	address admin;
 	uint feeAccumulatedInWei;
-	Price resetPriceInWei; //P0
-	Price lastAcceptedPrice;  //Pt
+	Price resetPrice; //P0
+	Price lastPrice;  //Pt
 	uint alphaInBP;
 	uint periodCouponInBP; // r
 	uint limitPeriodicInBP; // H_p
@@ -73,12 +72,15 @@ contract Custodian {
 	uint navBInBP;  
 
 	//priceFeeds
-	uint priceTolerancePercentBP = 500; //5%
-	uint priceFedDiffTolerancePercentBP = 100; //2%
-	uint priceFedTimeTolerance = 1 minutes;
-	uint numOfFedPrices=0;
-	address[] priceFeedsAddrs;
-	mapping(address => Price) public priceFeeds;
+	uint priceTolInBP = 500; //5%
+	uint priceFeedTolInBP = 100; //2%
+	uint priceFeedTimeTol = 1 minutes;
+	uint priceUpdateCoolDown = 30 minutes;
+	uint numOfPrices = 0;
+	address firstAddr;
+	address secondAddr;
+	Price firstPrice;
+	Price secondPrice;
 
 	modifier inState(State _state) {
         require(state == _state);
@@ -95,11 +97,6 @@ contract Custodian {
         _;
     }
 
-	modifier transferAllowed(){
-		require(transferrable);
-		_;
-	}
-
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
@@ -115,10 +112,10 @@ contract Custodian {
 		decimals = 18;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
-	    resetPriceInWei.price = ethPriceInWei;
-		resetPriceInWei.time = now;
-		lastAcceptedPrice.price=ethPriceInWei;
-		lastAcceptedPrice.time=now;
+	    resetPrice.priceInWei = ethPriceInWei;
+		resetPrice.timeInSeconds = now;
+		lastPrice.priceInWei = ethPriceInWei;
+		lastPrice.timeInSeconds = now;
 	}
     
     
@@ -129,153 +126,151 @@ contract Custodian {
 	// 	among(priceFeed1, priceFeed2, priceFeed3) 
 	// 	returns (bool success);
 	function getNavA() internal {
-		uint numOfDays = (now.sub(resetPriceInWei.time)).div(period);
+		uint numOfDays = (now.sub(resetPrice.timeInSeconds)).div(period);
 		navAInBP = periodCouponInBP.mul(numOfDays).add(10000);
 	}
 
 	function getNavB() internal {
-		navBInBP = lastAcceptedPrice.price
+		navBInBP = lastPrice.priceInWei
 								.mul(alphaInBP.add(10000))
-								.div(resetPriceInWei.price)
+								.div(resetPrice.priceInWei)
 								.sub(
 									navAInBP.mul(alphaInBP)
 								);
 							
 	}
 
-	function checkUpReset() internal returns (bool upset){
-		if (navBInBP >= limitUpperInBP){
+	function checkUpReset() internal returns (bool upset) {
+		if (navBInBP >= limitUpperInBP) {
 			state = State.PreReset;
-			transferrable = false;
+			StartPreReset();
 			return true;
 		}
 		return false;
 	}
 	
-	function checkDownReset() internal returns (bool downset){
-		if (navBInBP <= limitLowerInBP){
+	function checkDownReset() internal returns (bool downset) {
+		if (navBInBP <= limitLowerInBP) {
 			state = State.PreReset;
-			transferrable = false;
+			StartPreReset();
 			return true;
 		}
 		return false;
 	}
 
-	function checkPeriodicalReset() internal returns (bool upset){
-		if (navAInBP >= limitPeriodicInBP){
+	function checkPeriodicalReset() internal returns (bool upset) {
+		if (navAInBP >= limitPeriodicInBP) {
 			state = State.PreReset;
-			transferrable = false;
+			StartPreReset();
 			return true;
 		}
 		return false;
 	}
 	
 	//TO DO
-	function UpReset() internal {
+	function upReset() internal {
 
 	}
 
-	function DownReset() internal {
+	function downReset() internal {
 
 	}
 
 	//PriceFeed
-	function updatePrice(uint priceInWei, uint timeInSeconds) public inState(State.Trading) among(priceFeed1, priceFeed2, priceFeed3) returns (bool success) {
-		require(timeInSeconds > lastAcceptedPrice.time);
-		uint priceDifference = priceInWei > lastAcceptedPrice.price ? priceInWei.sub(lastAcceptedPrice.price) : lastAcceptedPrice.price.sub(priceInWei);
-		if( numOfFedPrices == 0 && priceDifference.mul(10000).div(lastAcceptedPrice.price) <= priceTolerancePercentBP){
-			// take the the price and proceed
-			lastAcceptedPrice.price = priceInWei;
-			lastAcceptedPrice.time = timeInSeconds;
-			//***************//
-			//Codes Here
-			//***************//
-
-		} else {
-			//wait for the second price
-			addPriceFeeds(msg.sender, priceInWei, timeInSeconds);
-		}
-
-		//Second Price Feed
-		if( numOfFedPrices == 1 && priceFeedsAddrs[0] != msg.sender) {
-			
-			var priceDiffToFirst = getPriceDiffToPrevious(0, priceInWei, timeInSeconds);
-			uint firstPriceNumber = priceFeeds[priceFeedsAddrs[0]].price;
-			uint firstPriceTime = priceFeeds[priceFeedsAddrs[0]].time;
-			if (priceDiffToFirst.time < priceFedTimeTolerance && priceDiffToFirst.price.mul(10000).div(firstPriceNumber) <= priceFedDiffTolerancePercentBP){
-				//take the average of two prices and proceed
-				lastAcceptedPrice.price = (firstPriceNumber.add(priceInWei)).div(2);
-				lastAcceptedPrice.time = (firstPriceTime.add(timeInSeconds)).div(2);
-				//***************//
-				//Codes Here
-				//***************//
-				emptyPriceFeeds();
-
+	function updatePrice(uint priceInWei, uint timeInSeconds) 
+		public 
+		inState(State.Trading) 
+		among(priceFeed1, priceFeed2, priceFeed3) 
+		returns (bool success)
+	{
+		require(timeInSeconds > lastPrice.timeInSeconds + priceUpdateCoolDown);
+		uint priceDiff;
+		if (numOfPrices == 0) {
+			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
+			if (priceDiff.mul(10000).div(lastPrice.priceInWei) <= priceTolInBP) {
+				// take the the price and proceed
+				lastPrice.priceInWei = priceInWei;
+				lastPrice.timeInSeconds = timeInSeconds;
+				// check resets
+			} else {
+				// wait for the second price
+				firstPrice = Price(priceInWei, timeInSeconds);
+				firstAddr = msg.sender;
+				numOfPrices++;
 			}
-		} else if(priceDiffToFirst.time < priceFedTimeTolerance && priceDiffToFirst.price.mul(10000).div(firstPriceNumber) > priceFedDiffTolerancePercentBP) {
-			//wait for the third price
-			addPriceFeeds(msg.sender, priceInWei, timeInSeconds);
-		}
-
-		//Third Price Feed
-		if( numOfFedPrices == 2 && priceFeedsAddrs[0] != msg.sender && priceFeedsAddrs[1] != msg.sender) {
-			var priceDiffToSecond = getPriceDiffToPrevious(1, priceInWei, timeInSeconds);
-			if (priceDiffToSecond.time < priceFedTimeTolerance){
-				//take median and proceed
-				var selectedPrice = selectPriceFromThreeFeeds();
-				lastAcceptedPrice.price = selectedPrice.price;
-				lastAcceptedPrice.time = selectedPrice.time;
-				//***************//
-				//Codes Here
-				//***************//
-				emptyPriceFeeds();
+		} else if (numOfPrices == 1) {
+			require(firstAddr != msg.sender);
+			// if second price times out, use first one
+			if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+				// take the the price and proceed
+				lastPrice.priceInWei = firstPrice.priceInWei;
+					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+				numOfPrices = 0;
+				// check resets
+			} else {
+				priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
+				if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
+					// take the average of two prices and proceed
+					lastPrice.priceInWei = firstPrice.priceInWei;
+					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+					numOfPrices = 0;
+					// check resets
+				} else {
+					// wait for the third price
+					secondPrice = Price(priceInWei, timeInSeconds);
+					secondAddr = msg.sender;
+					numOfPrices++;
+				} 
 			}
 
-		}
+		} else if (numOfPrices == 2) {
+			require(firstAddr != msg.sender && secondAddr != msg.sender);
+			// if third price times out, use first one
+			if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+				// take the the price and proceed
+				lastPrice.priceInWei = firstPrice.priceInWei;
+				lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+			} else {
+				// take median and proceed
+				// first and second price will never be equal in this part
+				// if second and third price are the same, they are median
+				if (secondPrice.priceInWei == priceInWei) {
+					lastPrice.priceInWei = priceInWei;
+				} else if (firstPrice.priceInWei
+					.sub(secondPrice.priceInWei)
+					.mul(priceInWei.sub(firstPrice.priceInWei)) > 0) {
+					lastPrice.priceInWei = firstPrice.priceInWei;
+				} else if (secondPrice.priceInWei
+					.sub(firstPrice.priceInWei)
+					.mul(priceInWei.sub(secondPrice.priceInWei)) > 0) {
+					lastPrice.priceInWei = secondPrice.priceInWei;
+				} else {
+					lastPrice.priceInWei = priceInWei;
+				}
+				lastPrice.timeInSeconds = firstPrice.timeInSeconds;	
+			}
 
-	}
-
-	function emptyPriceFeeds() internal {
-		for (uint i = 0; i <numOfFedPrices; i++) {
-            address priceAddr = priceFeedsAddrs[i];
-            delete priceFeedsAddrs[i];
-			delete priceFeeds[priceAddr];
-        }
-		numOfFedPrices = 0;
-	}
-
-	function addPriceFeeds(address priceFeedAddress, uint priceInWei, uint timeInSeconds) internal {
-		numOfFedPrices = numOfFedPrices.add(1);
-		priceFeeds[priceFeedAddress] = Price(priceInWei,timeInSeconds);
-		priceFeedsAddrs.push(priceFeedAddress);
-
-	}
-
-	function getPriceDiffToPrevious(uint priceIndex, uint priceInWei, uint timeInSeconds) internal view returns(Price){
-		uint prevPriceNumber = priceFeeds[priceFeedsAddrs[priceIndex]].price;
-		uint prevPriceTime = priceFeeds[priceFeedsAddrs[priceIndex]].time;
-		uint timeFedDifference = timeInSeconds > prevPriceTime ? timeInSeconds.sub(prevPriceTime) : timeInSeconds.sub(prevPriceTime).sub(timeInSeconds);
-		uint priceFedDifference = priceInWei > prevPriceNumber ? priceInWei.sub(prevPriceNumber) : prevPriceNumber.sub(priceInWei);
-		return Price(priceFedDifference,timeFedDifference);
-	}
-
-	function selectPriceFromThreeFeeds() internal returns(Price){
-		uint price1 = priceFeeds[priceFeed1].price;
-		uint price2 = priceFeeds[priceFeed2].price;
-		uint price3 = priceFeeds[priceFeed3].price;
-		uint selectedPriceNumber;
-		uint selectedPriceTime;
-		if ((price1.sub(price2)) * (price3.sub(price1)) > 0) {
-			selectedPriceNumber = price1;
-			selectedPriceTime = priceFeeds[priceFeed1].time;
-		} else if ((price2.sub(price1)) * (price3.sub(price2)) > 0) {
-			selectedPriceNumber = price2;
-			selectedPriceTime = priceFeeds[priceFeed2].time;
+			// check resets
+				numOfPrices = 0;
 		} else {
-			selectedPriceNumber = price3;
-			selectedPriceTime = priceFeeds[priceFeed3].time;
+			return false;
 		}
-		return Price(selectedPriceNumber, selectedPriceTime);
+
+		return true;
+	}
+
+	function getPriceDiff(uint price1InWei, uint price2InWei) 
+		internal 
+		pure 
+		returns(uint) 
+	{
+		return price1InWei > price2InWei 
+			? price1InWei.sub(price2InWei) 
+			: price2InWei.sub(price1InWei);
+	}
+
+	function getFee(uint ethInWei) internal constant returns(uint) {
+		return ethInWei.mul(commissionRateInBP).div(10000);
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success) {
@@ -284,8 +279,8 @@ contract Custodian {
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(10000);
 		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
-		uint amtEthInWei = (deductAmtInWeiA.add(deductAmtInWeiB)).div(resetPriceInWei.price);
-		uint feeInWei = amtEthInWei.mul(commissionRateInBP).div(10000);
+		uint amtEthInWei = (deductAmtInWeiA.add(deductAmtInWeiB)).div(resetPrice.priceInWei);
+		uint feeInWei = getFee(amtEthInWei);
 		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
 		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
@@ -293,14 +288,14 @@ contract Custodian {
 		return true;
 	}
 
-	function withdraw(uint amtEthInWei) public inState(State.Trading) transferAllowed returns (bool success) {
+	function withdraw(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
 		require(amtEthInWei > 0 && amtEthInWei <= ethPendingWithdrawal[msg.sender] && amtEthInWei < this.balance);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].sub(amtEthInWei);
 		msg.sender.transfer(amtEthInWei);
 		return true;
 	}
 
-	function collectFee(uint amountInWei) public only(feeCollector) transferAllowed returns (bool success) {
+	function collectFee(uint amountInWei) public only(feeCollector) inState(State.Trading) returns (bool success) {
 		require(amountInWei>0);
 		require(amountInWei<=feeAccumulatedInWei);
 		feeCollector.transfer(amountInWei);
@@ -308,10 +303,10 @@ contract Custodian {
 	}
 
 	function create() public payable inState(State.Trading) returns (uint balance) {
-		uint feeInWei = msg.value.mul(commissionRateInBP).div(10000);
+		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		uint tokenValueB = msg.value.sub(feeInWei)
-							.mul(resetPriceInWei.price)
+							.mul(resetPrice.priceInWei)
 							.mul(10000)
 							.div(alphaInBP.add(10000));
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(10000);
@@ -348,7 +343,7 @@ contract Custodian {
 	
     function transferA(address _from, address _to, uint _tokens) 
 		public 
-		inState(State.Trading) transferAllowed
+		inState(State.Trading)
 		returns (bool success) 
 	{
         // Prevent transfer to 0x0 address. Use burn() instead
@@ -372,7 +367,7 @@ contract Custodian {
 
 	function transferB(address _from, address _to, uint _tokens) 
 		public 
-		inState(State.Trading) transferAllowed
+		inState(State.Trading)
 		returns (bool success) 
 	{
         // Prevent transfer to 0x0 address. Use burn() instead
@@ -412,7 +407,7 @@ contract Custodian {
 
     function transferAFrom(address _spender, address _from, address _to, uint _tokens) 
 		public 
-		inState(State.Trading) transferAllowed
+		inState(State.Trading)
 		returns (bool success) 
 	{
 		require(_tokens <= allowanceA[_from][_spender]);	 // Check allowance
@@ -423,7 +418,7 @@ contract Custodian {
 	
 	function transferBFrom(address _spender, address _from, address _to, uint _tokens) 
 		public 
-		inState(State.Trading) transferAllowed
+		inState(State.Trading)
 		returns (bool success) 
 	{
 		require(_tokens <= allowanceB[_from][_spender]);	 // Check allowance
