@@ -73,7 +73,7 @@ contract Custodian {
 
 	//priceFeeds
 	uint priceTolInBP = 500; //5%
-	uint priceFeedTolInBP = 100; //2%
+	uint priceFeedTolInBP = 100; //1%
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown = 30 minutes;
 	uint numOfPrices = 0;
@@ -158,7 +158,7 @@ contract Custodian {
 		return false;
 	}
 
-	function checkPeriodicalReset() internal returns (bool upset) {
+	function checkPeriodicalReset() internal returns (bool periodicset) {
 		if (navAInBP >= limitPeriodicInBP) {
 			state = State.PreReset;
 			StartPreReset();
@@ -199,59 +199,71 @@ contract Custodian {
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
-			require(firstAddr != msg.sender);
-			// if second price times out, use first one
-			if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+			if (firstAddr == msg.sender && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
 				// take the the price and proceed
-				lastPrice.priceInWei = firstPrice.priceInWei;
-					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+				lastPrice.priceInWei = priceInWei;
+				lastPrice.timeInSeconds = timeInSeconds;
 				numOfPrices = 0;
 				// check resets
 			} else {
-				priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
-				if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
-					// take the average of two prices and proceed
+				require(firstAddr != msg.sender);
+				// if second price times out, use first one
+				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+					// take the the price and proceed
 					lastPrice.priceInWei = firstPrice.priceInWei;
 					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
 					numOfPrices = 0;
 					// check resets
 				} else {
-					// wait for the third price
-					secondPrice = Price(priceInWei, timeInSeconds);
-					secondAddr = msg.sender;
-					numOfPrices++;
-				} 
-			}
-
-		} else if (numOfPrices == 2) {
-			require(firstAddr != msg.sender && secondAddr != msg.sender);
-			// if third price times out, use first one
-			if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
-				// take the the price and proceed
-				lastPrice.priceInWei = firstPrice.priceInWei;
-				lastPrice.timeInSeconds = firstPrice.timeInSeconds;
-			} else {
-				// take median and proceed
-				// first and second price will never be equal in this part
-				// if second and third price are the same, they are median
-				if (secondPrice.priceInWei == priceInWei) {
-					lastPrice.priceInWei = priceInWei;
-				} else if (firstPrice.priceInWei
-					.sub(secondPrice.priceInWei)
-					.mul(priceInWei.sub(firstPrice.priceInWei)) > 0) {
-					lastPrice.priceInWei = firstPrice.priceInWei;
-				} else if (secondPrice.priceInWei
-					.sub(firstPrice.priceInWei)
-					.mul(priceInWei.sub(secondPrice.priceInWei)) > 0) {
-					lastPrice.priceInWei = secondPrice.priceInWei;
-				} else {
-					lastPrice.priceInWei = priceInWei;
+					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
+					if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
+						// take the average of two prices and proceed
+						lastPrice.priceInWei = firstPrice.priceInWei;
+						lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+						numOfPrices = 0;
+						// check resets
+					} else {
+						// wait for the third price
+						secondPrice = Price(priceInWei, timeInSeconds);
+						secondAddr = msg.sender;
+						numOfPrices++;
+					} 
 				}
-				lastPrice.timeInSeconds = firstPrice.timeInSeconds;	
 			}
-
+		} else if (numOfPrices == 2) {
+			if ((firstAddr == msg.sender || secondAddr == msg.sender) && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
+				// take the the price and proceed
+				lastPrice.priceInWei = priceInWei;
+				lastPrice.timeInSeconds = timeInSeconds;
+			} else {
+				require(firstAddr != msg.sender && secondAddr != msg.sender);
+				// if third price times out, use first one
+				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+					// take the the price and proceed
+					lastPrice.priceInWei = firstPrice.priceInWei;
+					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+				} else {
+					// take median and proceed
+					// first and second price will never be equal in this part
+					// if second and third price are the same, they are median
+					if (secondPrice.priceInWei == priceInWei) {
+						lastPrice.priceInWei = priceInWei;
+					} else if (firstPrice.priceInWei
+						.sub(secondPrice.priceInWei)
+						.mul(priceInWei.sub(firstPrice.priceInWei)) > 0) {
+						lastPrice.priceInWei = firstPrice.priceInWei;
+					} else if (secondPrice.priceInWei
+						.sub(firstPrice.priceInWei)
+						.mul(priceInWei.sub(secondPrice.priceInWei)) > 0) {
+						lastPrice.priceInWei = secondPrice.priceInWei;
+					} else {
+						lastPrice.priceInWei = priceInWei;
+					}
+					lastPrice.timeInSeconds = firstPrice.timeInSeconds;	
+				}
+			}
 			// check resets
-				numOfPrices = 0;
+			numOfPrices = 0;
 		} else {
 			return false;
 		}
