@@ -196,7 +196,7 @@ contract DUO {
 		return Price(priceFedDifference,timeFedDifference);
 	}
 
-	function selectPriceFromThreeFeeds() internal pure returns(Price selectedPrice){
+	function selectPriceFromThreeFeeds() internal returns(Price){
 		uint price1 = priceFeeds[priceFeed1].price;
 		uint price2 = priceFeeds[priceFeed2].price;
 		uint price3 = priceFeeds[priceFeed3].price;
@@ -212,7 +212,7 @@ contract DUO {
 			selectedPriceNumber = price3;
 			selectedPriceTime = priceFeeds[priceFeed3].time;
 		}
-		return Price(selectedPriceNumber, selectedPriceTime)
+		return Price(selectedPriceNumber, selectedPriceTime);
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success) {
