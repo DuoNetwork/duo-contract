@@ -5,7 +5,7 @@ contract TokenA {
 	string public name;
 	string public symbol;
 	uint8 public decimals = 18;
-	address public duoAddress;  //address of DUO contract
+	address public custodianAddress;  //address of custodian contract
 
 	/**
 	 * Constrctor function
@@ -15,12 +15,12 @@ contract TokenA {
 	function TokenA(
 		string tokenName,
 		string tokenSymbol,
-		address duoAddr
+		address custodianAddr
 	) public 
 	{
 		name = tokenName;								   // Set the name for display purposes
 		symbol = tokenSymbol;							   // Set the symbol for display purposes
-		duoAddress = duoAddr;
+		custodianAddress = custodianAddr;
 	}
 
 	event Transfer(address indexed from, address indexed to, uint tokens);
@@ -31,38 +31,38 @@ contract TokenA {
 	}
 	
 	function balanceOf(address add) public constant returns(uint balance) {
-	    DUO duoContract = DUO(duoAddress);
-        return duoContract.checkBalanceA(add);
+	    Custodian custodianContract = Custodian(custodianAddress);
+        return custodianContract.checkBalanceA(add);
 	}
 
 	function allowance(address _user, address _spender) public constant returns(uint value) {
-	    DUO duoContract = DUO(duoAddress);
-        return duoContract.checkAllowanceA(_user,_spender);
+	    Custodian custodianContract = Custodian(custodianAddress);
+        return custodianContract.checkAllowanceA(_user,_spender);
 	}
 
 	function transfer(address _to, uint256 _value) public returns (bool success) {
-		DUO duoContract = DUO(duoAddress);
-        duoContract.transferA(msg.sender,_to, _value);
+		Custodian custodianContract = Custodian(custodianAddress);
+        custodianContract.transferA(msg.sender,_to, _value);
 		Transfer(msg.sender, _to, _value);
 		return true;
 	}
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-		DUO duoContract = DUO(duoAddress);
-        duoContract.transferAFrom(msg.sender, _from, _to, _value);
+		Custodian custodianContract = Custodian(custodianAddress);
+        custodianContract.transferAFrom(msg.sender, _from, _to, _value);
 		Transfer(_from, _to, _value);
 		return true;
 	}
 
 	function approve(address _spender, uint256 _value) public returns (bool success) {
-		DUO duoContract = DUO(duoAddress);
-        duoContract.approveA(msg.sender, _spender,  _value);
+		Custodian custodianContract = Custodian(custodianAddress);
+        custodianContract.approveA(msg.sender, _spender,  _value);
 		Approval(msg.sender, _spender, _value);
 		return true;
 	}
 }
 
-contract DUO {
+contract Custodian {
     function transferA(address _from, address _to, uint _tokens) public returns (bool success);
 	function transferAFrom(address _spender, address _from, address _to, uint _tokens) returns (bool success);
 	function approveA(address _sender, address _spender, uint _tokens) public returns (bool success);
