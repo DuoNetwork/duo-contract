@@ -47,12 +47,13 @@ contract Custodian {
 	address priceFeed3;
 
 	uint decimals;
+	uint totalNumOfUser;
 	mapping(address => uint256) public balancesA;
 	mapping(address => uint256) public balancesB;
 	mapping (address => mapping (address => uint256)) public allowanceA;
 	mapping (address => mapping (address => uint256)) public allowanceB;
-	address[] addressesA;
-	address[] addressesB;
+	address[] addressesOfUsers;
+	mapping (address => bool) public existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
 
 	//custodian
@@ -119,12 +120,17 @@ contract Custodian {
 	}
     
     
-    //TO DO
-	// function updatePrice(uint priceInWei) 
-	// 	public 
-	// 	inState(State.Trading) 
-	// 	among(priceFeed1, priceFeed2, priceFeed3) 
-	// 	returns (bool success);
+	function checkNewUser(address user) internal{
+		if(!existingUsers[user]){
+			totalNumOfUser = totalNumOfUser.add(1);
+			addressesOfUsers.push(user);
+			existingUsers[user] = true;
+			balancesA[user] = 0;
+			balancesB[user] = 0;
+		}
+	}
+
+	
 	function getNavA() internal {
 		uint numOfDays = (now.sub(resetPrice.timeInSeconds)).div(period);
 		navAInBP = periodCouponInBP.mul(numOfDays).add(10000);
@@ -322,6 +328,7 @@ contract Custodian {
 							.mul(10000)
 							.div(alphaInBP.add(10000));
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(10000);
+		checkNewUser(msg.sender);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
 		balancesB[msg.sender] = balancesB[msg.sender].add(tokenValueB);
 		return this.balance;
@@ -367,10 +374,13 @@ contract Custodian {
 
 		// Save this for an assertion in the future
 		uint previousBalances = balancesA[_from].add(balancesA[_to]);
+		//check whether _to is new. if new then add
+		checkNewUser(_to);
 		// Subtract from the sender
 		balancesA[_from] = balancesA[_from].sub(_tokens);
 		// Add the same to the recipient
 		balancesA[_to] = balancesA[_to].add(_tokens);
+		
 		TransferA(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesA[_from].add(balancesA[_to]) == previousBalances);
@@ -391,6 +401,8 @@ contract Custodian {
 
 		// Save this for an assertion in the future
 		uint previousBalances = balancesB[_from].add(balancesB[_to]);
+		//check whether _to is new. if new then add
+		checkNewUser(_to);
 		// Subtract from the sender
 		balancesB[_from] = balancesB[_from].sub(_tokens);
 		// Add the same to the recipient
