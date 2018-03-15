@@ -69,8 +69,8 @@ contract Custodian {
 	uint commissionRateInBP;
 	uint lastResetTimestamp;
 	uint period = 1 days;
-	uint navAInBP;
-	uint navBInBP;  
+	uint public navAInBP;
+	uint public navBInBP;  
 
 	//priceFeeds
 	uint priceTolInBP = 500; //5%
@@ -120,8 +120,8 @@ contract Custodian {
 	}
     
     
-	function checkNewUser(address user) internal{
-		if(!existingUsers[user]){
+	function checkNewUser(address user) internal {
+		if (!existingUsers[user]) {
 			totalNumOfUser = totalNumOfUser.add(1);
 			addressesOfUsers.push(user);
 			existingUsers[user] = true;
@@ -131,19 +131,13 @@ contract Custodian {
 	}
 
 	
-	function getNavA() internal {
-		uint numOfDays = (now.sub(resetPrice.timeInSeconds)).div(period);
+	function updateNav() internal {
+		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
 		navAInBP = periodCouponInBP.mul(numOfDays).add(10000);
-	}
-
-	function getNavB() internal {
 		navBInBP = lastPrice.priceInWei
 								.mul(alphaInBP.add(10000))
 								.div(resetPrice.priceInWei)
-								.sub(
-									navAInBP.mul(alphaInBP)
-								);
-							
+								.sub(navAInBP.mul(alphaInBP));
 	}
 
 	function checkUpReset() internal returns (bool upset) {
@@ -190,7 +184,7 @@ contract Custodian {
 		uint userBamtARatioInBP = userBamtBRatioInBP.mul(alphaInBP).div(10000);
 
 		//Assume one time triggering can finish reset
-		for(uint i =0; i < totalNumOfUser; i++){
+		for (uint i =0; i < totalNumOfUser; i++) {
 			address userAddress = addressesOfUsers[i];
 			uint balanceApreSet = balancesA[userAddress];
 			uint balanceBpreSet = balancesB[userAddress];
@@ -216,6 +210,26 @@ contract Custodian {
 
 	}
 
+	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
+		lastPrice.priceInWei = priceInWei;
+		lastPrice.timeInSeconds = timeInSeconds;
+		numOfPrices = 0;
+		updateNav();
+		if (checkUpReset()) {
+			return true;
+		} 
+		
+		if (checkDownReset()) {
+			return true;
+		} 
+		
+		if (checkPeriodicalReset()) {
+			return true;
+		}
+
+		return true;
+	}
+
 	//PriceFeed
 	function updatePrice(uint priceInWei, uint timeInSeconds) 
 		public 
@@ -228,10 +242,7 @@ contract Custodian {
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
 			if (priceDiff.mul(10000).div(lastPrice.priceInWei) <= priceTolInBP) {
-				// take the the price and proceed
-				lastPrice.priceInWei = priceInWei;
-				lastPrice.timeInSeconds = timeInSeconds;
-				// check resets
+				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				// wait for the second price
 				firstPrice = Price(priceInWei, timeInSeconds);
@@ -240,28 +251,16 @@ contract Custodian {
 			}
 		} else if (numOfPrices == 1) {
 			if (firstAddr == msg.sender && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
-				// take the the price and proceed
-				lastPrice.priceInWei = priceInWei;
-				lastPrice.timeInSeconds = timeInSeconds;
-				numOfPrices = 0;
-				// check resets
+				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				require(firstAddr != msg.sender);
 				// if second price times out, use first one
 				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
-					// take the the price and proceed
-					lastPrice.priceInWei = firstPrice.priceInWei;
-					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
-					numOfPrices = 0;
-					// check resets
+					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
 					if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
-						// take the average of two prices and proceed
-						lastPrice.priceInWei = firstPrice.priceInWei;
-						lastPrice.timeInSeconds = firstPrice.timeInSeconds;
-						numOfPrices = 0;
-						// check resets
+						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 					} else {
 						// wait for the third price
 						secondPrice = Price(priceInWei, timeInSeconds);
@@ -272,38 +271,33 @@ contract Custodian {
 			}
 		} else if (numOfPrices == 2) {
 			if ((firstAddr == msg.sender || secondAddr == msg.sender) && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
-				// take the the price and proceed
-				lastPrice.priceInWei = priceInWei;
-				lastPrice.timeInSeconds = timeInSeconds;
+				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				require(firstAddr != msg.sender && secondAddr != msg.sender);
+				uint acceptedPriceInWei;
 				// if third price times out, use first one
 				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
-					// take the the price and proceed
-					lastPrice.priceInWei = firstPrice.priceInWei;
-					lastPrice.timeInSeconds = firstPrice.timeInSeconds;
+					acceptedPriceInWei = firstPrice.priceInWei;
 				} else {
 					// take median and proceed
 					// first and second price will never be equal in this part
 					// if second and third price are the same, they are median
 					if (secondPrice.priceInWei == priceInWei) {
-						lastPrice.priceInWei = priceInWei;
+						acceptedPriceInWei = priceInWei;
 					} else if (firstPrice.priceInWei
 						.sub(secondPrice.priceInWei)
 						.mul(priceInWei.sub(firstPrice.priceInWei)) > 0) {
-						lastPrice.priceInWei = firstPrice.priceInWei;
+						acceptedPriceInWei = firstPrice.priceInWei;
 					} else if (secondPrice.priceInWei
 						.sub(firstPrice.priceInWei)
 						.mul(priceInWei.sub(secondPrice.priceInWei)) > 0) {
-						lastPrice.priceInWei = secondPrice.priceInWei;
+						acceptedPriceInWei = secondPrice.priceInWei;
 					} else {
-						lastPrice.priceInWei = priceInWei;
+						acceptedPriceInWei = priceInWei;
 					}
-					lastPrice.timeInSeconds = firstPrice.timeInSeconds;	
 				}
+				acceptPrice(acceptedPriceInWei, firstPrice.timeInSeconds);
 			}
-			// check resets
-			numOfPrices = 0;
 		} else {
 			return false;
 		}
