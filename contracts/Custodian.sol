@@ -175,7 +175,41 @@ contract Custodian {
 	
 	//TO DO
 	function upReset() internal {
+		uint userAamtBRatioInBP = (navAInBP.sub(10000))
+									.mul(10000)
+									.div(
+										alphaInBP.add(10000)
+									);
+		uint userAamtARatioInBP = userAamtBRatioInBP.mul(alphaInBP).div(10000);
 
+		uint userBamtBRatioInBP = (navBInBP.sub(10000))
+									.mul(10000)
+									.div(
+										alphaInBP.add(10000)
+									);
+		uint userBamtARatioInBP = userBamtBRatioInBP.mul(alphaInBP).div(10000);
+
+		//Assume one time triggering can finish reset
+		for(uint i =0; i < totalNumOfUser; i++){
+			address userAddress = addressesOfUsers[i];
+			uint balanceApreSet = balancesA[userAddress];
+			uint balanceBpreSet = balancesB[userAddress];
+			balancesA[userAddress] = balanceApreSet
+									.add(
+										balanceApreSet.mul(userAamtARatioInBP).div(10000)
+									).add(
+										balanceApreSet.mul(userBamtARatioInBP).div(10000)
+									);
+
+			balancesB[userAddress] = balanceBpreSet
+									.add(
+										balanceBpreSet.mul(userAamtBRatioInBP).div(10000)
+									).add(
+										balanceBpreSet.mul(userBamtBRatioInBP).div(10000)
+									);
+		}
+		navAInBP = 10000;
+		navBInBP = 10000;
 	}
 
 	function downReset() internal {
@@ -407,7 +441,7 @@ contract Custodian {
 		balancesB[_from] = balancesB[_from].sub(_tokens);
 		// Add the same to the recipient
 		balancesB[_to] = balancesB[_to].add(_tokens);
-		TransferA(_from, _to, _tokens);
+		TransferB(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesB[_from].add(balancesB[_to]) == previousBalances);
         return true;
