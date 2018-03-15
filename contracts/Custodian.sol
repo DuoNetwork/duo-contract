@@ -250,8 +250,11 @@ contract Custodian {
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
-			if (firstAddr == msg.sender && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
-				acceptPrice(priceInWei, timeInSeconds);
+			if (timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
+				if (firstAddr == msg.sender)
+					acceptPrice(priceInWei, timeInSeconds);
+				else
+					acceptPrice(firstPrice.priceInWei, timeInSeconds);
 			} else {
 				require(firstAddr != msg.sender);
 				// if second price times out, use first one
@@ -270,8 +273,11 @@ contract Custodian {
 				}
 			}
 		} else if (numOfPrices == 2) {
-			if ((firstAddr == msg.sender || secondAddr == msg.sender) && timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
-				acceptPrice(priceInWei, timeInSeconds);
+			if (timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
+				if ((firstAddr == msg.sender || secondAddr == msg.sender))
+					acceptPrice(priceInWei, timeInSeconds);
+				else
+					acceptPrice(secondPrice.priceInWei, timeInSeconds);
 			} else {
 				require(firstAddr != msg.sender && secondAddr != msg.sender);
 				uint acceptedPriceInWei;
