@@ -31,7 +31,8 @@ contract Custodian {
 	enum State {
 		Trading,
 		PreReset,
-		InReset,
+		UpwardReset,
+		DownwardReset,
 		PostReset
 	}
 
@@ -62,15 +63,19 @@ contract Custodian {
 	Price resetPrice; //P0
 	Price lastPrice;  //Pt
 	uint alphaInBP;
-	uint periodCouponInBP; // r
-	uint limitPeriodicInBP; // H_p
-	uint limitUpperInBP; // H_u
-	uint limitLowerInBP; // H_d
+	uint periodCouponInWei; // r
+	uint limitPeriodicInWei; // H_p
+	uint limitUpperInWei; // H_u
+	uint limitLowerInWei; // H_d
 	uint commissionRateInBP;
-	uint lastResetTimestamp;
+	uint lastPreResetBlockNo;
+	uint lastPostResetBlockNo;
+	uint preResetWaitingBlocks;
+	uint postResetWaitingBlocks;
 	uint period = 1 days;
-	uint public navAInBP;
-	uint public navBInBP;  
+	uint public navAInWei;
+	uint public navBInWei; 
+	bool allDone;
 
 	//priceFeeds
 	uint priceTolInBP = 500; //5%
@@ -130,46 +135,54 @@ contract Custodian {
 		}
 	}
 
-	
 	function updateNav() internal {
 		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
-		navAInBP = periodCouponInBP.mul(numOfDays).add(10000);
-		navBInBP = lastPrice.priceInWei
+		navAInWei = periodCouponInWei.mul(numOfDays).add(1000000000000000000);
+		navBInWei = lastPrice.priceInWei.mul(100000000000000)
 								.mul(alphaInBP.add(10000))
 								.div(resetPrice.priceInWei)
-								.sub(navAInBP.mul(alphaInBP));
+								.sub(navAInWei.mul(alphaInBP).div(10000));
 	}
 
-	function checkUpReset() internal returns (bool upset) {
-		if (navBInBP >= limitUpperInBP) {
-			state = State.PreReset;
-			StartPreReset();
-			return true;
-		}
-		return false;
-	}
-	
-	function checkDownReset() internal returns (bool downset) {
-		if (navBInBP <= limitLowerInBP) {
-			state = State.PreReset;
-			StartPreReset();
-			return true;
-		}
-		return false;
+	function startPreReset() public inState(State.PreReset) returns (bool success) {
+		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
+			if (navBInWei >= limitUpperInWei || navBInWei >= 1000000000000000000) {
+				state = State.UpwardReset;
+			} else {
+				state = State.DownwardReset;
+			}
+			StartReset();
+		} 
+
+		return true;
 	}
 
-	function checkPeriodicalReset() internal returns (bool periodicset) {
-		if (navAInBP >= limitPeriodicInBP) {
-			state = State.PreReset;
-			StartPreReset();
-			return true;
+	function startPostReset() public inState(State.PostReset) returns (bool success) {
+		if (block.number - lastPostResetBlockNo >= postResetWaitingBlocks) {
+			state = State.Trading;
+			StartTrading();
+		} 
+
+		return true;
+	}
+
+	function startReset() public returns (bool success) {
+		require(state == State.UpwardReset || state == State.DownwardReset);
+		if (allDone) {
+			state = State.PostReset;
+			StartPostReset();
+		} else if (state == State.UpwardReset) {
+			upwardReset(); 
+		} else {
+			downwardReset();
 		}
-		return false;
+		
+		return true;
 	}
 	
 	//TO DO
-	function upReset() internal {
-		uint userAamtBRatioInBP = (navAInBP.sub(10000))
+	function upwardReset() internal {
+		/*uint userAamtBRatioInBP = (navAInBP.sub(10000))
 									.mul(10000)
 									.div(
 										alphaInBP.add(10000)
@@ -203,10 +216,10 @@ contract Custodian {
 									);
 		}
 		navAInBP = 10000;
-		navBInBP = 10000;
+		navBInBP = 10000;*/
 	}
 
-	function downReset() internal {
+	function downwardReset() internal {
 
 	}
 
@@ -215,23 +228,18 @@ contract Custodian {
 		lastPrice.timeInSeconds = timeInSeconds;
 		numOfPrices = 0;
 		updateNav();
-		if (checkUpReset()) {
+		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
+			state = State.PreReset;
+			lastPreResetBlockNo = block.number;
+			StartPreReset();
 			return true;
 		} 
-		
-		if (checkDownReset()) {
-			return true;
-		} 
-		
-		if (checkPeriodicalReset()) {
-			return true;
-		}
 
 		return true;
 	}
 
 	//PriceFeed
-	function updatePrice(uint priceInWei, uint timeInSeconds) 
+	function commitPrice(uint priceInWei, uint timeInSeconds) 
 		public 
 		inState(State.Trading) 
 		among(priceFeed1, priceFeed2, priceFeed3) 
