@@ -77,7 +77,7 @@ contract Custodian {
 	uint public navAInWei;
 	uint public navBInWei; 
 	uint iterationGasThreshold;
-	uint lastResetAddrIndex;
+	uint nextResetAddrIndex;
 
 	//priceFeeds
 	uint priceTolInBP = 500; //5%
@@ -167,7 +167,28 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset);
-		reset();
+		uint alphaAdj = alphaInBP.add(10000).div(10000);
+		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
+			if (state == State.UpwardReset) 
+				upwardResetForAddress(users[nextResetAddrIndex], alphaAdj); 
+			else 
+				downwardResetForAddress(users[nextResetAddrIndex], alphaAdj);
+			
+			nextResetAddrIndex++;
+		}
+
+		if (nextResetAddrIndex >= users.length) {
+			resetPrice.priceInWei = lastPrice.priceInWei;
+			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
+			navAInWei = weiDenominator;
+			navBInWei = weiDenominator;
+			nextResetAddrIndex = 0;
+
+			state = State.PostReset;
+			lastPostResetBlockNo = block.number;
+			StartPostReset();
+		} else 
+			StartReset();
 		return true;
 	}
 
@@ -197,31 +218,6 @@ contract Custodian {
 							.mul(navBInWei)
 							.div(weiDenominator)
 							.add(newBFromA);
-	}
-	
-	function reset() internal {
-		uint alphaAdj = alphaInBP.add(10000).div(10000);
-		for (uint i = lastResetAddrIndex; i < users.length && msg.gas > iterationGasThreshold; i++) {
-			if (state == State.UpwardReset) 
-				upwardResetForAddress(users[i], alphaAdj); 
-			else 
-				upwardResetForAddress(users[i], alphaAdj);
-			
-			lastResetAddrIndex = i;
-		}
-
-		if (lastResetAddrIndex >= users.length - 1) {
-			resetPrice.priceInWei = lastPrice.priceInWei;
-			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
-			navAInWei = weiDenominator;
-			navBInWei = weiDenominator;
-			lastResetAddrIndex = 0;
-
-			state = State.PostReset;
-			lastPostResetBlockNo = block.number;
-			StartPostReset();
-		} else 
-			StartReset();
 	}
 
 	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
