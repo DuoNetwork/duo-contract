@@ -215,6 +215,7 @@ contract Custodian {
 			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
 			navAInWei = weiDenominator;
 			navBInWei = weiDenominator;
+			lastResetAddrIndex = 0;
 
 			state = State.PostReset;
 			lastPostResetBlockNo = block.number;
