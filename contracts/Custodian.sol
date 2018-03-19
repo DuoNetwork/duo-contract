@@ -167,12 +167,31 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset);
-		uint alphaAdj = alphaInBP.add(10000).div(10000);
+		uint bAdj = alphaInBP.add(10000).div(10000);
+		uint newBFromAPerA;
+		uint newBFromBPerB;
+		uint existingBalanceAdj;
+		if (state == State.UpwardReset) {
+			newBFromAPerA = navAInWei.sub(weiDenominator).div(bAdj);
+			newBFromBPerB = navBInWei.sub(weiDenominator).div(bAdj);
+		} else {
+			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
+			existingBalanceAdj = navBInWei.div(weiDenominator);
+		}
+		uint aAdj = alphaInBP.div(10000);
 		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
 			if (state == State.UpwardReset) 
-				upwardResetForAddress(users[nextResetAddrIndex], alphaAdj); 
+				upwardResetForAddress(
+					users[nextResetAddrIndex], 
+					newBFromAPerA, 
+					newBFromBPerB, 
+					aAdj); 
 			else 
-				downwardResetForAddress(users[nextResetAddrIndex], alphaAdj);
+				downwardResetForAddress(
+					users[nextResetAddrIndex], 
+					newBFromAPerA, 
+					existingBalanceAdj, 
+					aAdj);
 			
 			nextResetAddrIndex++;
 		}
@@ -192,32 +211,36 @@ contract Custodian {
 		return true;
 	}
 
-	function upwardResetForAddress(address addr, uint alphaAdj) internal {
+	function upwardResetForAddress(
+		address addr, 
+		uint newBFromAPerA, 
+		uint newBFromBPerB, 
+		uint aAdj) 
+		internal 
+	{
 		uint balanceA = balancesA[addr];
 		uint balanceB = balancesB[addr];
-		uint newBFromA = balanceA.mul(navAInWei.sub(weiDenominator).div(alphaAdj));
-		uint newAFromA = newBFromA.mul(alphaInBP).div(10000);
-		uint newBFromB = balanceB.mul(navBInWei.sub(weiDenominator).div(alphaAdj));
-		uint newAFromB = newBFromB.mul(alphaInBP).div(10000);
+		uint newBFromA = balanceA.mul(newBFromAPerA);
+		uint newAFromA = newBFromA.mul(aAdj);
+		uint newBFromB = balanceB.mul(newBFromBPerB);
+		uint newAFromB = newBFromB.mul(aAdj);
 		balancesA[addr] = balanceA.add(newAFromA).add(newAFromB);
 		balancesB[addr] = balanceB.add(newBFromA).add(newBFromB);
 	}
 
-	function downwardResetForAddress(address addr, uint alphaAdj) internal {
+	function downwardResetForAddress(
+		address addr, 
+		uint newBFromAPerA, 
+		uint existingBalanceAdj, 
+		uint aAdj) 
+		internal 
+	{
 		uint balanceA = balancesA[addr];
 		uint balanceB = balancesB[addr];
-		uint newBFromA = balanceA.mul(navAInWei.sub(navBInWei).div(alphaAdj));
-		uint newAFromA = newBFromA.mul(alphaInBP).div(10000);
-		balancesA[addr] = balanceA
-							.mul(navBInWei)
-							.div(weiDenominator)
-							.mul(alphaInBP)
-							.div(10000)
-							.add(newAFromA);
-		balancesB[addr] = balanceB
-							.mul(navBInWei)
-							.div(weiDenominator)
-							.add(newBFromA);
+		uint newBFromA = balanceA.mul(newBFromAPerA);
+		uint newAFromA = newBFromA.mul(aAdj);
+		balancesA[addr] = balanceA.mul(existingBalanceAdj).add(newAFromA);
+		balancesB[addr] = balanceB.mul(existingBalanceAdj).add(newBFromA);
 	}
 
 	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
