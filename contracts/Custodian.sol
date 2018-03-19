@@ -1,4 +1,4 @@
-pragma solidity ^0.4.17;
+pragma solidity ^0.4.19;
 
 library SafeMath {
   function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -48,14 +48,15 @@ contract Custodian {
 	address priceFeed3;
 
 	uint decimals;
-	uint totalNumOfUser;
 	mapping(address => uint256) public balancesA;
 	mapping(address => uint256) public balancesB;
 	mapping (address => mapping (address => uint256)) public allowanceA;
 	mapping (address => mapping (address => uint256)) public allowanceB;
-	address[] addressesOfUsers;
+	address[] users;
 	mapping (address => bool) public existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
+
+	uint weiDenominator = 1000000000000000000;
 
 	//custodian
 	address admin;
@@ -75,7 +76,8 @@ contract Custodian {
 	uint period = 1 days;
 	uint public navAInWei;
 	uint public navBInWei; 
-	bool allDone;
+	uint iterationGasThreshold;
+	uint lastResetAddrIndex;
 
 	//priceFeeds
 	uint priceTolInBP = 500; //5%
@@ -108,8 +110,6 @@ contract Custodian {
 	event StartReset();
 	event StartPostReset();
 
-	event ResetRequired();
-
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
 	
@@ -127,8 +127,7 @@ contract Custodian {
     
 	function checkNewUser(address user) internal {
 		if (!existingUsers[user]) {
-			totalNumOfUser = totalNumOfUser.add(1);
-			addressesOfUsers.push(user);
+			users.push(user);
 			existingUsers[user] = true;
 			balancesA[user] = 0;
 			balancesB[user] = 0;
@@ -137,20 +136,20 @@ contract Custodian {
 
 	function updateNav() internal {
 		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
-		navAInWei = periodCouponInWei.mul(numOfDays).add(1000000000000000000);
-		navBInWei = lastPrice.priceInWei.mul(100000000000000)
+		navAInWei = periodCouponInWei.mul(numOfDays).add(weiDenominator);
+		navBInWei = lastPrice.priceInWei.mul(weiDenominator)
 								.mul(alphaInBP.add(10000))
+								.div(10000)
 								.div(resetPrice.priceInWei)
 								.sub(navAInWei.mul(alphaInBP).div(10000));
 	}
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			if (navBInWei >= limitUpperInWei || navBInWei >= 1000000000000000000) {
+			if (navBInWei >= limitUpperInWei || navBInWei >= weiDenominator)
 				state = State.UpwardReset;
-			} else {
+			else
 				state = State.DownwardReset;
-			}
 			StartReset();
 		} 
 
@@ -168,59 +167,60 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset);
-		if (allDone) {
-			state = State.PostReset;
-			StartPostReset();
-		} else if (state == State.UpwardReset) {
-			upwardReset(); 
-		} else {
-			downwardReset();
-		}
-		
+		reset();
 		return true;
 	}
-	
-	//TO DO
-	function upwardReset() internal {
-		/*uint userAamtBRatioInBP = (navAInBP.sub(10000))
-									.mul(10000)
-									.div(
-										alphaInBP.add(10000)
-									);
-		uint userAamtARatioInBP = userAamtBRatioInBP.mul(alphaInBP).div(10000);
 
-		uint userBamtBRatioInBP = (navBInBP.sub(10000))
-									.mul(10000)
-									.div(
-										alphaInBP.add(10000)
-									);
-		uint userBamtARatioInBP = userBamtBRatioInBP.mul(alphaInBP).div(10000);
-
-		//Assume one time triggering can finish reset
-		for (uint i =0; i < totalNumOfUser; i++) {
-			address userAddress = addressesOfUsers[i];
-			uint balanceApreSet = balancesA[userAddress];
-			uint balanceBpreSet = balancesB[userAddress];
-			balancesA[userAddress] = balanceApreSet
-									.add(
-										balanceApreSet.mul(userAamtARatioInBP).div(10000)
-									).add(
-										balanceApreSet.mul(userBamtARatioInBP).div(10000)
-									);
-
-			balancesB[userAddress] = balanceBpreSet
-									.add(
-										balanceBpreSet.mul(userAamtBRatioInBP).div(10000)
-									).add(
-										balanceBpreSet.mul(userBamtBRatioInBP).div(10000)
-									);
-		}
-		navAInBP = 10000;
-		navBInBP = 10000;*/
+	function upwardResetForAddress(address addr, uint alphaAdj) internal {
+		uint balanceA = balancesA[addr];
+		uint balanceB = balancesB[addr];
+		uint newBFromA = balanceA.mul(navAInWei.sub(weiDenominator).div(alphaAdj));
+		uint newAFromA = newBFromA.mul(alphaInBP).div(10000);
+		uint newBFromB = balanceB.mul(navBInWei.sub(weiDenominator).div(alphaAdj));
+		uint newAFromB = newBFromB.mul(alphaInBP).div(10000);
+		balancesA[addr] = balanceA.add(newAFromA).add(newAFromB);
+		balancesB[addr] = balanceB.add(newBFromA).add(newBFromB);
 	}
 
-	function downwardReset() internal {
+	function downwardResetForAddress(address addr, uint alphaAdj) internal {
+		uint balanceA = balancesA[addr];
+		uint balanceB = balancesB[addr];
+		uint newBFromA = balanceA.mul(navAInWei.sub(navBInWei).div(alphaAdj));
+		uint newAFromA = newBFromA.mul(alphaInBP).div(10000);
+		balancesA[addr] = balanceA
+							.mul(navBInWei)
+							.div(weiDenominator)
+							.mul(alphaInBP)
+							.div(10000)
+							.add(newAFromA);
+		balancesB[addr] = balanceB
+							.mul(navBInWei)
+							.div(weiDenominator)
+							.add(newBFromA);
+	}
+	
+	function reset() internal {
+		uint alphaAdj = alphaInBP.add(10000).div(10000);
+		for (uint i = lastResetAddrIndex; i < users.length && msg.gas > iterationGasThreshold; i++) {
+			if (state == State.UpwardReset) 
+				upwardResetForAddress(users[i], alphaAdj); 
+			else 
+				upwardResetForAddress(users[i], alphaAdj);
+			
+			lastResetAddrIndex = i;
+		}
 
+		if (lastResetAddrIndex >= users.length - 1) {
+			resetPrice.priceInWei = lastPrice.priceInWei;
+			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
+			navAInWei = weiDenominator;
+			navBInWei = weiDenominator;
+
+			state = State.PostReset;
+			lastPostResetBlockNo = block.number;
+			StartPostReset();
+		} else 
+			StartReset();
 	}
 
 	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
