@@ -122,6 +122,9 @@ contract Custodian {
 		resetPrice.timeInSeconds = now;
 		lastPrice.priceInWei = ethPriceInWei;
 		lastPrice.timeInSeconds = now;
+		priceFeed1 = msg.sender;
+		priceFeed2 = msg.sender;
+		priceFeed3 = msg.sender;
 	}
     
     
@@ -146,7 +149,7 @@ contract Custodian {
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			if (navBInWei >= limitUpperInWei || navBInWei >= weiDenominator)
+			if (navBInWei >= limitUpperInWei || navBInWei >= weiDenominator)  // limitUpperInWei always larger than 1 ether; For upward reset, the only condition should be navBInWei >= limitUpperInWei
 				state = State.UpwardReset;
 			else
 				state = State.DownwardReset;
