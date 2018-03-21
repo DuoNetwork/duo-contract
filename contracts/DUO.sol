@@ -24,29 +24,15 @@ contract DUO is Owned {
 	string public name;
 	string public symbol;
 	uint8 public decimals = 18;
-	uint256 public sellPrice;
-	uint256 public buyPrice;
 	// 18 decimals is the strongly suggested default, avoid changing it
 	uint256 public totalSupply;
-	bool public transferable=true;
 
 	// This creates an array with all balances
 	mapping (address => uint256) public balanceOf;
 	mapping (address => mapping (address => uint256)) public allowance;
-	mapping (address => bool) public frozenAccount;
-
-	/* This generates a public event on the blockchain that will notify clients */
-	event FrozenFunds(address target, bool frozen);
 
 	// This generates a public event on the blockchain that will notify clients
 	event Transfer(address indexed from, address indexed to, uint256 value);
-
-	// This notifies clients about the amount burnt
-	event Burn(address indexed from, uint256 value);
-
-	// This generates a public event on the blockchain that will lock or unlock token transfer
-	event Lock(bool locking);
-
 
 	/**
 	 * Constrctor function
@@ -72,18 +58,12 @@ contract DUO is Owned {
 	 * Internal transfer, only can be called by this contract
 	 */
 	function _transfer(address _from, address _to, uint _value) internal {
-		// check whether token transfer is allowed
-		require(transferable);
 		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
 		require(balanceOf[_from] >= _value);
 		// Check for overflows
 		require(balanceOf[_to] + _value > balanceOf[_to]);
-		//check if sender account is frozen
-		require(!frozenAccount[_from]);
-		//check if receiver account is frozen
-		require(!frozenAccount[_to]);
 		// Save this for an assertion in the future
 		uint previousBalances = balanceOf[_from] + balanceOf[_to];
 		// Subtract from the sender

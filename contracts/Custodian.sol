@@ -26,6 +26,11 @@ library SafeMath {
   }
 }
 
+
+contract DUO {
+    function balanceOf(address tokenOwner) public constant returns (uint balance);
+}
+
 contract Custodian {
 	using SafeMath for uint;
 	enum State {
@@ -46,6 +51,7 @@ contract Custodian {
 	address priceFeed1; 
 	address priceFeed2; 
 	address priceFeed3;
+	address public duoTokenAddress;
 
 	uint decimals;
 	mapping(address => uint256) public balancesA;
@@ -105,6 +111,12 @@ contract Custodian {
         _;
     }
 
+	modifier duoMember(address addr) {
+		DUO duoToken = DUO(duoTokenAddress);
+        require(duoToken.balanceOf(addr) > 0);
+		_;
+	}
+
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
@@ -113,7 +125,7 @@ contract Custodian {
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
 	
-	function Custodian (uint ethPriceInWei, address feeAddress) public {
+	function Custodian (uint ethPriceInWei, address feeAddress, address duoAddress) public {
 		admin = msg.sender;
 		decimals = 18;
 		commissionRateInBP = 100;
@@ -125,6 +137,7 @@ contract Custodian {
 		priceFeed1 = msg.sender;
 		priceFeed2 = msg.sender;
 		priceFeed3 = msg.sender;
+		duoTokenAddress = duoAddress;
 	}
     
     
@@ -385,7 +398,7 @@ contract Custodian {
 		return true;
 	}
 
-	function create() public payable inState(State.Trading) returns (uint balance) {
+	function create() public payable inState(State.Trading) duoMember(msg.sender) returns (uint balance) {
 		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		uint tokenValueB = msg.value.sub(feeInWei)
