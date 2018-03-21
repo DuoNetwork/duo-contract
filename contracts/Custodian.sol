@@ -320,7 +320,7 @@ contract Custodian {
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
-			if (priceDiff.mul(WEI_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
+			if (priceDiff.mul(10000).div(lastPrice.priceInWei) <= priceTolInBP) {
 				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				// wait for the second price
@@ -341,7 +341,7 @@ contract Custodian {
 					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
-					if (priceDiff.mul(WEI_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
+					if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
 						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 					} else {
 						// wait for the third price
