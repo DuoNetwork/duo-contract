@@ -90,7 +90,7 @@ contract Custodian {
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
-	uint priceUpdateCoolDown = 30 minutes;
+	uint priceUpdateCoolDown;
 
 	// cycle state variables
 	uint numOfPrices = 0;
@@ -172,6 +172,7 @@ contract Custodian {
 		iterationGasThreshold = gasThreshold;
 		navAInWei = 1;
 		navBInWei = 1;
+		priceUpdateCoolDown = p - 10 minutes;
 	}
     
     
