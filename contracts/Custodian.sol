@@ -54,43 +54,49 @@ contract Custodian {
 	address public duoTokenAddress;
 
 	uint decimals;
-	mapping(address => uint256) public balancesA;
-	mapping(address => uint256) public balancesB;
-	mapping (address => mapping (address => uint256)) public allowanceA;
-	mapping (address => mapping (address => uint256)) public allowanceB;
+	mapping(address => uint256) balancesA;
+	mapping(address => uint256) balancesB;
+	mapping (address => mapping (address => uint256)) allowanceA;
+	mapping (address => mapping (address => uint256)) allowanceB;
 	address[] users;
-	mapping (address => bool) public existingUsers;
+	mapping (address => bool) existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
-
-	uint weiDenominator = 1000000000000000000;
-
-	//custodian
-	address admin;
 	uint feeAccumulatedInWei;
-	Price resetPrice; //P0
-	Price lastPrice;  //Pt
-	uint alphaInBP;
-	uint periodCouponInWei; // r
-	uint limitPeriodicInWei; // H_p
-	uint limitUpperInWei; // H_u
-	uint limitLowerInWei; // H_d
-	uint commissionRateInBP;
-	uint lastPreResetBlockNo;
-	uint lastPostResetBlockNo;
-	uint preResetWaitingBlocks;
-	uint postResetWaitingBlocks;
-	uint period = 1 days;
+
+	uint constant WEI_DENOMINATOR = 1000000000000000000;
+
+	address admin;
+	// public parameters, do not change after deployment
+	Price public resetPrice; 
+	Price public lastPrice; 
+	uint public alphaInBP;
+	uint public periodCouponInWei; 
+	uint public limitPeriodicInWei; 
+	uint public limitUpperInWei; 
+	uint public limitLowerInWei;
+	uint public commissionRateInBP;
+	uint public period;
+	// public info
 	uint public navAInWei;
 	uint public navBInWei; 
-	uint iterationGasThreshold;
-	uint nextResetAddrIndex;
+	
+	// public parameters, can change after deployment
+	uint public memberThresholdInWei;
+	uint public iterationGasThreshold;
 
-	//priceFeeds
-	uint priceTolInBP = 500; //5%
-	uint priceFeedTolInBP = 100; //1%
+	// private parameters, can change after deployment
+	uint preResetWaitingBlocks = 10;
+	uint postResetWaitingBlocks = 10;
+	uint priceTolInBP = 500; 
+	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown = 30 minutes;
+
+	// cycle state variables
 	uint numOfPrices = 0;
+	uint lastPreResetBlockNo = 0;
+	uint lastPostResetBlockNo = 0;
+	uint nextResetAddrIndex = 0;
 	address firstAddr;
 	address secondAddr;
 	Price firstPrice;
@@ -111,9 +117,9 @@ contract Custodian {
         _;
     }
 
-	modifier duoMember(address addr) {
+	modifier isDuoMember() {
 		DUO duoToken = DUO(duoTokenAddress);
-        require(duoToken.balanceOf(addr) > 0);
+        require(duoToken.balanceOf(msg.sender) > memberThresholdInWei);
 		_;
 	}
 
@@ -125,7 +131,24 @@ contract Custodian {
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
 	
-	function Custodian (uint ethPriceInWei, address feeAddress, address duoAddress) public {
+	function Custodian (
+		uint ethPriceInWei, 
+		address feeAddress, 
+		address duoAddress,
+		address pf1,
+		address pf2,
+		address pf3,
+		uint alpha,
+		uint r,
+		uint hp,
+		uint hu,
+		uint hd,
+		uint c,
+		uint p,
+		uint memberThreshold,
+		uint gasThreshold) 
+		public 
+	{
 		admin = msg.sender;
 		decimals = 18;
 		commissionRateInBP = 100;
@@ -134,10 +157,21 @@ contract Custodian {
 		resetPrice.timeInSeconds = now;
 		lastPrice.priceInWei = ethPriceInWei;
 		lastPrice.timeInSeconds = now;
-		priceFeed1 = msg.sender;
-		priceFeed2 = msg.sender;
-		priceFeed3 = msg.sender;
+		priceFeed1 = pf1;
+		priceFeed2 = pf2;
+		priceFeed3 = pf3;
 		duoTokenAddress = duoAddress;
+		alphaInBP = alpha;
+		periodCouponInWei = r; 
+		limitPeriodicInWei = hp; 
+		limitUpperInWei = hu; 
+		limitLowerInWei = hd;
+		commissionRateInBP = c;
+		period = p;
+		memberThresholdInWei = memberThreshold;
+		iterationGasThreshold = gasThreshold;
+		navAInWei = 1;
+		navBInWei = 1;
 	}
     
     
@@ -152,8 +186,8 @@ contract Custodian {
 
 	function updateNav() internal {
 		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
-		navAInWei = periodCouponInWei.mul(numOfDays).add(weiDenominator);
-		navBInWei = lastPrice.priceInWei.mul(weiDenominator)
+		navAInWei = periodCouponInWei.mul(numOfDays).add(WEI_DENOMINATOR);
+		navBInWei = lastPrice.priceInWei.mul(WEI_DENOMINATOR)
 								.mul(alphaInBP.add(10000))
 								.div(10000)
 								.div(resetPrice.priceInWei)
@@ -162,7 +196,7 @@ contract Custodian {
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			if (navBInWei >= limitUpperInWei || navBInWei >= weiDenominator)  // limitUpperInWei always larger than 1 ether; For upward reset, the only condition should be navBInWei >= limitUpperInWei
+			if (navBInWei >= limitUpperInWei || navBInWei >= WEI_DENOMINATOR)  // limitUpperInWei always larger than 1 ether; For upward reset, the only condition should be navBInWei >= limitUpperInWei
 				state = State.UpwardReset;
 			else
 				state = State.DownwardReset;
@@ -188,11 +222,11 @@ contract Custodian {
 		uint newBFromBPerB;
 		uint existingBalanceAdj;
 		if (state == State.UpwardReset) {
-			newBFromAPerA = navAInWei.sub(weiDenominator).div(bAdj);
-			newBFromBPerB = navBInWei.sub(weiDenominator).div(bAdj);
+			newBFromAPerA = navAInWei.sub(WEI_DENOMINATOR).div(bAdj);
+			newBFromBPerB = navBInWei.sub(WEI_DENOMINATOR).div(bAdj);
 		} else {
 			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
-			existingBalanceAdj = navBInWei.div(weiDenominator);
+			existingBalanceAdj = navBInWei.div(WEI_DENOMINATOR);
 		}
 		uint aAdj = alphaInBP.div(10000);
 		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
@@ -215,8 +249,8 @@ contract Custodian {
 		if (nextResetAddrIndex >= users.length) {
 			resetPrice.priceInWei = lastPrice.priceInWei;
 			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
-			navAInWei = weiDenominator;
-			navBInWei = weiDenominator;
+			navAInWei = WEI_DENOMINATOR;
+			navBInWei = WEI_DENOMINATOR;
 			nextResetAddrIndex = 0;
 
 			state = State.PostReset;
@@ -369,7 +403,12 @@ contract Custodian {
 		return ethInWei.mul(commissionRateInBP).div(10000);
 	}
 
-	function redeem(uint amtInWeiA, uint amtInWeiB) public inState(State.Trading) returns (bool success) {
+	function redeem(uint amtInWeiA, uint amtInWeiB) 
+		public 
+		inState(State.Trading) 
+		isDuoMember() 
+		returns (bool success) 
+	{
 		require(amtInWeiA > 0 && amtInWeiB > 0);
 		uint adjAmtInWeiA = amtInWeiA.mul(10000).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
@@ -398,7 +437,13 @@ contract Custodian {
 		return true;
 	}
 
-	function create() public payable inState(State.Trading) duoMember(msg.sender) returns (uint balance) {
+	function create() 
+		public 
+		payable 
+		inState(State.Trading) 
+		isDuoMember() 
+		returns (uint balance) 
+	{
 		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		uint tokenValueB = msg.value.sub(feeInWei)
