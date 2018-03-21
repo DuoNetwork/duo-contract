@@ -64,6 +64,7 @@ contract Custodian {
 	uint feeAccumulatedInWei;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
+	uint constant BP_DENOMINATOR = 10000;
 
 	address admin;
 	// public parameters, do not change after deployment
@@ -189,10 +190,10 @@ contract Custodian {
 		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
 		navAInWei = periodCouponInWei.mul(numOfDays).add(WEI_DENOMINATOR);
 		navBInWei = lastPrice.priceInWei.mul(WEI_DENOMINATOR)
-								.mul(alphaInBP.add(10000))
-								.div(10000)
+								.mul(alphaInBP.add(BP_DENOMINATOR))
+								.div(BP_DENOMINATOR)
 								.div(resetPrice.priceInWei)
-								.sub(navAInWei.mul(alphaInBP).div(10000));
+								.sub(navAInWei.mul(alphaInBP).div(BP_DENOMINATOR));
 	}
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
@@ -218,7 +219,7 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset);
-		uint bAdj = alphaInBP.add(10000).div(10000);
+		uint bAdj = alphaInBP.add(BP_DENOMINATOR).div(BP_DENOMINATOR);
 		uint newBFromAPerA;
 		uint newBFromBPerB;
 		uint existingBalanceAdj;
@@ -229,7 +230,7 @@ contract Custodian {
 			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
 			existingBalanceAdj = navBInWei.div(WEI_DENOMINATOR);
 		}
-		uint aAdj = alphaInBP.div(10000);
+		uint aAdj = alphaInBP.div(BP_DENOMINATOR);
 		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
 			if (state == State.UpwardReset) 
 				upwardResetForAddress(
@@ -320,7 +321,7 @@ contract Custodian {
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
-			if (priceDiff.mul(10000).div(lastPrice.priceInWei) <= priceTolInBP) {
+			if (priceDiff.mul(BP_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
 				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				// wait for the second price
@@ -341,7 +342,7 @@ contract Custodian {
 					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
-					if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
+					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
 						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 					} else {
 						// wait for the third price
@@ -401,7 +402,7 @@ contract Custodian {
 	}
 
 	function getFee(uint ethInWei) internal constant returns(uint) {
-		return ethInWei.mul(commissionRateInBP).div(10000);
+		return ethInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB) 
@@ -411,9 +412,9 @@ contract Custodian {
 		returns (bool success) 
 	{
 		require(amtInWeiA > 0 && amtInWeiB > 0);
-		uint adjAmtInWeiA = amtInWeiA.mul(10000).div(alphaInBP);
+		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
-		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(10000);
+		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
 		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
 		uint amtEthInWei = (deductAmtInWeiA.add(deductAmtInWeiB)).div(resetPrice.priceInWei);
 		uint feeInWei = getFee(amtEthInWei);
@@ -449,9 +450,9 @@ contract Custodian {
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		uint tokenValueB = msg.value.sub(feeInWei)
 							.mul(resetPrice.priceInWei)
-							.mul(10000)
-							.div(alphaInBP.add(10000));
-		uint tokenValueA = tokenValueB.mul(alphaInBP).div(10000);
+							.mul(BP_DENOMINATOR)
+							.div(alphaInBP.add(BP_DENOMINATOR));
+		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		checkNewUser(msg.sender);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
 		balancesB[msg.sender] = balancesB[msg.sender].add(tokenValueB);
@@ -464,7 +465,7 @@ contract Custodian {
 
 	function setCommission (uint newComm) public only(admin) {
 		require(newComm > 0);
-		require(newComm < 10000);
+		require(newComm < BP_DENOMINATOR);
 		commissionRateInBP = newComm;
 	}
 	
