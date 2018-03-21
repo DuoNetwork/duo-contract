@@ -320,7 +320,7 @@ contract Custodian {
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
-			if (priceDiff.mul(10000).div(lastPrice.priceInWei) <= priceTolInBP) {
+			if (priceDiff.mul(WEI_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
 				acceptPrice(priceInWei, timeInSeconds);
 			} else {
 				// wait for the second price
@@ -341,7 +341,7 @@ contract Custodian {
 					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
-					if (priceDiff.mul(10000).div(firstPrice.priceInWei) <= priceTolInBP) {
+					if (priceDiff.mul(WEI_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
 						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 					} else {
 						// wait for the third price
@@ -572,6 +572,47 @@ contract Custodian {
 		require(_tokens <= allowanceB[_from][_spender]);	 // Check allowance
 		allowanceB[_from][_spender] = allowanceB[_from][_spender].sub(_tokens);
 		transferB(_from, _to, _tokens);
+		return true;
+	}
+
+	//admin function
+	function setMemberThresholdInWei(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		memberThresholdInWei = newValue;
+		return true;
+	}
+
+	function setIterationGasThreshold(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		iterationGasThreshold = newValue;
+		return true;
+	}
+
+	function setPreResetWaitingBlocks(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		preResetWaitingBlocks = newValue;
+		return true;
+	}
+
+	function setPostResetWaitingBlocks(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		postResetWaitingBlocks = newValue;
+		return true;
+	}
+
+	function setPriceTolInBP(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		priceTolInBP = newValue;
+		return true;
+	}
+
+	function setPriceFeedTolInBP(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		priceFeedTolInBP = newValue;
+		return true;
+	}
+
+	function setPriceFeedTimeTol(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		priceFeedTimeTol = newValue;
+		return true;
+	}
+
+	function setPriceUpdateCoolDown(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
+		priceUpdateCoolDown = newValue;
 		return true;
 	}
 }
