@@ -91,6 +91,7 @@ contract Custodian {
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
+	uint priceFeedBlockTimeTol = 2 minutes;
 	uint priceUpdateCoolDown;
 
 	// cycle state variables
@@ -120,7 +121,7 @@ contract Custodian {
 
 	modifier isDuoMember() {
 		DUO duoToken = DUO(duoTokenAddress);
-        require(duoToken.balanceOf(msg.sender) > memberThresholdInWei);
+        require(duoToken.balanceOf(msg.sender) >= memberThresholdInWei);
 		_;
 	}
 
@@ -316,7 +317,8 @@ contract Custodian {
 		inState(State.Trading) 
 		among(priceFeed1, priceFeed2, priceFeed3) 
 		returns (bool success)
-	{
+	{	
+		require(timeInSeconds < now && now.sub(timeInSeconds) <= priceFeedBlockTimeTol);
 		require(timeInSeconds > lastPrice.timeInSeconds + priceUpdateCoolDown);
 		uint priceDiff;
 		if (numOfPrices == 0) {
