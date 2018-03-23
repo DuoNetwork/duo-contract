@@ -318,7 +318,7 @@ contract Custodian {
 		returns (bool success)
 	{	
 		require(timeInSeconds < now);
-		require(timeInSeconds > lastPrice.timeInSeconds + priceUpdateCoolDown);
+		require(timeInSeconds > lastPrice.timeInSeconds.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
@@ -331,7 +331,7 @@ contract Custodian {
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
-			if (timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
+			if (timeInSeconds > firstPrice.timeInSeconds.add(priceUpdateCoolDown)) {
 				if (firstAddr == msg.sender)
 					acceptPrice(priceInWei, timeInSeconds);
 				else
@@ -339,7 +339,8 @@ contract Custodian {
 			} else {
 				require(firstAddr != msg.sender);
 				// if second price times out, use first one
-				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+				if (firstPrice.timeInSeconds.add(priceFeedTimeTol) < timeInSeconds || 
+					firstPrice.timeInSeconds.sub(priceFeedTimeTol) > timeInSeconds) {
 					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
@@ -363,7 +364,8 @@ contract Custodian {
 				require(firstAddr != msg.sender && secondAddr != msg.sender);
 				uint acceptedPriceInWei;
 				// if third price times out, use first one
-				if (firstPrice.timeInSeconds + priceFeedTimeTol > timeInSeconds) {
+				if (firstPrice.timeInSeconds.add(priceFeedTimeTol) < timeInSeconds || 
+					firstPrice.timeInSeconds.sub(priceFeedTimeTol) > timeInSeconds) {
 					acceptedPriceInWei = firstPrice.priceInWei;
 				} else {
 					// take median and proceed
