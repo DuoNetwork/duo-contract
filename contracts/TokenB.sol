@@ -1,4 +1,5 @@
 pragma solidity ^0.4.19;
+import { Custodian } from "./Custodian.sol";
 
 contract TokenB {
 	// Public variables of the token
@@ -62,10 +63,10 @@ contract TokenB {
 	}
 }
 
-contract Custodian {
-	function transferB(address _from, address _to, uint _tokens) public returns (bool success);
-	function transferBFrom(address _spender, address _from, address _to, uint _tokens) public returns (bool success);
-	function approveB(address _sender, address _spender, uint _tokens) public returns (bool success);
-	function checkBalanceB(address add) public returns(uint balance);
-	function checkAllowanceB(address _user, address _spender) public returns(uint value);
-}
+// contract Custodian {
+// 	function transferB(address _from, address _to, uint _tokens) public returns (bool success);
+// 	function transferBFrom(address _spender, address _from, address _to, uint _tokens) public returns (bool success);
+// 	function approveB(address _sender, address _spender, uint _tokens) public returns (bool success);
+// 	function checkBalanceB(address add) public returns(uint balance);
+// 	function checkAllowanceB(address _user, address _spender) public returns(uint value);
+// }
