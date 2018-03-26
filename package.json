@@ -9,6 +9,7 @@
     "build": "./node_modules/.bin/truffle.cmd compile"
   },
   "devDependencies": {
+    "ganache-cli": "^6.1.0",
     "truffle": "^4.1.0"
   }
 }
