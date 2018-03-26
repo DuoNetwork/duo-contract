@@ -1,34 +1,34 @@
 pragma solidity ^0.4.19;
 
 library SafeMath {
-  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-    uint256 c = a * b;
-    assert(a == 0 || c / a == b);
-    return c;
-  }
+	function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+		uint256 c = a * b;
+		assert(a == 0 || c / a == b);
+		return c;
+	}
 
-  function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return c;
-  }
+	function div(uint256 a, uint256 b) internal pure returns (uint256) {
+		// assert(b > 0); // Solidity automatically throws when dividing by 0
+		uint256 c = a / b;
+		// assert(a == b * c + a % b); // There is no case in which this doesn't hold
+		return c;
+	}
 
-  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-    assert(b <= a);
-    return a - b;
-  }
+	function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+		assert(b <= a);
+		return a - b;
+	}
 
-  function add(uint256 a, uint256 b) internal pure returns (uint256) {
-    uint256 c = a + b;
-    assert(c >= a);
-    return c;
-  }
+	function add(uint256 a, uint256 b) internal pure returns (uint256) {
+		uint256 c = a + b;
+		assert(c >= a);
+		return c;
+	}
 }
 
 
 contract DUO {
-    function balanceOf(address tokenOwner) public constant returns (uint balance);
+	function balanceOf(address tokenOwner) public constant returns (uint balance);
 }
 
 contract Custodian {
@@ -104,23 +104,23 @@ contract Custodian {
 	Price secondPrice;
 
 	modifier inState(State _state) {
-        require(state == _state);
-        _;
-    }
+		require(state == _state);
+		_;
+	}
 
 	modifier only(address addr) {
-        require(msg.sender == addr);
-        _;
-    }
+		require(msg.sender == addr);
+		_;
+	}
 
 	modifier among(address addr1, address addr2, address addr3) {
-        require(msg.sender == addr1 || msg.sender == addr2 || msg.sender == addr3);
-        _;
-    }
+		require(msg.sender == addr1 || msg.sender == addr2 || msg.sender == addr3);
+		_;
+	}
 
 	modifier isDuoMember() {
 		DUO duoToken = DUO(duoTokenAddress);
-        require(duoToken.balanceOf(msg.sender) >= memberThresholdInWei);
+		require(duoToken.balanceOf(msg.sender) >= memberThresholdInWei);
 		_;
 	}
 
@@ -154,7 +154,7 @@ contract Custodian {
 		decimals = 18;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
-	    resetPrice.priceInWei = ethPriceInWei;
+		resetPrice.priceInWei = ethPriceInWei;
 		resetPrice.timeInSeconds = now;
 		lastPrice.priceInWei = ethPriceInWei;
 		lastPrice.timeInSeconds = now;
@@ -175,8 +175,8 @@ contract Custodian {
 		navBInWei = 1;
 		priceUpdateCoolDown = p - 10 minutes;
 	}
-    
-    
+	
+	
 	function checkNewUser(address user) internal {
 		if (!existingUsers[user]) {
 			users.push(user);
@@ -189,11 +189,15 @@ contract Custodian {
 	function updateNav() internal {
 		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
 		navAInWei = periodCouponInWei.mul(numOfDays).add(WEI_DENOMINATOR);
-		navBInWei = lastPrice.priceInWei.mul(WEI_DENOMINATOR)
-								.mul(alphaInBP.add(BP_DENOMINATOR))
-								.div(BP_DENOMINATOR)
-								.div(resetPrice.priceInWei)
-								.sub(navAInWei.mul(alphaInBP).div(BP_DENOMINATOR));
+		navBInWei = lastPrice.priceInWei
+						.mul(WEI_DENOMINATOR)
+						.mul(alphaInBP.add(BP_DENOMINATOR))
+						.div(BP_DENOMINATOR)
+						.div(resetPrice.priceInWei)
+						.sub(navAInWei
+							.mul(alphaInBP)
+							.div(BP_DENOMINATOR)
+		);
 	}
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
@@ -451,10 +455,13 @@ contract Custodian {
 	{
 		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		uint tokenValueB = msg.value.sub(feeInWei)
+		uint tokenValueB = msg.value
+							.sub(feeInWei)
 							.mul(resetPrice.priceInWei)
 							.mul(BP_DENOMINATOR)
-							.div(alphaInBP.add(BP_DENOMINATOR));
+							.div(alphaInBP
+								.add(BP_DENOMINATOR)
+		);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		checkNewUser(msg.sender);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
@@ -473,27 +480,27 @@ contract Custodian {
 	}
 	
 	function checkBalanceA(address add) public constant returns(uint) {
-	    return balancesA[add];
+		return balancesA[add];
 	}
 	
 	function checkBalanceB(address add) public constant returns(uint) {
-	    return balancesB[add];
+		return balancesB[add];
 	}
 
 	function checkAllowanceA(address _user, address _spender) public constant returns(uint) {
-	    return allowanceA[_user][_spender];
+		return allowanceA[_user][_spender];
 	}
 
 	function checkAllowanceB(address _user, address _spender) public constant returns(uint) {
-	    return allowanceB[_user][_spender];
+		return allowanceB[_user][_spender];
 	}
 	
-    function transferA(address _from, address _to, uint _tokens) 
+	function transferA(address _from, address _to, uint _tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
 	{
-        // Prevent transfer to 0x0 address. Use burn() instead
+		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
 		require(balancesA[_from] >= _tokens);
@@ -512,15 +519,15 @@ contract Custodian {
 		TransferA(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesA[_from].add(balancesA[_to]) == previousBalances);
-        return true;
-    }
+		return true;
+	}
 
 	function transferB(address _from, address _to, uint _tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
 	{
-        // Prevent transfer to 0x0 address. Use burn() instead
+		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
 		require(balancesB[_from] >= _tokens);
@@ -538,26 +545,26 @@ contract Custodian {
 		TransferB(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesB[_from].add(balancesB[_to]) == previousBalances);
-        return true;
-    }
+		return true;
+	}
 
 	function approveA(address _sender, address _spender, uint _tokens) 
 		public 
 		returns (bool success) 
 	{
-	    allowanceA[_sender][_spender] = _tokens;
-	    return true;
+		allowanceA[_sender][_spender] = _tokens;
+		return true;
 	}
 	
-    function approveB(address _sender, address _spender, uint _tokens) 
+	function approveB(address _sender, address _spender, uint _tokens) 
 		public 
 		returns (bool success) 
 	{
-	    allowanceB[_sender][_spender] = _tokens;
-	    return true;
+		allowanceB[_sender][_spender] = _tokens;
+		return true;
 	}
 
-    function transferAFrom(address _spender, address _from, address _to, uint _tokens) 
+	function transferAFrom(address _spender, address _from, address _to, uint _tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
