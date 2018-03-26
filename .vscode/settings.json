@@ -6,5 +6,17 @@
 	"editor.insertSpaces": false,
 	"vsicons.presets.angular": false,
 	//"eslint.run": "onSave"
-	"solidity.validationDelay": 500
+	"solidity.validationDelay": 500,
+	"solidity.soliumRules": {
+		"imports-on-top": 0,
+		"variable-declarations": 0,
+		"indentation": [
+		  "error",
+		  "tab"
+		],
+		"quotes": [
+		  "error",
+		  "double"
+		]
+	  }
 }
