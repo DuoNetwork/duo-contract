@@ -8,8 +8,9 @@
     "test": "truffle.cmd test",
     "clean": "rimraf build",
     "start": "ganache-cli",
-    "build": "truffle.cmd migrate",
-    "rebuild": "npm run clean && truffle.cmd migrate --reset --compile-all"
+    "deploy": "truffle.cmd migrate --reset --compile-all",
+    "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
+    "deployLive": "npm run clean && truffle.cmd migrate --reset --compile-all --network live"
   },
   "devDependencies": {
     "eslint": "^4.19.1",
