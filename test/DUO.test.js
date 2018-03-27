@@ -19,15 +19,15 @@ contract('DUO', accounts => {
 		});
 	});
 
-	// it('owner should be the default account, first one', () => {
-	// 	return DUO.deployed()
-	// 		.then(instance => {
-	// 			instance.owner.call().then(
-	// 				owner => {
-	// 					console.log(owner.valueOf());
-	// 					assert.equal(owner.valueOf(), accounts[0], "owner is incorrect");
-	// 				}
-	// 			);
-	// 		});
-	// });
+	it('owner should be the default account, first one', () => {
+		return DUO.deployed()
+			.then(instance => {
+				instance.owner.call().then(
+					owner => {
+						console.log(owner.valueOf());
+						assert.equal(owner.valueOf(), accounts[0], "owner is incorrect");
+					}
+				);
+			});
+	});
 });
