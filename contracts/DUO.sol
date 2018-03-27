@@ -17,8 +17,6 @@ contract Owned {
 	}
 }
 
-interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public; }
-
 contract DUO is Owned {
 	// Public variables of the token
 	string public name;

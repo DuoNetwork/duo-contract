@@ -62,11 +62,3 @@ contract TokenA {
 		return true;
 	}
 }
-
-// contract Custodian {
-// 	function transferA(address _from, address _to, uint _tokens) public returns (bool success);
-// 	function transferAFrom(address _spender, address _from, address _to, uint _tokens) public returns (bool success);
-// 	function approveA(address _sender, address _spender, uint _tokens) public returns (bool success);
-// 	function checkBalanceA(address add) public returns(uint balance);
-// 	function checkAllowanceA(address _user, address _spender) public returns(uint value);
-// }

@@ -1,4 +1,5 @@
 pragma solidity ^0.4.19;
+import { DUO } from "./DUO.sol";
 
 library SafeMath {
 	function mul(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -24,11 +25,6 @@ library SafeMath {
 		assert(c >= a);
 		return c;
 	}
-}
-
-
-contract DUO {
-	function balanceOf(address tokenOwner) public constant returns (uint balance);
 }
 
 contract Custodian {
@@ -150,6 +146,7 @@ contract Custodian {
 		uint gasThreshold) 
 		public 
 	{
+		state = State.Trading;
 		admin = msg.sender;
 		decimals = 18;
 		commissionRateInBP = 100;
