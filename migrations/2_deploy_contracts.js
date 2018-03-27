@@ -7,7 +7,7 @@ var TokenB = artifacts.require('./TokenB.sol');
 module.exports = (deployer, network, accounts) => {
 	let CustodianToDeploy = network !== 'development' ? Custodian : CustodianMock;
 	return deployer
-		.deploy(DUO, 10000, 'DUO', 'DUO', accounts[0])
+		.deploy(DUO, 10000, 'DUO', 'DUO')
 		.then(() =>
 			deployer
 				.deploy(
@@ -31,9 +31,9 @@ module.exports = (deployer, network, accounts) => {
 				.then(() =>
 					deployer
 						.deploy(TokenA, 'TokenA', 'TKA', CustodianToDeploy.address)
-						.then(() => {
-							deployer.deploy(TokenB, 'TokenB', 'TKB', CustodianToDeploy.address);
-						})
+						.then(() =>
+							deployer.deploy(TokenB, 'TokenB', 'TKB', CustodianToDeploy.address)
+						)
 						.catch(error => console.log(error))
 				)
 				.catch(error => console.log(error))

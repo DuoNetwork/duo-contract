@@ -11,7 +11,7 @@ contract('DUO', accounts => {
 				.call()
 				.then(totalSupply =>
 					assert.equal(
-						totalSupply.valueOf() / Math.pow(10, 18),
+						web3.utils.fromWei(totalSupply.valueOf()),
 						10000,
 						'totalSupply not equal to 10000'
 					)
@@ -29,5 +29,25 @@ contract('DUO', accounts => {
 					}
 				);
 			});
+	});
+
+	it('should show balance', () => {
+		return DUO.deployed().then(instance => assert.isTrue(!instance));
+	});
+
+	it('should show allowance', () => {
+		return DUO.deployed().then(instance => assert.isTrue(!instance));
+	});
+
+	it('should be able to transfer', () => {
+		return DUO.deployed().then(instance => assert.isTrue(!instance));
+	});
+
+	it('should not transfer more than balance', () => {
+		return DUO.deployed().then(instance => assert.isTrue(!instance));
+	});
+
+	it('should be able to approve', () => {
+		return DUO.deployed().then(instance => assert.isTrue(!instance));
 	});
 });

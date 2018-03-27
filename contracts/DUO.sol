@@ -1,23 +1,6 @@
 pragma solidity ^0.4.19;
 
-contract Owned {
-	address public owner;
-
-	function Owned() public {
-		owner = msg.sender;
-	}
-
-	modifier onlyOwner {
-		require(msg.sender == owner);
-		_;
-	}
-
-	function transferOwnership(address newOwner) onlyOwner public {
-		owner = newOwner;
-	}
-}
-
-contract DUO is Owned {
+contract DUO {
 	// Public variables of the token
 	string public name;
 	string public symbol;
@@ -41,12 +24,9 @@ contract DUO is Owned {
 	function DUO (
 		uint256 initialSupply,
 		string tokenName,
-		string tokenSymbol,
-		address centralMinter
+		string tokenSymbol
 	) public 
 	{
-		if (centralMinter != 0) 
-			owner = centralMinter;
 		totalSupply = initialSupply * 10 ** uint256(decimals);  // Update total supply with the decimal amount
 		balanceOf[msg.sender] = totalSupply;				// Give the creator all initial tokens
 		name = tokenName;								   // Set the name for display purposes
@@ -115,7 +95,4 @@ contract DUO is Owned {
 		Approval(msg.sender, _spender, _value);
 		return true;
 	}
-
-
-
 }
