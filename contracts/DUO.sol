@@ -31,6 +31,7 @@ contract DUO is Owned {
 
 	// This generates a public event on the blockchain that will notify clients
 	event Transfer(address indexed from, address indexed to, uint256 value);
+	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 
 	/**
 	 * Constrctor function
@@ -111,6 +112,7 @@ contract DUO is Owned {
 	 */
 	function approve(address _spender, uint256 _value) public returns (bool success) {
 		allowance[msg.sender][_spender] = _value;
+		Approval(msg.sender, _spender, _value);
 		return true;
 	}
 
