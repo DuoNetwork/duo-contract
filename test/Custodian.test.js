@@ -1,4 +1,4 @@
-let Custodian = artifacts.require('./Custodian.sol');
+let Custodian = artifacts.require('./CustodianMock.sol');
 
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
@@ -11,5 +11,11 @@ contract('Custodian', () => {
 		return Custodian.deployed()
 			.then(instance => instance.state.call())
 			.then(state => assert.isTrue(state.valueOf() === STATE_TRADING));
+	});
+
+	it('priceFeedTolInBP should equal 100', () => {
+		return Custodian.deployed()
+			.then(instance => instance.GETpriceFeedTolInBP.call())
+			.then(priceFeedTolInBP => assert.equal(priceFeedTolInBP.valueOf(), 100, "priceFeedTolInBP not equal to 100"));
 	});
 });

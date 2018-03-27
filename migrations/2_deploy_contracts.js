@@ -4,19 +4,14 @@ var CustodianMock = artifacts.require('./CustodianMock.sol');
 var TokenA = artifacts.require('./TokenA.sol');
 var TokenB = artifacts.require('./TokenB.sol');
 
-let networkContract = {
-	development: CustodianMock,
-	kovan: Custodian,
-	live: Custodian
-};
-
-module.exports = function(deployer, network, accounts) {
-	deployer
+module.exports = (deployer, network, accounts) => {
+	let CustodianToDeploy = network !== 'development' ? Custodian : CustodianMock;
+	return deployer
 		.deploy(DUO, 10000, 'DUO', 'DUO', accounts[0])
 		.then(() =>
 			deployer
 				.deploy(
-					networkContract[network],
+					CustodianToDeploy,
 					582000000000000000000,
 					accounts[0],
 					DUO.address,
@@ -35,9 +30,9 @@ module.exports = function(deployer, network, accounts) {
 				)
 				.then(() =>
 					deployer
-						.deploy(TokenA, 'TokenA', 'TKA', networkContract[network].address)
+						.deploy(TokenA, 'TokenA', 'TKA', CustodianToDeploy.address)
 						.then(() => {
-							deployer.deploy(TokenB, 'TokenB', 'TKB', networkContract[network].address);
+							deployer.deploy(TokenB, 'TokenB', 'TKB', CustodianToDeploy.address);
 						})
 						.catch(error => console.log(error))
 				)
