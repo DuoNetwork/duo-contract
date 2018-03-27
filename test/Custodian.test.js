@@ -15,7 +15,7 @@ contract('Custodian', () => {
 
 	it('priceFeedTolInBP should equal 100', () => {
 		return Custodian.deployed()
-			.then(instance => instance.GETpriceFeedTolInBP.call())
+			.then(instance => instance.getPriceFeedTolInBP.call())
 			.then(priceFeedTolInBP => assert.equal(priceFeedTolInBP.valueOf(), 100, "priceFeedTolInBP not equal to 100"));
 	});
 });

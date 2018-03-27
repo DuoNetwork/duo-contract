@@ -2,7 +2,7 @@ pragma solidity ^0.4.19;
 
 import "./Custodian.sol";
 
-contract CustodianMock is Custodian () {
+contract CustodianMock is Custodian {
 
 	function CustodianMock (
 		uint ethPriceInWei, 
@@ -43,11 +43,11 @@ contract CustodianMock is Custodian () {
 
 
 
-	function GETpriceFeedTolInBP() public returns (uint256 _priceFeedTolInBP) {
+	function getPriceFeedTolInBP() public view returns (uint256 _priceFeedTolInBP) {
 		return priceFeedTolInBP;
 	}
 
-	function GETfeeAccumulatedInWei() public returns (uint256 _feeAccumulatedInWei) {
+	function getFeeAccumulatedInWei() public view returns (uint256 _feeAccumulatedInWei) {
 		return feeAccumulatedInWei;
 	}
 
