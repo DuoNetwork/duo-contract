@@ -36,10 +36,35 @@ contract('DUO', accounts => {
 		});
 	});
 
+	it('should be able to approve', () => {
+		return DUO.deployed().then(instance => {
+			instance.approve.call(accounts[1],100,{from:accounts[0]}).then(success =>{
+				assert.isTrue(success,"approve not working");
+			})
+		});
+	});
+
 	// it('should show allowance', () => {
-	// 	return DUO.deployed().then(instance => assert.isTrue(!instance));
+	// 	return DUO.deployed().then(instance => {
+	// 		instance.allowance
+	// 			.call(accounts[0],accounts[1])
+	// 			.then(allowance =>{
+	// 				console.log(allowance.toNumber());
+	// 				// assert.equal(
+	// 				// 	balance.toNumber() / 1e18,
+	// 				// 	10000,
+	// 				// 	'balance of owner not equal to 10000'
+	// 				// )
+
+	// 			}
+
+					
+	// 			);
+	// 	});
 	// });
 
+
+	
 	// it('should be able to transfer', () => {
 	// 	return DUO.deployed().then(instance => assert.isTrue(!instance));
 	// });
@@ -48,7 +73,5 @@ contract('DUO', accounts => {
 	// 	return DUO.deployed().then(instance => assert.isTrue(!instance));
 	// });
 
-	// it('should be able to approve', () => {
-	// 	return DUO.deployed().then(instance => assert.isTrue(!instance));
-	// });
+	
 });
