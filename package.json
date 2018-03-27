@@ -5,11 +5,11 @@
   "description": "israfel",
   "author": "FinBook Pte Ltd",
   "scripts": {
-    "test": "./node_modules/.bin/truffle.cmd test",
+    "test": "truffle.cmd test",
     "clean": "rimraf build",
     "start": "ganache-cli",
-    "build": "./node_modules/.bin/truffle.cmd migrate",
-    "rebuild": "npm run clean && npm run build"
+    "build": "truffle.cmd migrate",
+    "rebuild": "npm run clean && truffle.cmd migrate --reset --compile-all"
   },
   "devDependencies": {
     "eslint": "^4.19.1",
