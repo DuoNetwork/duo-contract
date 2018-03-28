@@ -10,14 +10,11 @@ contract('DUO', accounts => {
 	const WEI_DENOMINATOR = 1e18;
 	const TOTAL_SUPPLY = 10000;
 
-	before(done => {
+	before(() =>
 		DUO.new(web3.utils.toWei(TOTAL_SUPPLY + ''), 'DUO', 'DUO', { from: creator }).then(
-			instance => {
-				duoContract = instance;
-				done();
-			}
-		);
-	});
+			instance => (duoContract = instance)
+		)
+	);
 
 	it('total supply should be 10000', () => {
 		return duoContract.totalSupply.call().then(supply => {

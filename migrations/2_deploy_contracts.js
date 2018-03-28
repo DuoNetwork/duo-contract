@@ -6,35 +6,42 @@ var CustodianMock = artifacts.require('./CustodianMock.sol');
 var TokenA = artifacts.require('./TokenA.sol');
 var TokenB = artifacts.require('./TokenB.sol');
 
+const InitParas = require("./contractInitParas.json");
+const CustodianInit = InitParas["Custodian"];
+const DuoInit = InitParas["DUO"];
+const TokenAInit = InitParas["TokenA"];
+const TokenBInit = InitParas["TokenB"];
+
+
 module.exports = (deployer, network, accounts) => {
 	let CustodianToDeploy = network !== 'development' ? Custodian : CustodianMock;
 	return deployer
-		.deploy(DUO, web3.utils.toWei("10000"), 'DUO', 'DUO')
+		.deploy(DUO, web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol)
 		.then(() =>
 			deployer
 				.deploy(
 					CustodianToDeploy,
-					web3.utils.toWei("582"),
+					web3.utils.toWei(CustodianInit.ethInitPrice),
 					accounts[0],
 					DUO.address,
 					accounts[0],
 					accounts[1],
 					accounts[2],
-					10000,
-					web3.utils.toWei("0.0002"),
-					web3.utils.toWei("1.2"),
-					web3.utils.toWei("1.5"),
-					web3.utils.toWei("0.25"),
-					300,
-					3600,
-					0,
-					200000
+					CustodianInit.alphaInBP,
+					web3.utils.toWei(CustodianInit.couponRate),
+					web3.utils.toWei(CustodianInit.hp),
+					web3.utils.toWei(CustodianInit.hu),
+					web3.utils.toWei(CustodianInit.hd),
+					CustodianInit.commissionRateInBP,
+					CustodianInit.period,
+					CustodianInit.memberThreshold,
+					CustodianInit.gasThreshhold
 				)
 				.then(() =>
 					deployer
-						.deploy(TokenA, 'TokenA', 'TKA', CustodianToDeploy.address)
+						.deploy(TokenA, TokenAInit.tokenName, TokenAInit.tokenSymbol, CustodianToDeploy.address)
 						.then(() =>
-							deployer.deploy(TokenB, 'TokenB', 'TKB', CustodianToDeploy.address)
+							deployer.deploy(TokenB, TokenBInit.tokenName, TokenBInit.tokenSymbol, CustodianToDeploy.address)
 						)
 						.catch(error => console.log(error))
 				)
