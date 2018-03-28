@@ -54,7 +54,7 @@ contract('DUO', accounts => {
 			assert.equal(
 				allowance.toNumber() / WEI_DENOMINATOR,
 				100,
-				'balance of owner not equal to 100'
+				'allowance of alice not equal to 100'
 			);
 		});
 	});
@@ -79,12 +79,35 @@ contract('DUO', accounts => {
 			);
 	});
 
-	it('alice should transferFrom creator to bob', () => {
+	it('alice cannot transfer 200 from creator to bob', () => {
+		return duoContract
+			.transferFrom(creator, bob, web3.utils.toWei('200'), { from: alice })
+			.then(() => assert.isTrue(false, 'can transfer of more than balance'))
+			.catch(err =>
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				)
+			);
+	});
+
+	it('alice should transfer 50 from creator to bob', () => {
 		return duoContract
 			.transferFrom(creator, bob, web3.utils.toWei('50'), { from: alice })
 			.then(transferFrom => {
 				assert.isTrue(!!transferFrom, 'Not able to transferFrom');
 			});
+	});
+
+	it('allowance for alice should be 50', () => {
+		return duoContract.allowance.call(creator, alice).then(allowance => {
+			assert.equal(
+				allowance.toNumber() / WEI_DENOMINATOR,
+				50,
+				'allowance of alice not equal to 50'
+			);
+		});
 	});
 
 	it('check balance of bob equal 60', () => {
