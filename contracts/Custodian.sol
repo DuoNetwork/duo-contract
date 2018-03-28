@@ -437,8 +437,8 @@ contract Custodian {
 	}
 
 	function collectFee(uint amountInWei) public only(feeCollector) inState(State.Trading) returns (bool success) {
-		require(amountInWei>0);
-		require(amountInWei<=feeAccumulatedInWei);
+		require(amountInWei > 0);
+		require(amountInWei <= feeAccumulatedInWei);
 		feeCollector.transfer(amountInWei);
 		return true;
 	}
@@ -466,11 +466,11 @@ contract Custodian {
 		return this.balance;
 	}
 
-	function setFeeAddress(address newAddress) public only(admin) {
+	function setFeeAddress(address newAddress) public only(admin) inState(State.Trading) {
 		feeCollector = newAddress;
 	}
 
-	function setCommission (uint newComm) public only(admin) {
+	function setCommission(uint newComm) public only(admin) inState(State.Trading) {
 		require(newComm > 0);
 		require(newComm < BP_DENOMINATOR);
 		commissionRateInBP = newComm;
