@@ -420,7 +420,7 @@ contract Custodian {
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
 		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
-		uint amtEthInWei = (deductAmtInWeiA.add(deductAmtInWeiB)).div(resetPrice.priceInWei);
+		uint amtEthInWei = deductAmtInWeiA.add(deductAmtInWeiB).mul(WEI_DENOMINATOR).div(resetPrice.priceInWei);
 		uint feeInWei = getFee(amtEthInWei);
 		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
 		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
@@ -456,6 +456,7 @@ contract Custodian {
 							.sub(feeInWei)
 							.mul(resetPrice.priceInWei)
 							.mul(BP_DENOMINATOR)
+							.div(WEI_DENOMINATOR)
 							.div(alphaInBP
 								.add(BP_DENOMINATOR)
 		);
