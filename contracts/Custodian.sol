@@ -57,7 +57,7 @@ contract Custodian {
 	address[] public users;
 	mapping (address => bool) public existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
-	uint feeAccumulatedInWei;
+	uint public feeAccumulatedInWei;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
@@ -448,7 +448,7 @@ contract Custodian {
 		payable 
 		inState(State.Trading) 
 		isDuoMember() 
-		returns (uint balance) 
+		returns (bool success) 
 	{
 		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
@@ -464,7 +464,7 @@ contract Custodian {
 		checkNewUser(msg.sender);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
 		balancesB[msg.sender] = balancesB[msg.sender].add(tokenValueB);
-		return this.balance;
+		return true;
 	}
 
 	function setFeeAddress(address newAddress) public only(admin) inState(State.Trading) {

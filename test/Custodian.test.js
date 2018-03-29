@@ -23,12 +23,12 @@ contract('Custodian', accounts => {
 	const pf1 = accounts[4];
 	const pf2 = accounts[5];
 	const pf3 = accounts[6];
-	const feeCollector = accounts[7];
+	const fc = accounts[7];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
 
-	before(() =>
+	const initContracts = () =>
 		DUO.new(web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol, {
 			from: creator
 		})
@@ -36,7 +36,7 @@ contract('Custodian', accounts => {
 			.then(() =>
 				Custodian.new(
 					web3.utils.toWei(CustodianInit.ethInitPrice),
-					feeCollector,
+					fc,
 					duoContract.address,
 					pf1,
 					pf2,
@@ -54,19 +54,24 @@ contract('Custodian', accounts => {
 						from: creator
 					}
 				).then(instance => (custodianContract = instance))
-			)
-	);
+			);
 
 	describe('constructor', () => {
+		before(initContracts);
+
+		it('state should be trading', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading')
+				);
+		});
+
 		it('feeCollector should equal specified value', () => {
 			return custodianContract.getFeeCollector
 				.call()
-				.then(_feeCollector =>
-					assert.equal(
-						_feeCollector.valueOf(),
-						feeCollector,
-						'feeCollector specified incorrect'
-					)
+				.then(feeCollector =>
+					assert.equal(feeCollector.valueOf(), fc, 'feeCollector specified incorrect')
 				);
 		});
 
@@ -100,50 +105,6 @@ contract('Custodian', accounts => {
 				.then(admin => assert.equal(admin.valueOf(), creator, 'admin specified incorrect'));
 		});
 
-		it('priceFeedTolInBP should equal 100', () => {
-			return custodianContract.getPriceFeedTolInBP
-				.call()
-				.then(priceFeedTolInBP =>
-					assert.equal(
-						priceFeedTolInBP.valueOf(),
-						100,
-						'priceFeedTolInBP not equal to 100'
-					)
-				);
-		});
-
-		it('feeAccumulatedInWei should equal 0', () => {
-			return custodianContract.getFeeAccumulatedInWei
-				.call()
-				.then(feeAccumulated =>
-					assert.equal(feeAccumulated.valueOf(), 0, 'feeAccumulated specified incorrect')
-				);
-		});
-
-		it('preResetWaitingBlocks should equal 10', () => {
-			return custodianContract.getPreResetWaitingBlocks
-				.call()
-				.then(preResetWaitingBlocks =>
-					assert.equal(
-						preResetWaitingBlocks.valueOf(),
-						10,
-						'preResetWaitingBlocks specified incorrect'
-					)
-				);
-		});
-
-		it('postResetWaitingBlocks should equal 10', () => {
-			return custodianContract.getPostResetWaitingBlocks
-				.call()
-				.then(postResetWaitingBlocks =>
-					assert.equal(
-						postResetWaitingBlocks.valueOf(),
-						10,
-						'postResetWaitingBlocks specified incorrect'
-					)
-				);
-		});
-
 		it('priceTolInBP should equal 500', () => {
 			return custodianContract.getPriceTolInBP
 				.call()
@@ -152,14 +113,14 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('priceFeedTimeTol should equal 60', () => {
-			return custodianContract.getPriceFeedTimeTol
+		it('period should equal specified value', () => {
+			return custodianContract.period
 				.call()
-				.then(priceFeedTimeTol =>
+				.then(period =>
 					assert.equal(
-						priceFeedTimeTol.valueOf(),
-						60,
-						'priceFeedTimeTol specified incorrect'
+						period.valueOf(),
+						CustodianInit.period,
+						'period specified incorrect'
 					)
 				);
 		});
@@ -175,62 +136,20 @@ contract('Custodian', accounts => {
 					)
 				);
 		});
-
-		it('numOfPrices should equal 0', () => {
-			return custodianContract.getNumOfPrices
-				.call()
-				.then(numOfPrices =>
-					assert.equal(numOfPrices.valueOf(), 0, 'numOfPrices specified incorrect')
-				);
-		});
-
-		it('lastPreResetBlockNo should equal 0', () => {
-			return custodianContract.getLastPreResetBlockNo
-				.call()
-				.then(lastPreResetBlockNo =>
-					assert.equal(
-						lastPreResetBlockNo.valueOf(),
-						0,
-						'lastPreResetBlockNo specified incorrect'
-					)
-				);
-		});
-
-		it('lastPostResetBlockNo should equal 0', () => {
-			return custodianContract.getLastPostResetBlockNo
-				.call()
-				.then(lastPostResetBlockNo =>
-					assert.equal(
-						lastPostResetBlockNo.valueOf(),
-						0,
-						'lastPostResetBlockNo specified incorrect'
-					)
-				);
-		});
-
-		it('nextResetAddrIndex should equal 0', () => {
-			return custodianContract.getNextResetAddrIndex
-				.call()
-				.then(nextResetAddrIndex =>
-					assert.equal(
-						nextResetAddrIndex.valueOf(),
-						0,
-						'nextResetAddrIndex specified incorrect'
-					)
-				);
-		});
 	});
 
 	describe('creation', () => {
 		before(() =>
-			duoContract
-				.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator })
-				.then(() =>
-					duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator })
-				)
+			initContracts().then(() =>
+				duoContract
+					.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator })
+					.then(() =>
+						duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator })
+					)
+			)
 		);
 
-		it('should create token A and B', () => {
+		it('should only allow duo member to create', () => {
 			return custodianContract
 				.create({ from: nonDuoMember, value: 1 * WEI_DENOMINATOR })
 				.then(() => {
@@ -245,16 +164,19 @@ contract('Custodian', accounts => {
 				});
 		});
 
-		it('should only allow duo member to create', () => {
-			return custodianContract
-				.create({ from: alice, value: 1 * WEI_DENOMINATOR })
-				.then(create => {
-					assert.isTrue(!!create, 'duo member is not able to create');
+		it('should create token A and B', () => {
+			return custodianContract.create
+				.call({ from: alice, value: 1 * WEI_DENOMINATOR })
+				.then(success => {
+					// first check return value with call()
+					assert.isTrue(success, 'duo member is not able to create');
+					// then send transaction to check effects
+					return custodianContract.create({ from: alice, value: 1 * WEI_DENOMINATOR });
 				});
 		});
 
 		it('feeAccumulated should be updated', () => {
-			return custodianContract.getFeeAccumulatedInWei.call().then(feeAccumulated => {
+			return custodianContract.feeAccumulatedInWei.call().then(feeAccumulated => {
 				let fee = 1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 				assert.equal(feeAccumulated.valueOf(), fee, 'feeAccumulated not updated correctly');
 			});
@@ -267,21 +189,23 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A and B correctly', () => {
-			let feeInWei =1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
-			let tokenValueB =(1 * WEI_DENOMINATOR - feeInWei) *
-						web3.utils.toWei(CustodianInit.ethInitPrice) /
-						WEI_DENOMINATOR /
-						(CustodianInit.alphaInBP + BP_DENOMINATOR) *
-						BP_DENOMINATOR;
+			let feeInWei = 1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+			let tokenValueB =
+				(1 * WEI_DENOMINATOR - feeInWei) *
+				web3.utils.toWei(CustodianInit.ethInitPrice) /
+				WEI_DENOMINATOR /
+				(CustodianInit.alphaInBP + BP_DENOMINATOR) *
+				BP_DENOMINATOR;
 			let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
-			return custodianContract.balancesB
-				.call(alice)
-				.then(balanceB =>  {
-					return custodianContract.balancesA.call(alice).then((balanceA) => {
-						// console.log(balanceA.toNumber(), balanceB.toNumber());
-						assert.isTrue( balanceA.toNumber() === tokenValueA &&  balanceB.toNumber() === tokenValueB, "balance not updated correctly");
-					});
+			return custodianContract.balancesB.call(alice).then(balanceB => {
+				return custodianContract.balancesA.call(alice).then(balanceA => {
+					// console.log(balanceA.toNumber(), balanceB.toNumber());
+					assert.isTrue(
+						balanceA.toNumber() === tokenValueA && balanceB.toNumber() === tokenValueB,
+						'balance not updated correctly'
+					);
 				});
+			});
 		});
 	});
 

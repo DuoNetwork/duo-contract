@@ -75,10 +75,6 @@ contract CustodianMock is Custodian {
 		return priceFeedTolInBP;
 	}
 
-	function getFeeAccumulatedInWei() public view returns (uint256 _feeAccumulatedInWei) {
-		return feeAccumulatedInWei;
-	}
-
 	function getPreResetWaitingBlocks() public view returns (uint256 _preResetWaitingBlocks) {
 		return preResetWaitingBlocks;
 	}
