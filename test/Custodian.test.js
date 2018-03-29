@@ -12,6 +12,9 @@ const STATE_UPWARD_RESET = '2';
 const STATE_DOWNWARD_RESET = '3';
 const STATE_POST_RESET = '4';
 
+const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
+const VM_INVALID_OPCODE_MSG = "VM Exception while processing transaction: invalid opcode";
+
 contract('Custodian', accounts => {
 	let custodianContract;
 	let duoContract;
@@ -158,7 +161,7 @@ contract('Custodian', accounts => {
 				.catch(err => {
 					assert.equal(
 						err.message,
-						'VM Exception while processing transaction: revert',
+						VM_REVERT_MSG,
 						'non DUO member still can create Tranche Token'
 					);
 				});
@@ -209,31 +212,117 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	// describe('redemption', () => {
-	// 	it('should only allow duo member to redeem', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+	describe('redemption', () => {
+		before(() =>
+			initContracts().then(() =>
+				duoContract
+					.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator })
+					.then(() =>
+						duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator })
+					)
+					.then(() => duoContract.transfer(bob, 100 * WEI_DENOMINATOR, { from: creator }))
+					.then(() =>
+						custodianContract.create({ from: alice, value: 1 * WEI_DENOMINATOR })
+					)
+			)
+		);
 
-	// 	it('should collect fee', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('nonduo member should not redeem', () => {
+			return custodianContract.redeem
+				.call(28000000000000000000, 29000000000000000000, { from: nonDuoMember })
+				.then(() => {
+					assert.isTrue(false, 'the transaction should revert');
+				})
+				.catch(err => {
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'non DUO member still can redeem Tranche Token'
+					);
+				});
+		});
 
-	// 	it('should update user list if required', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('should only redeem token value leess than balance', () => {
+			return custodianContract
+				.redeem(2800000000000000000000, 2900000000000000000000, { from: alice })
+				.then(() => {
+					assert.isTrue(false, 'duomember not able to create more than allowed');
+					// console.log(redeem);
+				})
+				.catch(err => {
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'non DUO member still can create Tranche Token'
+					);
+				});
+		});
 
-	// 	it('should update A and B balance correctly', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('should only redeem token value greater than 0', () => {
+			return custodianContract.redeem(-28000000000000000000, 29000000000000000000, { from: alice })
+				.then(() => {
+					assert.isTrue(false, 'duomember not able to create more than allowed');
+				})
+				.catch(err => {
+					assert.equal(
+						err.message,
+						VM_INVALID_OPCODE_MSG,
+						'non DUO member still can create Tranche Token'
+					);
+				});
+		});
 
-	// 	it('should update pending withdraw amount correctly', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		
+		// it('only duo member can redeem', () => {
+		// 	let amtInWeiA = 28000000000000000000;
+		// 	let amtInWeiB = 29000000000000000000;
+		// 	let adjAmtInWeiA = amtInWeiA * BP_DENOMINATOR / CustodianInit.alphaInBP;
+		// 	let deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
+		// 	let deductAmtInWeiA = deductAmtInWeiB * CustodianInit.alphaInBP / BP_DENOMINATOR;
+		// 	let amtEthInWei = (deductAmtInWeiA + deductAmtInWeiB) / web3.utils.toWei(CustodianInit.ethInitPrice) * WEI_DENOMINATOR;
+		// 	let fee = amtEthInWei * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
-	// 	it('should allow user to withdraw ETH', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
+
+		// 	return custodianContract.redeem
+		// 		.call(amtInWeiA, amtInWeiB, { from: alice })
+		// 		.then(success => {
+		// 			assert.isTrue(success, 'duomember not able to create');
+		// 			return custodianContract.redeem(amtInWeiA, amtInWeiB, { from: alice });
+		// 		}).then(
+					
+
+		// 		)
+		// });
+
+		// it('should update A and B balance correctly', () => {
+			
+		
+		
+	
+	
+		// balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
+		// balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
+		// feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+		// ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
+
+		// });
+
+		// it('should collect fee', () => {
+		// 	return assert.isTrue(false);
+		// });
+
+		// it('should update user list if required', () => {
+		// 	return assert.isTrue(false);
+		// });
+
+		// it('should update pending withdraw amount correctly', () => {
+		// 	return assert.isTrue(false);
+		// });
+
+		// it('should allow user to withdraw ETH', () => {
+		// 	return assert.isTrue(false);
+		// });
+	});
 
 	// describe('only admin', () => {
 	// 	it('should be able to set fee address', () => {
