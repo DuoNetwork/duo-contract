@@ -13,17 +13,17 @@ const STATE_DOWNWARD_RESET = '3';
 const STATE_POST_RESET = '4';
 
 contract('Custodian', accounts => {
-
 	let custodianContract;
 	let duoContract;
 
 	const creator = accounts[0];
-	const alice = accounts[1];
+	const alice = accounts[1]; //duoMember
 	const bob = accounts[2];
-	const pf1 = accounts[3];
-	const pf2 = accounts[4];
-	const pf3 = accounts[5];
-	const feeCollector = accounts[6];
+	const nonDuoMember = accounts[3];
+	const pf1 = accounts[4];
+	const pf2 = accounts[5];
+	const pf3 = accounts[6];
+	const feeCollector = accounts[7];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -33,6 +33,8 @@ contract('Custodian', accounts => {
 			from: creator
 		})
 			.then(instance => (duoContract = instance))
+			.then( () => duoContract.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator }))
+			.then( () => duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator }))
 			.then(() =>
 				Custodian.new(
 					web3.utils.toWei(CustodianInit.ethInitPrice),
@@ -57,110 +59,189 @@ contract('Custodian', accounts => {
 			)
 	);
 
-
 	describe('constructor', () => {
-	
 		it('feeCollector should equal specified value', () => {
-			return custodianContract.getFeeCollector.call()
-				.then(_feeCollector => assert.equal(_feeCollector.valueOf(), feeCollector, "feeCollector specified incorrect"));
+			return custodianContract.getFeeCollector
+				.call()
+				.then(_feeCollector =>
+					assert.equal(
+						_feeCollector.valueOf(),
+						feeCollector,
+						'feeCollector specified incorrect'
+					)
+				);
 		});
 
 		it('priceFeed1 should equal specified value', () => {
-			return custodianContract.getPriceFeed1.call()
-				.then(priceFeed1 => assert.equal(priceFeed1.valueOf(), pf1, "priceFeed1 specified incorrect"));
+			return custodianContract.getPriceFeed1
+				.call()
+				.then(priceFeed1 =>
+					assert.equal(priceFeed1.valueOf(), pf1, 'priceFeed1 specified incorrect')
+				);
 		});
 
 		it('priceFeed2 should equal specified value', () => {
-			return custodianContract.getPriceFeed2.call()
-				.then(priceFeed2 => assert.equal(priceFeed2.valueOf(), pf2, "priceFeed2 specified incorrect"));
+			return custodianContract.getPriceFeed2
+				.call()
+				.then(priceFeed2 =>
+					assert.equal(priceFeed2.valueOf(), pf2, 'priceFeed2 specified incorrect')
+				);
 		});
 
 		it('priceFeed3 should equal specified value', () => {
-			return custodianContract.getPriceFeed3.call()
-				.then(priceFeed3 => assert.equal(priceFeed3.valueOf(), pf3, "priceFeed3 specified incorrect"));
+			return custodianContract.getPriceFeed3
+				.call()
+				.then(priceFeed3 =>
+					assert.equal(priceFeed3.valueOf(), pf3, 'priceFeed3 specified incorrect')
+				);
 		});
 
 		it('admin should equal specified value', () => {
-			return custodianContract.getAdmin.call()
-				.then(admin => assert.equal(admin.valueOf(), creator, "admin specified incorrect"));
+			return custodianContract.getAdmin
+				.call()
+				.then(admin => assert.equal(admin.valueOf(), creator, 'admin specified incorrect'));
 		});
 
 		it('priceFeedTolInBP should equal 100', () => {
-			return custodianContract.getPriceFeedTolInBP.call()
-				.then(priceFeedTolInBP => assert.equal(priceFeedTolInBP.valueOf(), 100, "priceFeedTolInBP not equal to 100"));
+			return custodianContract.getPriceFeedTolInBP
+				.call()
+				.then(priceFeedTolInBP =>
+					assert.equal(
+						priceFeedTolInBP.valueOf(),
+						100,
+						'priceFeedTolInBP not equal to 100'
+					)
+				);
 		});
 
 		it('feeAccumulatedInWei should equal 0', () => {
-			return custodianContract.getFeeAccumulatedInWei.call()
-				.then(feeAccumulated => assert.equal(feeAccumulated.valueOf(), 0, "feeAccumulated specified incorrect"));
+			return custodianContract.getFeeAccumulatedInWei
+				.call()
+				.then(feeAccumulated =>
+					assert.equal(feeAccumulated.valueOf(), 0, 'feeAccumulated specified incorrect')
+				);
 		});
 
 		it('preResetWaitingBlocks should equal 10', () => {
-			return custodianContract.getPreResetWaitingBlocks.call()
-				.then(preResetWaitingBlocks => assert.equal(preResetWaitingBlocks.valueOf(), 10, "preResetWaitingBlocks specified incorrect"));
+			return custodianContract.getPreResetWaitingBlocks
+				.call()
+				.then(preResetWaitingBlocks =>
+					assert.equal(
+						preResetWaitingBlocks.valueOf(),
+						10,
+						'preResetWaitingBlocks specified incorrect'
+					)
+				);
 		});
 
 		it('postResetWaitingBlocks should equal 10', () => {
-			return custodianContract.getPostResetWaitingBlocks.call()
-				.then(postResetWaitingBlocks => assert.equal(postResetWaitingBlocks.valueOf(), 10, "postResetWaitingBlocks specified incorrect"));
+			return custodianContract.getPostResetWaitingBlocks
+				.call()
+				.then(postResetWaitingBlocks =>
+					assert.equal(
+						postResetWaitingBlocks.valueOf(),
+						10,
+						'postResetWaitingBlocks specified incorrect'
+					)
+				);
 		});
 
 		it('priceTolInBP should equal 500', () => {
-			return custodianContract.getPriceTolInBP.call()
-				.then(getPriceTolInBP => assert.equal(getPriceTolInBP.valueOf(), 500, "priceTolInBP specified incorrect"));
+			return custodianContract.getPriceTolInBP
+				.call()
+				.then(getPriceTolInBP =>
+					assert.equal(getPriceTolInBP.valueOf(), 500, 'priceTolInBP specified incorrect')
+				);
 		});
 
 		it('priceFeedTimeTol should equal 60', () => {
-			return custodianContract.getPriceFeedTimeTol.call()
-				.then(priceFeedTimeTol => assert.equal(priceFeedTimeTol.valueOf(), 60, "priceFeedTimeTol specified incorrect"));
+			return custodianContract.getPriceFeedTimeTol
+				.call()
+				.then(priceFeedTimeTol =>
+					assert.equal(
+						priceFeedTimeTol.valueOf(),
+						60,
+						'priceFeedTimeTol specified incorrect'
+					)
+				);
 		});
 
 		it('priceUpdateCoolDown should equal period minus 600', () => {
-			return custodianContract.getPriceUpdateCoolDown.call()
-				.then(priceUpdateCoolDown => assert.equal(priceUpdateCoolDown.valueOf(), CustodianInit.period - 600, "priceUpdateCoolDown specified incorrect"));
+			return custodianContract.getPriceUpdateCoolDown
+				.call()
+				.then(priceUpdateCoolDown =>
+					assert.equal(
+						priceUpdateCoolDown.valueOf(),
+						CustodianInit.period - 600,
+						'priceUpdateCoolDown specified incorrect'
+					)
+				);
 		});
 
 		it('numOfPrices should equal 0', () => {
-			return custodianContract.getNumOfPrices.call()
-				.then(numOfPrices => assert.equal(numOfPrices.valueOf(), 0, "numOfPrices specified incorrect"));
+			return custodianContract.getNumOfPrices
+				.call()
+				.then(numOfPrices =>
+					assert.equal(numOfPrices.valueOf(), 0, 'numOfPrices specified incorrect')
+				);
 		});
 
 		it('lastPreResetBlockNo should equal 0', () => {
-			return custodianContract.getLastPreResetBlockNo.call()
-				.then(lastPreResetBlockNo => assert.equal(lastPreResetBlockNo.valueOf(), 0, "lastPreResetBlockNo specified incorrect"));
+			return custodianContract.getLastPreResetBlockNo
+				.call()
+				.then(lastPreResetBlockNo =>
+					assert.equal(
+						lastPreResetBlockNo.valueOf(),
+						0,
+						'lastPreResetBlockNo specified incorrect'
+					)
+				);
 		});
 
 		it('lastPostResetBlockNo should equal 0', () => {
-			return custodianContract.getLastPostResetBlockNo.call()
-				.then(lastPostResetBlockNo => assert.equal(lastPostResetBlockNo.valueOf(), 0, "lastPostResetBlockNo specified incorrect"));
+			return custodianContract.getLastPostResetBlockNo
+				.call()
+				.then(lastPostResetBlockNo =>
+					assert.equal(
+						lastPostResetBlockNo.valueOf(),
+						0,
+						'lastPostResetBlockNo specified incorrect'
+					)
+				);
 		});
 
 		it('nextResetAddrIndex should equal 0', () => {
-			return custodianContract.getNextResetAddrIndex.call()
-				.then(nextResetAddrIndex => assert.equal(nextResetAddrIndex.valueOf(), 0, "nextResetAddrIndex specified incorrect"));
+			return custodianContract.getNextResetAddrIndex
+				.call()
+				.then(nextResetAddrIndex =>
+					assert.equal(
+						nextResetAddrIndex.valueOf(),
+						0,
+						'nextResetAddrIndex specified incorrect'
+					)
+				);
 		});
-
 
 	});
 
+	describe('creation', () => {
+		
+		it('should only allow duo member to create', () => {
+			return assert.isTrue(false);
+		});
 
-	// describe('creation', () => {
-	// 	it('should only allow duo member to create', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('should collect fee', () => {
+			return assert.isTrue(false);
+		});
 
-	// 	it('should collect fee', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('should update user list if required', () => {
+			return assert.isTrue(false);
+		});
 
-	// 	it('should update user list if required', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should update A and B balance correctly', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
+		it('should update A and B balance correctly', () => {
+			return assert.isTrue(false);
+		});
+	});
 
 	// describe('redemption', () => {
 	// 	it('should only allow duo member to redeem', () => {
@@ -223,7 +304,7 @@ contract('Custodian', accounts => {
 
 	// 	it('should be able to set price update cool down', () => {
 	// 		return assert.isTrue(false);
-	// 	});	
+	// 	});
 	// });
 
 	// describe('A', () => {
@@ -239,7 +320,7 @@ contract('Custodian', accounts => {
 	// 		return assert.isTrue(false);
 	// 	});
 	// });
-	
+
 	// describe('B', () => {
 	// 	it('should be able to transfer', () => {
 	// 		return assert.isTrue(false);
@@ -386,6 +467,5 @@ contract('Custodian', accounts => {
 	// 	it('should transit to trading state after a given number of blocks but not before that', () => {
 	// 		return assert.isTrue(false);
 	// 	});
-	// });	
-
+	// });
 });

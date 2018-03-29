@@ -89,6 +89,18 @@ contract('TokenB', accounts => {
 		);
 	});
 
+	it('non creater balance should be 0', () => {
+		return tokenBContract.balanceOf
+			.call(alice)
+			.then(balance =>
+				assert.equal(
+					balance.toNumber() / WEI_DENOMINATOR,
+					0,
+					'balance of owner not equal to 0'
+				)
+			);
+	});
+
 	it('should be able to approve', () => {
 		return tokenBContract
 			.approve(alice, web3.utils.toWei('100'), { from: creator })

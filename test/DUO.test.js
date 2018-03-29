@@ -26,7 +26,7 @@ contract('DUO', accounts => {
 		});
 	});
 
-	it('should show balance', () => {
+	it('creator balance should be 10000', () => {
 		return duoContract.balanceOf
 			.call(creator)
 			.then(balance =>
@@ -34,6 +34,18 @@ contract('DUO', accounts => {
 					balance.toNumber() / WEI_DENOMINATOR,
 					10000,
 					'balance of owner not equal to 10000'
+				)
+			);
+	});
+
+	it('non creater balance should be 0', () => {
+		return duoContract.balanceOf
+			.call(alice)
+			.then(balance =>
+				assert.equal(
+					balance.toNumber() / WEI_DENOMINATOR,
+					0,
+					'balance of owner not equal to 0'
 				)
 			);
 	});
