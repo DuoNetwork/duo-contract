@@ -282,6 +282,8 @@ contract('Custodian', accounts => {
 		// 	let amtEthInWei = (deductAmtInWeiA + deductAmtInWeiB) / web3.utils.toWei(CustodianInit.ethInitPrice) * WEI_DENOMINATOR;
 		// 	let fee = amtEthInWei * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
+		// 	let 
+
 
 		// 	return custodianContract.redeem
 		// 		.call(amtInWeiA, amtInWeiB, { from: alice })

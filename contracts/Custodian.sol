@@ -204,7 +204,9 @@ contract Custodian {
 			else
 				state = State.DownwardReset;
 			StartReset();
-		} 
+		} else {
+			StartPreReset();
+		}
 
 		return true;
 	}
@@ -213,7 +215,9 @@ contract Custodian {
 		if (block.number - lastPostResetBlockNo >= postResetWaitingBlocks) {
 			state = State.Trading;
 			StartTrading();
-		} 
+		} else {
+			StartPostReset();
+		}
 
 		return true;
 	}

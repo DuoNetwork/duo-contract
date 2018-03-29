@@ -8,19 +8,16 @@ const addressCustodianContract = '';
 
 const custodianContract = new web3.eth.Contract(CustodianABI, addressCustodianContract);
 
-
 let priceFeedInterval = 3600000; //60*60*1000 ; 1 Hour
 setInterval(() => {
-	let priceInWei;  //ETH/USD price in Wei
+	let priceInWei; //ETH/USD price in Wei
 	let priceInSeconds; //seconds since unix epoch
 
 	custodianContract.methods
-	.commitPrice(priceInWei, priceInSeconds)
-	.call()
-	.then(success => {
-		console.log(success);
-	})
-	.catch(error => rej(error));
+		.commitPrice(priceInWei, priceInSeconds)
+		.call()
+		.then(success => {
+			console.log(success);
+		})
+		.catch(error => rej(error));
 }, priceFeedInterval);
-
-
