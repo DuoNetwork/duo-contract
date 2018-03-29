@@ -1,0 +1,31 @@
+{
+	"Custodian" :{
+		"ethInitPrice": "582",
+		"feeAddress": "0x00",
+		"pf1": "0x00",
+		"pf2": "0x00",
+		"pf3": "0x00",
+		"alphaInBP": 10000,
+		"couponRate": "0.0002",
+		"hp": "1.2",
+		"hu": "1.5",
+		"hd": "0.25",
+		"commissionRateInBP": 300,
+		"period": 3600,
+		"memberThreshold": 0,
+		"gasThreshhold": 200000
+	},
+	"DUO": {
+		"initSupply": "10000",
+		"tokenName": "DUO",
+		"tokenSymbol": "DUO"
+	},
+	"TokenA": {
+		"tokenName": "TokenA",
+		"tokenSymbol": "TKA"
+	},
+	"TokenB": {
+		"tokenName": "TokenB",
+		"tokenSymbol": "TKB"
+	}
+}
