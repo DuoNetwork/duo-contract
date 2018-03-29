@@ -34,7 +34,7 @@ module.exports = (deployer, network, accounts) => {
 					web3.utils.toWei(CustodianInit.hd),
 					CustodianInit.commissionRateInBP,
 					CustodianInit.period,
-					CustodianInit.memberThreshold,
+					web3.utils.toWei(CustodianInit.memberThreshold),
 					CustodianInit.gasThreshhold
 				)
 				.then(() =>

@@ -33,8 +33,6 @@ contract('Custodian', accounts => {
 			from: creator
 		})
 			.then(instance => (duoContract = instance))
-			.then( () => duoContract.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator }))
-			.then( () => duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator }))
 			.then(() =>
 				Custodian.new(
 					web3.utils.toWei(CustodianInit.ethInitPrice),
@@ -50,7 +48,7 @@ contract('Custodian', accounts => {
 					web3.utils.toWei(CustodianInit.hd),
 					CustodianInit.commissionRateInBP,
 					CustodianInit.period,
-					CustodianInit.memberThreshold,
+					web3.utils.toWei(CustodianInit.memberThreshold),
 					CustodianInit.gasThreshhold,
 					{
 						from: creator
@@ -221,25 +219,69 @@ contract('Custodian', accounts => {
 					)
 				);
 		});
-
 	});
 
 	describe('creation', () => {
-		
-		it('should only allow duo member to create', () => {
-			return assert.isTrue(false);
+		before(() =>
+			duoContract
+				.transfer(alice, 100 * WEI_DENOMINATOR, { from: creator })
+				.then(() =>
+					duoContract.transfer(nonDuoMember, 2 * WEI_DENOMINATOR, { from: creator })
+				)
+		);
+
+		it('should create token A and B', () => {
+			return custodianContract
+				.create({ from: nonDuoMember, value: 1 * WEI_DENOMINATOR })
+				.then(() => {
+					assert.isTrue(false, 'the transaction should revert');
+				})
+				.catch(err => {
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'non DUO member still can create Tranche Token'
+					);
+				});
 		});
 
-		it('should collect fee', () => {
-			return assert.isTrue(false);
+		it('should only allow duo member to create', () => {
+			return custodianContract
+				.create({ from: alice, value: 1 * WEI_DENOMINATOR })
+				.then(create => {
+					assert.isTrue(!!create, 'duo member is not able to create');
+				});
+		});
+
+		it('feeAccumulated should be updated', () => {
+			return custodianContract.getFeeAccumulatedInWei.call().then(feeAccumulated => {
+				let fee = 1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+				assert.equal(feeAccumulated.valueOf(), fee, 'feeAccumulated not updated correctly');
+			});
 		});
 
 		it('should update user list if required', () => {
-			return assert.isTrue(false);
+			return custodianContract.existingUsers
+				.call(alice)
+				.then(isUser => assert.isTrue(isUser, 'new user is not updated'));
 		});
 
-		it('should update A and B balance correctly', () => {
-			return assert.isTrue(false);
+		it('should update balance of A and B correctly', () => {
+			let feeInWei =1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+			let tokenValueB =(1 * WEI_DENOMINATOR - feeInWei) *
+						web3.utils.toWei(CustodianInit.ethInitPrice) /
+						WEI_DENOMINATOR /
+						(CustodianInit.alphaInBP + BP_DENOMINATOR) *
+						BP_DENOMINATOR;
+			let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
+			return custodianContract.balancesB
+				.call(alice)
+				.then(balanceB =>  {
+					return custodianContract.balancesA.call(alice).then((balanceA) => {
+						// console.log(balanceA.toNumber(), balanceB.toNumber());
+						assert.isTrue( balanceA.toNumber() === tokenValueA &&  balanceB.toNumber() === tokenValueB, "balance not updated correctly");
+					});
+				});
 		});
 	});
 

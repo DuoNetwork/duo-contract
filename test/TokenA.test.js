@@ -43,7 +43,7 @@ contract('TokenA', accounts => {
 					web3.utils.toWei(CustodianInit.hd),
 					CustodianInit.commissionRateInBP,
 					CustodianInit.period,
-					CustodianInit.memberThreshold,
+					web3.utils.toWei(CustodianInit.memberThreshold),
 					CustodianInit.gasThreshhold,
 					{
 						from: creator

@@ -50,12 +50,12 @@ contract Custodian {
 	address public duoTokenAddress;
 
 	uint decimals;
-	mapping(address => uint256) balancesA;
-	mapping(address => uint256) balancesB;
-	mapping (address => mapping (address => uint256)) allowanceA;
-	mapping (address => mapping (address => uint256)) allowanceB;
-	address[] users;
-	mapping (address => bool) existingUsers;
+	mapping(address => uint256) public balancesA;
+	mapping(address => uint256) public balancesB;
+	mapping (address => mapping (address => uint256)) public allowanceA;
+	mapping (address => mapping (address => uint256)) public allowanceB;
+	address[] public users;
+	mapping (address => bool) public existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
 	uint feeAccumulatedInWei;
 

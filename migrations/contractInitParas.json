@@ -12,7 +12,7 @@
 		"hd": "0.25",
 		"commissionRateInBP": 300,
 		"period": 3600,
-		"memberThreshold": 10,
+		"memberThreshold": "10",
 		"gasThreshhold": 200000
 	},
 	"DUO": {
