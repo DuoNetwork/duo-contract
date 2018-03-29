@@ -70,17 +70,17 @@ contract('TokenA', accounts => {
 
 	it('should create token A and B', () => {
 		return custodianContract
-			.create({ from: creator, value: 10000 })
+			.create({ from: creator, value: 1 * WEI_DENOMINATOR })
 			.then(create => assert.isTrue(!!create, 'Tranche token cannot be created'));
 	});
 
 	it('should show balance', () => {
 		return tokenAContract.balanceOf.call(creator).then(
 			balance =>{
-				let feeInWei = 10000 * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
-				let tokenValueB = (10000 - feeInWei) * web3.utils.toWei(CustodianInit.ethInitPrice) / (CustodianInit.alphaInBP + BP_DENOMINATOR) * BP_DENOMINATOR;
+				let feeInWei = 1 * WEI_DENOMINATOR * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+				let tokenValueB = (1 * WEI_DENOMINATOR - feeInWei) * web3.utils.toWei(CustodianInit.ethInitPrice) / WEI_DENOMINATOR /  (CustodianInit.alphaInBP + BP_DENOMINATOR) * BP_DENOMINATOR;
+				let tokenValueA = (CustodianInit.alphaInBP) / BP_DENOMINATOR * tokenValueB;
 
-				let tokenValueA = tokenValueB * (CustodianInit.alphaInBP) / BP_DENOMINATOR;
 				return assert.equal(
 					balance.toNumber(),
 					tokenValueA,
