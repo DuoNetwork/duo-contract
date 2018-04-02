@@ -34,6 +34,7 @@ contract Custodian {
 		PreReset,
 		UpwardReset,
 		DownwardReset,
+		PeriodicReset,
 		PostReset
 	}
 
@@ -67,6 +68,7 @@ contract Custodian {
 	Price public resetPrice; 
 	Price public lastPrice; 
 	uint public alphaInBP;
+	uint public betaInWei = WEI_DENOMINATOR;
 	uint public periodCouponInWei; 
 	uint public limitPeriodicInWei; 
 	uint public limitUpperInWei; 
@@ -184,13 +186,15 @@ contract Custodian {
 	}
 
 	function updateNav() internal {
-		uint numOfDays = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
-		navAInWei = periodCouponInWei.mul(numOfDays).add(WEI_DENOMINATOR);
+		uint numOfPeriods = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
+		navAInWei = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
 		navBInWei = lastPrice.priceInWei
+						.mul(WEI_DENOMINATOR)
 						.mul(WEI_DENOMINATOR)
 						.mul(alphaInBP.add(BP_DENOMINATOR))
 						.div(BP_DENOMINATOR)
 						.div(resetPrice.priceInWei)
+						.div(betaInWei)
 						.sub(navAInWei
 							.mul(alphaInBP)
 							.div(BP_DENOMINATOR)
@@ -199,10 +203,12 @@ contract Custodian {
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			if (navBInWei >= limitUpperInWei || navBInWei >= WEI_DENOMINATOR)  // limitUpperInWei always larger than 1 ether; For upward reset, the only condition should be navBInWei >= limitUpperInWei
+			if (navBInWei >= limitUpperInWei)  // limitUpperInWei always larger than 1 ether; For upward reset, the only condition should be navBInWei >= limitUpperInWei
 				state = State.UpwardReset;
-			else
+			else if(navBInWei <= limitLowerInWei)
 				state = State.DownwardReset;
+			else
+				state = State.PeriodicReset;
 			StartReset();
 		} else {
 			StartPreReset();
@@ -223,48 +229,99 @@ contract Custodian {
 	}
 
 	function startReset() public returns (bool success) {
-		require(state == State.UpwardReset || state == State.DownwardReset);
-		uint bAdj = alphaInBP.add(BP_DENOMINATOR).div(BP_DENOMINATOR);
+		require(state == State.UpwardReset || state == State.DownwardReset || state == State.PeriodicReset);
+		uint bAdj;
 		uint newBFromAPerA;
 		uint newBFromBPerB;
 		uint existingBalanceAdj;
+		uint aAdj = alphaInBP.div(BP_DENOMINATOR);
 		if (state == State.UpwardReset) {
+			bAdj = alphaInBP.add(BP_DENOMINATOR).div(BP_DENOMINATOR);
 			newBFromAPerA = navAInWei.sub(WEI_DENOMINATOR).div(bAdj);
 			newBFromBPerB = navBInWei.sub(WEI_DENOMINATOR).div(bAdj);
-		} else {
-			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
-			existingBalanceAdj = navBInWei.div(WEI_DENOMINATOR);
-		}
-		uint aAdj = alphaInBP.div(BP_DENOMINATOR);
-		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
-			if (state == State.UpwardReset) 
+			while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
 				upwardResetForAddress(
 					users[nextResetAddrIndex], 
 					newBFromAPerA, 
 					newBFromBPerB, 
 					aAdj); 
-			else 
+				nextResetAddrIndex++;
+			}
+			if (nextResetAddrIndex >= users.length){
+				return completeContigentReset();
+			} else{
+				StartReset();
+				return false;
+			}
+		} else if (state == State.DownwardReset){
+			bAdj = alphaInBP.add(BP_DENOMINATOR).div(BP_DENOMINATOR);
+			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
+			existingBalanceAdj = navBInWei.div(WEI_DENOMINATOR);
+			while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
 				downwardResetForAddress(
 					users[nextResetAddrIndex], 
 					newBFromAPerA, 
 					existingBalanceAdj, 
 					aAdj);
-			
-			nextResetAddrIndex++;
+				nextResetAddrIndex++;
+			}
+			if (nextResetAddrIndex >= users.length){
+				return completeContigentReset();
+			} else{
+				StartReset();
+				return false;
+			}
+
+		} else {
+			bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR).div(betaInWei);
+			newBFromAPerA = navAInWei.sub(WEI_DENOMINATOR).div(bAdj);
+			while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
+				periodicResetForAddress(
+					users[nextResetAddrIndex], 
+					newBFromAPerA, 
+					aAdj); 
+				nextResetAddrIndex++;
+			}
+			if (nextResetAddrIndex >= users.length){
+				return completePeriodicReset();
+			} else{
+				StartReset();
+				return false;
+			}
+
 		}
+		
+	}
 
-		if (nextResetAddrIndex >= users.length) {
-			resetPrice.priceInWei = lastPrice.priceInWei;
-			resetPrice.timeInSeconds = lastPrice.timeInSeconds;
-			navAInWei = WEI_DENOMINATOR;
-			navBInWei = WEI_DENOMINATOR;
-			nextResetAddrIndex = 0;
+	function completeContigentReset() internal returns(bool success) {
+		resetPrice.priceInWei = lastPrice.priceInWei;
+		resetPrice.timeInSeconds = lastPrice.timeInSeconds;
+		navAInWei = WEI_DENOMINATOR;
+		navBInWei = WEI_DENOMINATOR;
+		nextResetAddrIndex = 0;
 
-			state = State.PostReset;
-			lastPostResetBlockNo = block.number;
-			StartPostReset();
-		} else 
-			StartReset();
+		state = State.PostReset;
+		lastPostResetBlockNo = block.number;
+		StartPostReset();
+		return true;
+	}
+
+	function completePeriodicReset() internal returns(bool success) {
+		navAInWei = WEI_DENOMINATOR;
+		uint num = alphaInBP.add(BP_DENOMINATOR).mul(lastPrice.priceInWei).mul(WEI_DENOMINATOR).mul(WEI_DENOMINATOR);
+		uint den = num.sub(
+							resetPrice.priceInWei
+							.mul(alphaInBP)
+							.mul(betaInWei)
+							.mul(navAInWei
+								.sub(WEI_DENOMINATOR)
+								)
+		);
+		betaInWei = betaInWei.mul(num).div(den);
+		nextResetAddrIndex = 0;
+		state = State.PostReset;
+		lastPostResetBlockNo = block.number;
+		StartPostReset();
 		return true;
 	}
 
@@ -298,6 +355,20 @@ contract Custodian {
 		uint newAFromA = newBFromA.mul(aAdj);
 		balancesA[addr] = balanceA.mul(existingBalanceAdj).add(newAFromA);
 		balancesB[addr] = balanceB.mul(existingBalanceAdj).add(newBFromA);
+	}
+
+	function periodicResetForAddress(
+		address addr, 
+		uint newBFromAPerA, 
+		uint aAdj) 
+		internal 
+	{
+		uint balanceA = balancesA[addr];
+		uint balanceB = balancesB[addr];
+		uint newBFromA = balanceA.mul(newBFromAPerA);
+		uint newAFromA = newBFromA.mul(aAdj);
+		balancesA[addr] = balanceA.add(newAFromA);
+		balancesB[addr] = balanceB.add(newBFromA);
 	}
 
 	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
@@ -424,7 +495,7 @@ contract Custodian {
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
 		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
-		uint amtEthInWei = deductAmtInWeiA.add(deductAmtInWeiB).mul(WEI_DENOMINATOR).div(resetPrice.priceInWei);
+		uint amtEthInWei = deductAmtInWeiA.add(deductAmtInWeiB).mul(WEI_DENOMINATOR).mul(WEI_DENOMINATOR).div(resetPrice.priceInWei).div(betaInWei);
 		uint feeInWei = getFee(amtEthInWei);
 		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
 		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
@@ -456,14 +527,18 @@ contract Custodian {
 	{
 		uint feeInWei = getFee(msg.value);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		uint tokenValueB = msg.value
-							.sub(feeInWei)
-							.mul(resetPrice.priceInWei)
-							.mul(BP_DENOMINATOR)
-							.div(WEI_DENOMINATOR)
-							.div(alphaInBP
-								.add(BP_DENOMINATOR)
+		uint numeritor = msg.value
+						.sub(feeInWei)
+						.mul(resetPrice.priceInWei)
+						.mul(betaInWei)
+						.mul(BP_DENOMINATOR
 		);
+		uint denominator = WEI_DENOMINATOR
+						.mul(WEI_DENOMINATOR)
+						.mul(alphaInBP
+							.add(BP_DENOMINATOR)
+		);
+		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		checkNewUser(msg.sender);
 		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
