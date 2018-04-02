@@ -460,8 +460,8 @@ contract Custodian {
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
 		uint feeInWei = getFee(amtEthInWei);
-		balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
-		balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
+		balancesA[msg.sender] = balancesA[msg.sender].sub(deductAmtInWeiA);
+		balancesB[msg.sender] = balancesB[msg.sender].sub(deductAmtInWeiB);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
 		return true;

@@ -1,6 +1,7 @@
 let Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const web3 = require('web3');
+var bigInt = require('big-integer');
 
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
@@ -13,7 +14,7 @@ const STATE_DOWNWARD_RESET = '3';
 const STATE_POST_RESET = '4';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-const VM_INVALID_OPCODE_MSG = "VM Exception while processing transaction: invalid opcode";
+const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
 contract('Custodian', accounts => {
 	let custodianContract;
@@ -259,7 +260,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should only redeem token value greater than 0', () => {
-			return custodianContract.redeem(-28000000000000000000, 29000000000000000000, { from: alice })
+			return custodianContract
+				.redeem(-28000000000000000000, 29000000000000000000, { from: alice })
 				.then(() => {
 					assert.isTrue(false, 'duomember not able to create more than allowed');
 				})
@@ -272,42 +274,58 @@ contract('Custodian', accounts => {
 				});
 		});
 
-		
-		// it('only duo member can redeem', () => {
-		// 	let amtInWeiA = 28000000000000000000;
-		// 	let amtInWeiB = 29000000000000000000;
-		// 	let adjAmtInWeiA = amtInWeiA * BP_DENOMINATOR / CustodianInit.alphaInBP;
-		// 	let deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
-		// 	let deductAmtInWeiA = deductAmtInWeiB * CustodianInit.alphaInBP / BP_DENOMINATOR;
-		// 	let amtEthInWei = (deductAmtInWeiA + deductAmtInWeiB) / web3.utils.toWei(CustodianInit.ethInitPrice) * WEI_DENOMINATOR;
-		// 	let fee = amtEthInWei * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+		it('only duo member can redeem', () => {
+			let amtInWeiA = 28000000000000000000;
+			let amtInWeiB = 29000000000000000000;
+			let adjAmtInWeiA = amtInWeiA * BP_DENOMINATOR / CustodianInit.alphaInBP;
+			let deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
+			let deductAmtInWeiA = deductAmtInWeiB * CustodianInit.alphaInBP / BP_DENOMINATOR;
+			let amtEthInWei =
+				(deductAmtInWeiA + deductAmtInWeiB) /
+				web3.utils.toWei(CustodianInit.ethInitPrice) *
+				WEI_DENOMINATOR;
+			let fee = bigInt(amtEthInWei).multiply(CustodianInit.commissionRateInBP).over(BP_DENOMINATOR);
 
-		// 	let 
+			return custodianContract.balancesA.call(alice).then(prevBalanceA =>
+				custodianContract.balancesB.call(alice).then(prevBalanceB =>
+					custodianContract.feeAccumulatedInWei.call().then(prefeeAccumulated =>
+						custodianContract.redeem
+							.call(amtInWeiA, amtInWeiB, { from: alice })
+							.then(success => {
+								assert.isTrue(success, 'duo member is not able to redeem'); //check whether duo member can redeem
+								return custodianContract
+									.redeem(amtInWeiA, amtInWeiB, { from: alice })   //send transaction to actually redeem
+									.then(() => {
+										return custodianContract.balancesA
+											.call(alice)
+											.then(currentBalanceA =>
+												custodianContract.balancesB
+													.call(alice)
+													.then(currentBalanceB => {
+														assert.isTrue(
+															currentBalanceA.toNumber() +
+																deductAmtInWeiA ===
+																prevBalanceA.toNumber() &&
+																currentBalanceB.toNumber() +
+																	deductAmtInWeiB ===
+																	prevBalanceB.toNumber(),
+															'balance not updated correctly after redeed'
+														);
+														return custodianContract
+															.feeAccumulatedInWei.call().then(feeAccumulated => {
+																assert.equal(feeAccumulated.minus(prefeeAccumulated).valueOf(),fee.valueOf(), 'feeAccumulated not updated correctly');
 
+															});
 
-		// 	return custodianContract.redeem
-		// 		.call(amtInWeiA, amtInWeiB, { from: alice })
-		// 		.then(success => {
-		// 			assert.isTrue(success, 'duomember not able to create');
-		// 			return custodianContract.redeem(amtInWeiA, amtInWeiB, { from: alice });
-		// 		}).then(
-					
+													})
+											);
+									});
+							})
+					)
+				)
+			);
+		});
 
-		// 		)
-		// });
-
-		// it('should update A and B balance correctly', () => {
-			
-		
-		
-	
-	
-		// balancesA[msg.sender] = balancesA[msg.sender].sub(amtInWeiA);
-		// balancesB[msg.sender] = balancesB[msg.sender].sub(amtInWeiB);
-		// feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		// ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
-
-		// });
 
 		// it('should collect fee', () => {
 		// 	return assert.isTrue(false);
