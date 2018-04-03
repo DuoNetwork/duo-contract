@@ -4,7 +4,7 @@ import "./Custodian.sol";
 
 contract CustodianMock is Custodian {
 
-	uint public timestamp;
+	uint public timestamp = now;
 
 	function CustodianMock (
 		uint ethPriceInWei, 
@@ -39,7 +39,6 @@ contract CustodianMock is Custodian {
 		memberThreshold,
 		gasThreshold
 	) public {
-		timestamp = now;
 	}
 
 	function setTimestamp(uint ts) public {

@@ -189,7 +189,7 @@ contract Custodian {
 	}
 
 	function updateNav() internal {
-		uint numOfPeriods = (lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds)).div(period);
+		uint numOfPeriods = lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds).div(period);
 		navAInWei = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
 		navBInWei = lastPrice.priceInWei
 						.mul(WEI_DENOMINATOR)
@@ -354,7 +354,7 @@ contract Custodian {
 		among(priceFeed1, priceFeed2, priceFeed3) 
 		returns (bool success)
 	{	
-		require(timeInSeconds < getNowTimestamp());
+		require(timeInSeconds <= getNowTimestamp());
 		require(timeInSeconds > lastPrice.timeInSeconds.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
