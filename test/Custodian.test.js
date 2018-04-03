@@ -16,9 +16,13 @@ const STATE_POST_RESET = '5';
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 1e-18;
+const EPSILON = 15e-18;
 
-const isEqual = (a, b) => {
+const isEqual = (a, b, log = false) => {
+	if (log) {
+		console.log(a);
+		console.log(b);
+	}
 	return Math.abs(Number(a) - Number(b)) <= EPSILON;
 };
 
@@ -148,13 +152,14 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('creation', () => {
+	describe('creation and fee withdrawal', () => {
 		let amtEth = 1;
 		let tokenValueB =
 			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
 			CustodianInit.ethInitPrice /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
+		let prevFeeAccumulated;
 
 		before(() =>
 			initContracts().then(() =>
@@ -230,16 +235,64 @@ contract('Custodian', accounts => {
 				);
 			});
 		});
+
+		it('only allowed account can withdraw fee', () => {
+			return custodianContract.collectFee
+				.call(web3.utils.toWei('0.001'), { from: alice })
+				.then(() => assert.isTrue(false, 'can collect fee more than allowed'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'non DUO member still can create Tranche Token'
+					)
+				);
+		});
+
+		it('should only collect fee less than allowed', () => {
+			return custodianContract.collectFee
+				.call(web3.utils.toWei('1'), { from: fc })
+				.then(() => assert.isTrue(false, 'can collect fee more than allowed'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'non DUO member still can create Tranche Token'
+					)
+				);
+		});
+
+		it('should collect fee', () => {
+			return custodianContract.feeAccumulatedInWei
+				.call()
+				.then(prevFee => (prevFeeAccumulated = prevFee))
+				.then(() =>
+					custodianContract.collectFee
+						.call(web3.utils.toWei('0.0001'), { from: fc })
+						.then(success => assert.isTrue(success))
+				)
+				.then(() => custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc }));
+		});
+
+		it('should fee pending withdrawal amount should be updated correctly', () => {
+			return custodianContract.feeAccumulatedInWei.call().then(currentFee => {
+				assert.isTrue(
+					isEqual(currentFee.toNumber(), prevFeeAccumulated.toNumber()),
+					'fee not updated correctly'
+				);
+			});
+		});
 	});
 
-	describe('redemption', () => {
-		let prevBalanceA, prevBalanceB, prevFeeAccumulated;
+	describe('redemption and eth withdrawal', () => {
+		let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevPendingWithdrawalAMT;
 		let amtA = 28;
 		let amtB = 29;
 		let adjAmtA = amtA * BP_DENOMINATOR / CustodianInit.alphaInBP;
 		let deductAmtB = Math.min(adjAmtA, amtB);
 		let deductAmtA = deductAmtB * CustodianInit.alphaInBP / BP_DENOMINATOR;
 		let amtEth = (deductAmtA + deductAmtA) / CustodianInit.ethInitPrice;
+		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
 		before(() =>
 			initContracts().then(() =>
@@ -319,7 +372,6 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeAccumulated should be updated', () => {
-			let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 			return custodianContract.feeAccumulatedInWei.call().then(feeAccumulated => {
 				assert.isTrue(
 					isEqual(
@@ -359,13 +411,55 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		// it('should update pending withdraw amount correctly', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should update pending withdraw amount correctly', () => {
+			return custodianContract.ethPendingWithdrawal.call(alice).then(pendingWithdrawAMT => {
+				assert.isTrue(
+					isEqual(amtEth - pendingWithdrawAMT.toNumber() / WEI_DENOMINATOR, fee),
+					'pending withdraw not updated correctly'
+				);
+			});
+		});
 
-		// it('should allow user to withdraw ETH', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should not withdraw more than pending withdrawl amount', () => {
+			return custodianContract.withdraw
+				.call(web3.utils.toWei('0.1'), { from: alice })
+				.then(() => assert.isTrue(false, 'is able to with withdaw more than allowed'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'non DUO member still can create Tranche Token'
+					)
+				);
+		});
+
+		it('should withdraw from pending withdrawal', () => {
+			return custodianContract.ethPendingWithdrawal
+				.call(alice)
+				.then(prePendingWithdrawal => (prevPendingWithdrawalAMT = prePendingWithdrawal))
+				.then(() =>
+					custodianContract.withdraw
+						.call(web3.utils.toWei('0.01'), { from: alice })
+						.then(success => assert.isTrue(success, 'cannot withdraw fee'))
+				)
+				.then(() => custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice }));
+		});
+
+		it('pending eth withdrawal should be updated correctly', () => {
+			return custodianContract.ethPendingWithdrawal
+				.call(alice)
+				.then(currentPendingWithdrawal =>
+					assert.isTrue(
+						isEqual(
+							(prevPendingWithdrawalAMT.toNumber() -
+								currentPendingWithdrawal.toNumber()) /
+								WEI_DENOMINATOR,
+							0.01
+						),
+						'pending withdrawal eth not updated correctly'
+					)
+				);
+		});
 	});
 
 	// describe('only admin', () => {
