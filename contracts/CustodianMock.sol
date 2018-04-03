@@ -4,6 +4,8 @@ import "./Custodian.sol";
 
 contract CustodianMock is Custodian {
 
+	uint public timestamp;
+
 	function CustodianMock (
 		uint ethPriceInWei, 
 		address feeAddress, 
@@ -36,9 +38,20 @@ contract CustodianMock is Custodian {
 		p,
 		memberThreshold,
 		gasThreshold
-
 	) public {
+		timestamp = now;
+	}
 
+	function setTimestamp(uint ts) public {
+		timestamp = ts;
+	}
+
+	function skipCooldown() public {
+		timestamp = timestamp.add(priceUpdateCoolDown + 5 minutes);
+	}
+
+	function getNowTimestamp() internal view returns (uint) {
+		return timestamp;
 	}
 
 	function getFeeCollector() public view returns (address _feeCollector) {

@@ -154,9 +154,9 @@ contract Custodian {
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		resetPrice.priceInWei = ethPriceInWei;
-		resetPrice.timeInSeconds = now;
+		resetPrice.timeInSeconds = getNowTimestamp();
 		lastPrice.priceInWei = ethPriceInWei;
-		lastPrice.timeInSeconds = now;
+		lastPrice.timeInSeconds = getNowTimestamp();
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
@@ -175,6 +175,9 @@ contract Custodian {
 		priceUpdateCoolDown = p - 10 minutes;
 	}
 	
+	function getNowTimestamp() internal view returns (uint) {
+		return now;
+	}
 	
 	function checkNewUser(address user) internal {
 		if (!existingUsers[user]) {
@@ -351,7 +354,7 @@ contract Custodian {
 		among(priceFeed1, priceFeed2, priceFeed3) 
 		returns (bool success)
 	{	
-		require(timeInSeconds < now);
+		require(timeInSeconds < getNowTimestamp());
 		require(timeInSeconds > lastPrice.timeInSeconds.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
