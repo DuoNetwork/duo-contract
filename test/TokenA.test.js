@@ -50,7 +50,7 @@ contract('TokenA', accounts => {
 					}
 				).then(instance => {
 					custodianContract = instance;
-					return custodianContract.create({ from: creator, value: 1 * WEI_DENOMINATOR });
+					return custodianContract.create({ from: creator, value: web3.utils.toWei('1') });
 				})
 			)
 			.then(() =>

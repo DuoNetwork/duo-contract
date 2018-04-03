@@ -19,6 +19,8 @@ contract('DUO', accounts => {
 	it('total supply should be 10000', () => {
 		return duoContract.totalSupply.call().then(supply => {
 			return assert.equal(
+				// web3 1.0 has BN package for fromWei/toWei and only takes in string or BN object
+				// but the conversion does not handle scientific notation of 1e+22
 				supply.toNumber() / WEI_DENOMINATOR,
 				10000,
 				'totalSupply not equal to 10000'
