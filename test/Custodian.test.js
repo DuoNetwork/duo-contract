@@ -162,13 +162,11 @@ contract('Custodian', accounts => {
 		let prevFeeAccumulated;
 
 		before(() =>
-			initContracts().then(() =>
-				duoContract
-					.transfer(alice, web3.utils.toWei('100'), { from: creator })
-					.then(() =>
-						duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-					)
-			)
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() =>
+					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
+				)
 		);
 
 		it('should only allow duo member to create', () => {
@@ -267,10 +265,9 @@ contract('Custodian', accounts => {
 				.call()
 				.then(prevFee => (prevFeeAccumulated = prevFee))
 				.then(() =>
-					custodianContract.collectFee
-						.call(web3.utils.toWei('0.0001'), { from: fc })
-						.then(success => assert.isTrue(success))
+					custodianContract.collectFee.call(web3.utils.toWei('0.0001'), { from: fc })
 				)
+				.then(success => assert.isTrue(success))
 				.then(() => custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc }));
 		});
 
@@ -295,34 +292,19 @@ contract('Custodian', accounts => {
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
 		before(() =>
-			initContracts().then(() =>
-				duoContract
-					.transfer(alice, web3.utils.toWei('100'), { from: creator })
-					.then(() =>
-						duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-					)
-					.then(() =>
-						duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator })
-					)
-					.then(() =>
-						custodianContract.create({ from: alice, value: web3.utils.toWei('1') })
-					)
-					.then(() =>
-						custodianContract.balancesA
-							.call(alice)
-							.then(prevA => (prevBalanceA = prevA))
-					)
-					.then(() =>
-						custodianContract.balancesB
-							.call(alice)
-							.then(prevB => (prevBalanceB = prevB))
-					)
-					.then(() =>
-						custodianContract.feeAccumulatedInWei
-							.call()
-							.then(prevFee => (prevFeeAccumulated = prevFee))
-					)
-			)
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() =>
+					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
+				)
+				.then(() => duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator }))
+				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
+				.then(() => custodianContract.balancesA.call(alice))
+				.then(prevA => (prevBalanceA = prevA))
+				.then(() => custodianContract.balancesB.call(alice))
+				.then(prevB => (prevBalanceB = prevB))
+				.then(() => custodianContract.feeAccumulatedInWei.call())
+				.then(prevFee => (prevFeeAccumulated = prevFee))
 		);
 
 		it('should only redeem token value less than balance', () => {
@@ -438,10 +420,9 @@ contract('Custodian', accounts => {
 				.call(alice)
 				.then(prePendingWithdrawal => (prevPendingWithdrawalAMT = prePendingWithdrawal))
 				.then(() =>
-					custodianContract.withdraw
-						.call(web3.utils.toWei('0.01'), { from: alice })
-						.then(success => assert.isTrue(success, 'cannot withdraw fee'))
+					custodianContract.withdraw.call(web3.utils.toWei('0.01'), { from: alice })
 				)
+				.then(success => assert.isTrue(success, 'cannot withdraw fee'))
 				.then(() => custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice }));
 		});
 
@@ -462,13 +443,13 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('commit price', () => {
+	describe('commit price', () => {
 		let initTimeStamp;
 
 		before(() =>
-			initContracts().then(() =>
-				custodianContract.timestamp.call().then(ts => (initTimeStamp = ts))
-			)
+			initContracts()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (initTimeStamp = ts))
 		);
 
 		it('non pf address cannot call commitPrice method', () => {
