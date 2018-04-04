@@ -609,6 +609,54 @@ contract('Custodian', accounts => {
 				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
 		});
 
+		it('should not accept first price arrived if it is too far away', () => {
+			return custodianContract.skipCooldown().then(() =>
+				custodianContract.timestamp
+					.call()
+					.then(ts => (secondPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('500'),
+							secondPeriod.toNumber(),
+							{
+								from: pf1
+							}
+						)
+					)
+					.then(() => custodianContract.getFirstPrice.call())
+					.then(res =>
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+								isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+							'first price is not recorded'
+						)
+					)
+			);
+		});
+
+		it('should accept first price arrived if second price timed out and sent by the different address as first price', () => {
+			return custodianContract.skipCooldown().then(() =>
+				custodianContract.timestamp.call().then(ts =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('550'), ts.toNumber(), {
+							from: pf2
+						})
+						.then(() => custodianContract.lastPrice.call())
+						.then(res => {
+							assert.isTrue(
+								isEqual(res[0].toNumber(), web3.utils.toWei('500')),
+								'second price priceNumber is not accepted'
+							);
+							assert.isTrue(
+								isEqual(res[1].toNumber(), ts.toNumber()),
+								'second price timeSecond is not accepted'
+							);
+						})
+				)
+			);
+		});
+
+
 		// it('should accept first price arrived if second price is close to it and within cool down', () => {
 		// 	return assert.isTrue(false);
 		// });
