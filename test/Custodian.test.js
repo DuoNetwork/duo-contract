@@ -548,28 +548,23 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not accept first price arrived if it is too far away', () => {
-			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp
-					.call()
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('500'),
-							firstPeriod.toNumber(),
-							{
-								from: pf1
-							}
-						)
+			return custodianContract
+				.skipCooldown()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (firstPeriod = ts))
+				.then(() =>
+					custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+						from: pf1
+					})
+				)
+				.then(() => custodianContract.getFirstPrice.call())
+				.then(res =>
+					assert.isTrue(
+						isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+							isEqual(res[1].toNumber(), firstPeriod.toNumber()),
+						'first price is not recorded'
 					)
-					.then(() => custodianContract.getFirstPrice.call())
-					.then(res =>
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-								isEqual(res[1].toNumber(), firstPeriod.toNumber()),
-							'first price is not recorded'
-						)
-					)
-			);
+				);
 		});
 
 		it('should reject price from the same sender within cool down', () => {
@@ -582,25 +577,30 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept second price arrived if second price timed out and sent by the same address as first price', () => {
-			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp.call().then(ts =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('550'), ts.toNumber(), {
+			return custodianContract
+				.skipCooldown()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (secondPeriod = ts))
+				.then(() =>
+					custodianContract.commitPrice(
+						web3.utils.toWei('550'),
+						secondPeriod.toNumber(),
+						{
 							from: pf1
-						})
-						.then(() => custodianContract.lastPrice.call())
-						.then(res => {
-							assert.isTrue(
-								isEqual(res[0].toNumber(), web3.utils.toWei('550')),
-								'second price priceNumber is not accepted'
-							);
-							assert.isTrue(
-								isEqual(res[1].toNumber(), ts.toNumber()),
-								'second price timeSecond is not accepted'
-							);
-						})
+						}
+					)
 				)
-			);
+				.then(() => custodianContract.lastPrice.call())
+				.then(res => {
+					assert.isTrue(
+						isEqual(res[0].toNumber(), web3.utils.toWei('550')),
+						'second price priceNumber is not accepted'
+					);
+					assert.isTrue(
+						isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+						'second price timeSecond is not accepted'
+					);
+				});
 		});
 
 		it('should not reset', () => {
