@@ -443,29 +443,26 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('should calculate nav', () => {
+	describe('nav calculation', () => {
 		before(initContracts);
 
-		it('it should update nav correclty', () => {
+		function calcNav(price, time, resetPrice, resetTime, beta) {
+			let numOfPeriods = Math.floor((time - resetTime) / CustodianInit.period);
+			let navA = 1 + numOfPeriods * Number(CustodianInit.couponRate);
+			let navB =
+				price / resetPrice / beta * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) -
+				navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+
+			return [navA, navB];
+		}
+
+		it('it should calculate nav correclty', () => {
 			let resetPriceInWei = web3.utils.toWei('582');
 			let resetPriceTimeSeconds = 1522745087;
 			let lastPriceInWei = web3.utils.toWei('600');
 			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
 			let betaInWei = web3.utils.toWei('1.2');
-
-			let numOfPeriods = Math.floor(
-				(lastPriceTimeSeconds - resetPriceTimeSeconds) / CustodianInit.period
-			);
-			let navA = web3.utils.fromWei(
-				web3.utils.toWei(CustodianInit.couponRate) * numOfPeriods + WEI_DENOMINATOR + ''
-			);
-
-			let navB =
-				600 /
-					Number(CustodianInit.ethInitPrice) /
-					1.2 *
-					(1 + CustodianInit.alphaInBP / BP_DENOMINATOR) -
-				navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+			let [navA, navB] = calcNav(600, lastPriceTimeSeconds, 582, resetPriceTimeSeconds, 1.2);
 			return custodianContract.calculateNav
 				.call(
 					lastPriceInWei,
@@ -477,11 +474,6 @@ contract('Custodian', accounts => {
 				.then(res => {
 					let navAInWei = res[0].valueOf();
 					let navBInWei = res[1].valueOf();
-					// console.log(navAInWei);
-					// console.log(navBInWei);
-					// console.log(navA);
-					// console.log(navB);
-
 					assert.isTrue(
 						isEqual(web3.utils.fromWei(navAInWei), navA),
 						'navA not calculated correctly'
@@ -495,17 +487,18 @@ contract('Custodian', accounts => {
 	});
 
 	describe('commit price', () => {
-		let initTimeStamp;
+		//let initTimeStamp;
 		let firstPeriod;
 		let secondPeriod;
-		let beta;
+		//let beta;
 
-		before(() =>
-			initContracts()
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (initTimeStamp = ts))
-				.then(() => custodianContract.betaInWei.call())
-				.then(betaInWei => (beta = web3.utils.fromWei(betaInWei.valueOf())))
+		before(
+			//() =>
+			initContracts //()
+			//.then(() => custodianContract.timestamp.call())
+			//.then(ts => (initTimeStamp = ts))
+			//.then(() => custodianContract.betaInWei.call())
+			//.then(betaInWei => (beta = web3.utils.fromWei(betaInWei.valueOf())))
 		);
 
 		it('non pf address cannot call commitPrice method', () => {
@@ -516,21 +509,25 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept first price arrived if it is not too far away', () => {
-			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp.call().then(ts => {
-					firstPeriod = ts;
-					custodianContract.commitPrice
-						.call(web3.utils.toWei('580'), ts.toNumber(), {
+			return custodianContract
+				.skipCooldown()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (firstPeriod = ts))
+				.then(() =>
+					custodianContract.commitPrice.call(
+						web3.utils.toWei('580'),
+						firstPeriod.toNumber(),
+						{
 							from: pf1
-						})
-						.then(success => assert.isTrue(success))
-						.then(() =>
-							custodianContract.commitPrice(web3.utils.toWei('580'), ts.toNumber(), {
-								from: pf1
-							})
-						);
-				})
-			);
+						}
+					)
+				)
+				.then(success => assert.isTrue(success))
+				.then(() =>
+					custodianContract.commitPrice(web3.utils.toWei('580'), firstPeriod.toNumber(), {
+						from: pf1
+					})
+				);
 		});
 
 		it('should update the price', () => {
@@ -552,21 +549,26 @@ contract('Custodian', accounts => {
 
 		it('should not accept first price arrived if it is too far away', () => {
 			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp.call().then(ts => {
-					secondPeriod = ts;
-					custodianContract
-						.commitPrice(web3.utils.toWei('500'), ts.toNumber(), {
-							from: pf1
-						})
-						.then(() => custodianContract.getFirstPrice.call())
-						.then(res =>
-							assert.isTrue(
-								isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-									isEqual(res[1].toNumber(), ts.toNumber()),
-								'first price is not recorded'
-							)
-						);
-				})
+				custodianContract.timestamp
+					.call()
+					.then(ts => (secondPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('500'),
+							secondPeriod.toNumber(),
+							{
+								from: pf1
+							}
+						)
+					)
+					.then(() => custodianContract.getFirstPrice.call())
+					.then(res =>
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+								isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+							'first price is not recorded'
+						)
+					)
 			);
 		});
 
