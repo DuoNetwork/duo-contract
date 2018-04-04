@@ -17,6 +17,7 @@
     "eslint-plugin-mocha": "^5.0.0",
     "ganache-cli": "^6.1.0",
     "rimraf": "^2.6.2",
+    "solium": "^1.1.6",
     "truffle": "^4.1.5"
   },
   "dependencies": {
