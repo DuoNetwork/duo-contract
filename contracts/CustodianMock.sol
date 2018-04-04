@@ -76,11 +76,11 @@ contract CustodianMock is Custodian {
 	function getSecondAddr() public view returns (address _secondAddr) {
 		return secondAddr;
 	}
-	function getFirstPrice() public view returns (Price _firstPrice) {
-		return firstPrice;
+	function getFirstPrice() public view returns (uint _firstPrice, uint _priceTime) {
+		return (firstPrice.priceInWei, firstPrice.timeInSecond);
 	}
-	function getSecondPrice() public view returns (Price _secondPrice) {
-		return secondPrice;
+	function getSecondPrice() public view returns (uint _secondPrice, uint _priceTime) {
+		return (secondPrice.priceInWei, secondPrice.timeInSecond);
 	}
 
 	function getPriceFeedTolInBP() public view returns (uint256 _priceFeedTolInBP) {

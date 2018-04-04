@@ -40,7 +40,7 @@ contract Custodian {
 
 	struct Price {
 		uint priceInWei;
-		uint timeInSeconds;
+		uint timeInSecond;
 	}
 
 	State public state;
@@ -154,9 +154,9 @@ contract Custodian {
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		resetPrice.priceInWei = ethPriceInWei;
-		resetPrice.timeInSeconds = getNowTimestamp();
+		resetPrice.timeInSecond = getNowTimestamp();
 		lastPrice.priceInWei = ethPriceInWei;
-		lastPrice.timeInSeconds = getNowTimestamp();
+		lastPrice.timeInSecond = getNowTimestamp();
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
@@ -188,20 +188,30 @@ contract Custodian {
 		}
 	}
 
-	function updateNav() internal {
-		uint numOfPeriods = lastPrice.timeInSeconds.sub(resetPrice.timeInSeconds).div(period);
-		navAInWei = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
-		navBInWei = lastPrice.priceInWei
-						.mul(WEI_DENOMINATOR)
-						.mul(WEI_DENOMINATOR)
-						.mul(alphaInBP.add(BP_DENOMINATOR))
-						.div(BP_DENOMINATOR)
-						.div(resetPrice.priceInWei)
-						.div(betaInWei)
-						.sub(navAInWei
-							.mul(alphaInBP)
-							.div(BP_DENOMINATOR)
+	function calculateNav(
+		uint priceInWei, 
+		uint timeInSecond, 
+		uint resetPriceInWei, 
+		uint resetTimeInSecond,
+		uint bInWei) 
+	public view returns (uint, uint) {
+		uint numOfPeriods = timeInSecond.sub(resetTimeInSecond).div(period);
+		uint navA = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
+		uint navB = priceInWei
+				.mul(WEI_DENOMINATOR)
+				.mul(alphaInBP.add(BP_DENOMINATOR))
+				.div(resetPriceInWei
 		);
+		// stack too deep, has to use second assignment
+		navB = navB
+			.mul(WEI_DENOMINATOR)
+			.div(BP_DENOMINATOR)
+			.div(bInWei)
+			.sub(navA
+				.mul(alphaInBP)
+				.div(BP_DENOMINATOR)
+		);
+		return (navA, navB);
 	}
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
@@ -283,7 +293,7 @@ contract Custodian {
 		if (nextResetAddrIndex >= users.length) {
 			if (state != State.PeriodicReset) {
 				resetPrice.priceInWei = lastPrice.priceInWei;
-				resetPrice.timeInSeconds = lastPrice.timeInSeconds;
+				resetPrice.timeInSecond = lastPrice.timeInSecond;
 				navBInWei = WEI_DENOMINATOR;
 			}
 			
@@ -332,11 +342,16 @@ contract Custodian {
 		balancesB[addr] = balanceB.mul(existingBalanceAdj).add(newBFromA);
 	}
 
-	function acceptPrice(uint priceInWei, uint timeInSeconds) internal returns (bool) {
+	function acceptPrice(uint priceInWei, uint timeInSecond) internal returns (bool) {
 		lastPrice.priceInWei = priceInWei;
-		lastPrice.timeInSeconds = timeInSeconds;
+		lastPrice.timeInSecond = timeInSecond;
 		numOfPrices = 0;
-		updateNav();
+		(navAInWei, navBInWei) = calculateNav(
+			lastPrice.priceInWei, 
+			lastPrice.timeInSecond, 
+			resetPrice.priceInWei, 
+			resetPrice.timeInSecond, 
+			betaInWei);
 		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
 			state = State.PreReset;
 			lastPreResetBlockNo = block.number;
@@ -348,61 +363,61 @@ contract Custodian {
 	}
 
 	//PriceFeed
-	function commitPrice(uint priceInWei, uint timeInSeconds) 
+	function commitPrice(uint priceInWei, uint timeInSecond) 
 		public 
 		inState(State.Trading) 
 		among(priceFeed1, priceFeed2, priceFeed3) 
 		returns (bool success)
 	{	
-		require(timeInSeconds <= getNowTimestamp());
-		require(timeInSeconds > lastPrice.timeInSeconds.add(priceUpdateCoolDown));
+		require(timeInSecond <= getNowTimestamp());
+		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
 			if (priceDiff.mul(BP_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
-				acceptPrice(priceInWei, timeInSeconds);
+				acceptPrice(priceInWei, timeInSecond);
 			} else {
 				// wait for the second price
-				firstPrice = Price(priceInWei, timeInSeconds);
+				firstPrice = Price(priceInWei, timeInSecond);
 				firstAddr = msg.sender;
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
-			if (timeInSeconds > firstPrice.timeInSeconds.add(priceUpdateCoolDown)) {
+			if (timeInSecond > firstPrice.timeInSecond.add(priceUpdateCoolDown)) {
 				if (firstAddr == msg.sender)
-					acceptPrice(priceInWei, timeInSeconds);
+					acceptPrice(priceInWei, timeInSecond);
 				else
-					acceptPrice(firstPrice.priceInWei, timeInSeconds);
+					acceptPrice(firstPrice.priceInWei, timeInSecond);
 			} else {
 				require(firstAddr != msg.sender);
 				// if second price times out, use first one
-				if (firstPrice.timeInSeconds.add(priceFeedTimeTol) < timeInSeconds || 
-					firstPrice.timeInSeconds.sub(priceFeedTimeTol) > timeInSeconds) {
-					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
+				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
+					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
+					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
 				} else {
 					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
 					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
-						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSeconds);
+						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
 					} else {
 						// wait for the third price
-						secondPrice = Price(priceInWei, timeInSeconds);
+						secondPrice = Price(priceInWei, timeInSecond);
 						secondAddr = msg.sender;
 						numOfPrices++;
 					} 
 				}
 			}
 		} else if (numOfPrices == 2) {
-			if (timeInSeconds > firstPrice.timeInSeconds + priceUpdateCoolDown) {
+			if (timeInSecond > firstPrice.timeInSecond + priceUpdateCoolDown) {
 				if ((firstAddr == msg.sender || secondAddr == msg.sender))
-					acceptPrice(priceInWei, timeInSeconds);
+					acceptPrice(priceInWei, timeInSecond);
 				else
-					acceptPrice(secondPrice.priceInWei, timeInSeconds);
+					acceptPrice(secondPrice.priceInWei, timeInSecond);
 			} else {
 				require(firstAddr != msg.sender && secondAddr != msg.sender);
 				uint acceptedPriceInWei;
 				// if third price times out, use first one
-				if (firstPrice.timeInSeconds.add(priceFeedTimeTol) < timeInSeconds || 
-					firstPrice.timeInSeconds.sub(priceFeedTimeTol) > timeInSeconds) {
+				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
+					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
 					acceptedPriceInWei = firstPrice.priceInWei;
 				} else {
 					// take median and proceed
@@ -422,7 +437,7 @@ contract Custodian {
 						acceptedPriceInWei = priceInWei;
 					}
 				}
-				acceptPrice(acceptedPriceInWei, firstPrice.timeInSeconds);
+				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond);
 			}
 		} else {
 			return false;

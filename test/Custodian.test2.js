@@ -16,7 +16,7 @@ const STATE_POST_RESET = '5';
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 15e-17;
+const EPSILON = 15e-18;
 
 const isEqual = (a, b, log = false) => {
 	if (log) {
@@ -162,11 +162,13 @@ contract('Custodian', accounts => {
 		let prevFeeAccumulated;
 
 		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() =>
-					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-				)
+			initContracts().then(() =>
+				duoContract
+					.transfer(alice, web3.utils.toWei('100'), { from: creator })
+					.then(() =>
+						duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
+					)
+			)
 		);
 
 		it('should only allow duo member to create', () => {
@@ -265,9 +267,10 @@ contract('Custodian', accounts => {
 				.call()
 				.then(prevFee => (prevFeeAccumulated = prevFee))
 				.then(() =>
-					custodianContract.collectFee.call(web3.utils.toWei('0.0001'), { from: fc })
+					custodianContract.collectFee
+						.call(web3.utils.toWei('0.0001'), { from: fc })
+						.then(success => assert.isTrue(success))
 				)
-				.then(success => assert.isTrue(success))
 				.then(() => custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc }));
 		});
 
@@ -292,19 +295,34 @@ contract('Custodian', accounts => {
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
 		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() =>
-					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-				)
-				.then(() => duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator }))
-				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
-				.then(() => custodianContract.balancesA.call(alice))
-				.then(prevA => (prevBalanceA = prevA))
-				.then(() => custodianContract.balancesB.call(alice))
-				.then(prevB => (prevBalanceB = prevB))
-				.then(() => custodianContract.feeAccumulatedInWei.call())
-				.then(prevFee => (prevFeeAccumulated = prevFee))
+			initContracts().then(() =>
+				duoContract
+					.transfer(alice, web3.utils.toWei('100'), { from: creator })
+					.then(() =>
+						duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
+					)
+					.then(() =>
+						duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator })
+					)
+					.then(() =>
+						custodianContract.create({ from: alice, value: web3.utils.toWei('1') })
+					)
+					.then(() =>
+						custodianContract.balancesA
+							.call(alice)
+							.then(prevA => (prevBalanceA = prevA))
+					)
+					.then(() =>
+						custodianContract.balancesB
+							.call(alice)
+							.then(prevB => (prevBalanceB = prevB))
+					)
+					.then(() =>
+						custodianContract.feeAccumulatedInWei
+							.call()
+							.then(prevFee => (prevFeeAccumulated = prevFee))
+					)
+			)
 		);
 
 		it('should only redeem token value less than balance', () => {
@@ -420,9 +438,10 @@ contract('Custodian', accounts => {
 				.call(alice)
 				.then(prePendingWithdrawal => (prevPendingWithdrawalAMT = prePendingWithdrawal))
 				.then(() =>
-					custodianContract.withdraw.call(web3.utils.toWei('0.01'), { from: alice })
+					custodianContract.withdraw
+						.call(web3.utils.toWei('0.01'), { from: alice })
+						.then(success => assert.isTrue(success, 'cannot withdraw fee'))
 				)
-				.then(success => assert.isTrue(success, 'cannot withdraw fee'))
 				.then(() => custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice }));
 		});
 
@@ -443,47 +462,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('should calculate nav', () => {
-
-		before(initContracts);
-
-		it('it should update nav correclty', () => {
-			let resetPriceInWei = web3.utils.toWei("582");
-			let resetPriceTimeSeconds = 1522745087;
-			let lastPriceInWei = web3.utils.toWei("600");
-			let lastPriceTimeSeconds = 1522745087 + 60*5 +10;
-			let betaInWei = web3.utils.toWei("1.2");
-
-			let numOfPeriods = Math.floor(
-				(lastPriceTimeSeconds - resetPriceTimeSeconds) / CustodianInit.period
-			);
-			let navA = web3.utils.fromWei(
-				web3.utils.toWei(CustodianInit.couponRate) * numOfPeriods + WEI_DENOMINATOR + ''
-			);
-
-			let navB =
-				600 / Number(CustodianInit.ethInitPrice) / 1.2 *
-					(1 + CustodianInit.alphaInBP / BP_DENOMINATOR)  -
-				navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
-			return custodianContract.calculateNav
-				.call(lastPriceInWei, lastPriceTimeSeconds, resetPriceInWei,resetPriceTimeSeconds,betaInWei)
-				.then(res => {
-					let navAInWei = res[0].valueOf();
-					let navBInWei = res[1].valueOf();
-					// console.log(navAInWei);
-					// console.log(navBInWei);
-					// console.log(navA);
-					// console.log(navB);
-
-					assert.isTrue(isEqual(web3.utils.fromWei(navAInWei),navA), "navA not calculated correctly");
-					assert.isTrue(isEqual(web3.utils.fromWei(navBInWei),navB), "navB not calculated correctly");
-				});
-				
-
-		});
-	});
-
-	describe('commit price', () => {
+	describe.only('commit price', () => {
 		let initTimeStamp;
 		let firstPeriod;
 		let secondPeriod;
@@ -491,10 +470,12 @@ contract('Custodian', accounts => {
 
 		before(() =>
 			initContracts()
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (initTimeStamp = ts))
-				.then(() => custodianContract.betaInWei.call())
-				.then(betaInWei => (beta = web3.utils.fromWei(betaInWei.valueOf())))
+				.then(() => custodianContract.timestamp.call().then(ts => (initTimeStamp = ts)))
+				.then(() =>
+					custodianContract.betaInWei
+						.call()
+						.then(betaInWei => (beta = web3.utils.fromWei(betaInWei.valueOf())))
+				)
 		);
 
 		it('non pf address cannot call commitPrice method', () => {
@@ -537,6 +518,32 @@ contract('Custodian', accounts => {
 			return custodianContract.state
 				.call()
 				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
+		});
+
+		it('it should update nav correclty', () => {
+			let numOfPeriods = Math.floor(
+				(firstPeriod.toNumber() - initTimeStamp.toNumber()) / CustodianInit.period
+			);
+			let navA = web3.utils.fromWei(
+				web3.utils.toWei(CustodianInit.couponRate) * numOfPeriods + WEI_DENOMINATOR + ''
+			);
+			// console.log(navA);
+			// console.log(beta);
+			let navB =
+				(580 * CustodianInit.alphaInBP + BP_DENOMINATOR) /
+				BP_DENOMINATOR /
+				Number(CustodianInit.ethInitPrice) /
+				beta;
+			-navA * CustodianInit.alphaInB / BP_DENOMINATOR;
+			// ;
+			console.log(navB);
+			return custodianContract.navAInWei
+				.call()
+				.then(navAInWei =>
+					custodianContract.navBInWei
+						.call()
+						.then(navBInWei => console.log(navBInWei.valueOf()))
+				);
 		});
 
 		it('should not accept first price arrived if it is too far away', () => {
