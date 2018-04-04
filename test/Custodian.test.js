@@ -444,15 +444,14 @@ contract('Custodian', accounts => {
 	});
 
 	describe('should calculate nav', () => {
-
 		before(initContracts);
 
 		it('it should update nav correclty', () => {
-			let resetPriceInWei = web3.utils.toWei("582");
+			let resetPriceInWei = web3.utils.toWei('582');
 			let resetPriceTimeSeconds = 1522745087;
-			let lastPriceInWei = web3.utils.toWei("600");
-			let lastPriceTimeSeconds = 1522745087 + 60*5 +10;
-			let betaInWei = web3.utils.toWei("1.2");
+			let lastPriceInWei = web3.utils.toWei('600');
+			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
+			let betaInWei = web3.utils.toWei('1.2');
 
 			let numOfPeriods = Math.floor(
 				(lastPriceTimeSeconds - resetPriceTimeSeconds) / CustodianInit.period
@@ -462,11 +461,19 @@ contract('Custodian', accounts => {
 			);
 
 			let navB =
-				600 / Number(CustodianInit.ethInitPrice) / 1.2 *
-					(1 + CustodianInit.alphaInBP / BP_DENOMINATOR)  -
+				600 /
+					Number(CustodianInit.ethInitPrice) /
+					1.2 *
+					(1 + CustodianInit.alphaInBP / BP_DENOMINATOR) -
 				navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
 			return custodianContract.calculateNav
-				.call(lastPriceInWei, lastPriceTimeSeconds, resetPriceInWei,resetPriceTimeSeconds,betaInWei)
+				.call(
+					lastPriceInWei,
+					lastPriceTimeSeconds,
+					resetPriceInWei,
+					resetPriceTimeSeconds,
+					betaInWei
+				)
 				.then(res => {
 					let navAInWei = res[0].valueOf();
 					let navBInWei = res[1].valueOf();
@@ -475,11 +482,15 @@ contract('Custodian', accounts => {
 					// console.log(navA);
 					// console.log(navB);
 
-					assert.isTrue(isEqual(web3.utils.fromWei(navAInWei),navA), "navA not calculated correctly");
-					assert.isTrue(isEqual(web3.utils.fromWei(navBInWei),navB), "navB not calculated correctly");
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navAInWei), navA),
+						'navA not calculated correctly'
+					);
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navBInWei), navB),
+						'navB not calculated correctly'
+					);
 				});
-				
-
 		});
 	});
 
@@ -547,16 +558,13 @@ contract('Custodian', accounts => {
 						.commitPrice(web3.utils.toWei('500'), ts.toNumber(), {
 							from: pf1
 						})
-						.then(() =>
-							custodianContract.getFirstPrice
-								.call()
-								.then(res =>
-									assert.isTrue(
-										isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-											isEqual(res[1].toNumber(), ts.toNumber()),
-										'first price is not recorded'
-									)
-								)
+						.then(() => custodianContract.getFirstPrice.call())
+						.then(res =>
+							assert.isTrue(
+								isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+									isEqual(res[1].toNumber(), ts.toNumber()),
+								'first price is not recorded'
+							)
 						);
 				})
 			);
@@ -571,24 +579,24 @@ contract('Custodian', accounts => {
 				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'the VM is not reverted'));
 		});
 
-		it('should accept first price arrived if second price timed out and within cool down', () => {
+		it('should accept second price arrived if second price timed out and sent by the same address as first price', () => {
 			return custodianContract.skipCooldown().then(() =>
 				custodianContract.timestamp.call().then(ts =>
 					custodianContract
-						.commitPrice(web3.utils.toWei('560'), ts.toNumber(), {
+						.commitPrice(web3.utils.toWei('550'), ts.toNumber(), {
 							from: pf1
 						})
-						.then(() => () =>
-							custodianContract.lastPrice
-								.call()
-								.then(res =>
-									assert.isTrue(
-										isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-											isEqual(res[1].toNumber(), ts.toNumber()),
-										'first price is not accepted'
-									)
-								)
-						)
+						.then(() => custodianContract.lastPrice.call())
+						.then(res => {
+							assert.isTrue(
+								isEqual(res[0].toNumber(), web3.utils.toWei('550')),
+								'second price priceNumber is not accepted'
+							);
+							assert.isTrue(
+								isEqual(res[1].toNumber(), ts.toNumber()),
+								'second price timeSecond is not accepted'
+							);
+						})
 				)
 			);
 		});
