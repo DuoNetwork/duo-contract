@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 import { DUO } from "./DUO.sol";
 
 library SafeMath {
@@ -129,6 +129,7 @@ contract Custodian {
 
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 	
 	function Custodian (
 		uint ethPriceInWei, 
@@ -239,9 +240,9 @@ contract Custodian {
 				);
 				betaInWei = betaInWei.mul(num).div(den);
 			}
-			StartReset();
+			emit StartReset();
 		} else {
-			StartPreReset();
+			emit StartPreReset();
 		}
 
 		return true;
@@ -250,9 +251,9 @@ contract Custodian {
 	function startPostReset() public inState(State.PostReset) returns (bool success) {
 		if (block.number - lastPostResetBlockNo >= postResetWaitingBlocks) {
 			state = State.Trading;
-			StartTrading();
+			emit StartTrading();
 		} else {
-			StartPostReset();
+			emit StartPostReset();
 		}
 
 		return true;
@@ -302,10 +303,10 @@ contract Custodian {
 
 			state = State.PostReset;
 			lastPostResetBlockNo = block.number;
-			StartPostReset();
+			emit StartPostReset();
 			return true;
 		} else{
-			StartReset();
+			emit StartReset();
 			return false;
 		}
 	}
@@ -355,9 +356,10 @@ contract Custodian {
 		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
 			state = State.PreReset;
 			lastPreResetBlockNo = block.number;
-			StartPreReset();
+			emit StartPreReset();
 			return true;
 		} 
+		emit AcceptPrice(priceInWei, timeInSecond);
 
 		return true;
 	}
@@ -574,7 +576,7 @@ contract Custodian {
 		// Add the same to the recipient
 		balancesA[_to] = balancesA[_to].add(_tokens);
 		
-		TransferA(_from, _to, _tokens);
+		emit TransferA(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesA[_from].add(balancesA[_to]) == previousBalances);
 		return true;
@@ -600,7 +602,7 @@ contract Custodian {
 		balancesB[_from] = balancesB[_from].sub(_tokens);
 		// Add the same to the recipient
 		balancesB[_to] = balancesB[_to].add(_tokens);
-		TransferB(_from, _to, _tokens);
+		emit TransferB(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balancesB[_from].add(balancesB[_to]) == previousBalances);
 		return true;

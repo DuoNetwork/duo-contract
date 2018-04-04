@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 import { Custodian } from "./Custodian.sol";
 
 contract TokenB {
@@ -44,21 +44,21 @@ contract TokenB {
 	function transfer(address _to, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
 		custodianContract.transferB(msg.sender,_to, _value);
-		Transfer(msg.sender, _to, _value);
+		emit Transfer(msg.sender, _to, _value);
 		return true;
 	}
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
 		custodianContract.transferBFrom(msg.sender, _from, _to, _value);
-		Transfer(_from, _to, _value);
+		emit Transfer(_from, _to, _value);
 		return true;
 	}
 
 	function approve(address _spender, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
 		custodianContract.approveB(msg.sender, _spender,  _value);
-		Approval(msg.sender, _spender, _value);
+		emit Approval(msg.sender, _spender, _value);
 		return true;
 	}
 }

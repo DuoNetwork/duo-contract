@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 contract DUO {
 	// Public variables of the token
@@ -49,7 +49,7 @@ contract DUO {
 		balanceOf[_from] -= _value;
 		// Add the same to the recipient
 		balanceOf[_to] += _value;
-		Transfer(_from, _to, _value);
+		emit Transfer(_from, _to, _value);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
 	}
@@ -92,7 +92,7 @@ contract DUO {
 	 */
 	function approve(address _spender, uint256 _value) public returns (bool success) {
 		allowance[msg.sender][_spender] = _value;
-		Approval(msg.sender, _spender, _value);
+		emit Approval(msg.sender, _spender, _value);
 		return true;
 	}
 }
