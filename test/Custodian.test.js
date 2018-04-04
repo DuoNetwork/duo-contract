@@ -7,11 +7,11 @@ const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 
 const STATE_TRADING = '0';
-const STATE_PRE_RESET = '1';
-const STATE_UPWARD_RESET = '2';
-const STATE_DOWNWARD_RESET = '3';
-const STATE_PERIODIC_RESET = '4';
-const STATE_POST_RESET = '5';
+//const STATE_PRE_RESET = '1';
+//const STATE_UPWARD_RESET = '2';
+//const STATE_DOWNWARD_RESET = '3';
+//const STATE_PERIODIC_RESET = '4';
+//const STATE_POST_RESET = '5';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -551,11 +551,11 @@ contract('Custodian', accounts => {
 			return custodianContract.skipCooldown().then(() =>
 				custodianContract.timestamp
 					.call()
-					.then(ts => (secondPeriod = ts))
+					.then(ts => (firstPeriod = ts))
 					.then(() =>
 						custodianContract.commitPrice(
 							web3.utils.toWei('500'),
-							secondPeriod.toNumber(),
+							firstPeriod.toNumber(),
 							{
 								from: pf1
 							}
@@ -565,7 +565,7 @@ contract('Custodian', accounts => {
 					.then(res =>
 						assert.isTrue(
 							isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-								isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+								isEqual(res[1].toNumber(), firstPeriod.toNumber()),
 							'first price is not recorded'
 						)
 					)
@@ -574,7 +574,7 @@ contract('Custodian', accounts => {
 
 		it('should reject price from the same sender within cool down', () => {
 			return custodianContract
-				.commitPrice(web3.utils.toWei('570'), secondPeriod.toNumber(), {
+				.commitPrice(web3.utils.toWei('570'), firstPeriod.toNumber(), {
 					from: pf1
 				})
 				.then(() => assert.isTrue(false, 'the price is not rejected'))
@@ -609,53 +609,48 @@ contract('Custodian', accounts => {
 				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
 		});
 
-		it('should not accept first price arrived if it is too far away', () => {
-			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp
-					.call()
-					.then(ts => (secondPeriod = ts))
+		it('should accept first price arrived if second price timed out and sent by the different address as first price', () => {
+			// first price
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
 					.then(() =>
 						custodianContract.commitPrice(
 							web3.utils.toWei('500'),
-							secondPeriod.toNumber(),
+							firstPeriod.toNumber(),
 							{
 								from: pf1
 							}
 						)
 					)
-					.then(() => custodianContract.getFirstPrice.call())
-					.then(res =>
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-								isEqual(res[1].toNumber(), secondPeriod.toNumber()),
-							'first price is not recorded'
+					// second price
+					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (secondPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('550'),
+							secondPeriod.toNumber(),
+							{
+								from: pf2
+							}
 						)
 					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('500')),
+							'second price priceNumber is not accepted'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+							'second price timeSecond is not accepted'
+						);
+					})
 			);
 		});
-
-		it('should accept first price arrived if second price timed out and sent by the different address as first price', () => {
-			return custodianContract.skipCooldown().then(() =>
-				custodianContract.timestamp.call().then(ts =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('550'), ts.toNumber(), {
-							from: pf2
-						})
-						.then(() => custodianContract.lastPrice.call())
-						.then(res => {
-							assert.isTrue(
-								isEqual(res[0].toNumber(), web3.utils.toWei('500')),
-								'second price priceNumber is not accepted'
-							);
-							assert.isTrue(
-								isEqual(res[1].toNumber(), ts.toNumber()),
-								'second price timeSecond is not accepted'
-							);
-						})
-				)
-			);
-		});
-
 
 		// it('should accept first price arrived if second price is close to it and within cool down', () => {
 		// 	return assert.isTrue(false);
