@@ -6,6 +6,8 @@ const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 
+const ACCEPTPRICE = 'AcceptPrice';
+const STARTPRERESET = 'StartPreReset';
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
 //const STATE_UPWARD_RESET = '2';
@@ -558,18 +560,29 @@ contract('Custodian', accounts => {
 					custodianContract.commitPrice(web3.utils.toWei('580'), firstPeriod.toNumber(), {
 						from: pf1
 					})
-				);
-		});
-
-		it('should update the price', () => {
-			return custodianContract.lastPrice
-				.call()
-				.then(lastPrice =>
+				)
+				.then(tx => {
+					assert.equal(tx.logs.length, 1, 'more than one event emitted');
+					assert.equal(
+						tx.logs[0].event,
+						ACCEPTPRICE,
+						'AcceptPrice Event is not emitted'
+					);
 					assert.isTrue(
-						isEqual(lastPrice[0].toNumber(), web3.utils.toWei('580')),
+						isEqual(
+							tx.logs[0].args.priceInWei.toNumber(),
+							web3.utils.toWei('580')
+						),
 						'last price is not updated correctly'
-					)
-				);
+					);
+					assert.isTrue(
+						isEqual(
+							tx.logs[0].args.timeInSecond.toNumber(),
+							firstPeriod.toNumber()
+						),
+						'last price time is not updated correctly'
+					);
+				});
 		});
 
 		it('should not reset', () => {
@@ -621,15 +634,26 @@ contract('Custodian', accounts => {
 						}
 					)
 				)
-				.then(() => custodianContract.lastPrice.call())
-				.then(res => {
-					assert.isTrue(
-						isEqual(res[0].toNumber(), web3.utils.toWei('550')),
-						'second price priceNumber is not accepted'
+				.then(tx => {
+					assert.equal(tx.logs.length, 1, 'more than one event emitted');
+					assert.equal(
+						tx.logs[0].event,
+						ACCEPTPRICE,
+						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
-						isEqual(res[1].toNumber(), secondPeriod.toNumber()),
-						'second price timeSecond is not accepted'
+						isEqual(
+							tx.logs[0].args.priceInWei.toNumber(),
+							web3.utils.toWei('550')
+						),
+						'last price is not updated correctly'
+					);
+					assert.isTrue(
+						isEqual(
+							tx.logs[0].args.timeInSecond.toNumber(),
+							secondPeriod.toNumber()
+						),
+						'last price time is not updated correctly'
 					);
 				});
 		});
@@ -669,15 +693,26 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('500')),
-							'second price priceNumber is not accepted'
+					.then(tx => {
+						assert.equal(tx.logs.length, 1, 'more than one event emitted');
+						assert.equal(
+							tx.logs[0].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
-							'second price timeSecond is not accepted'
+							isEqual(
+								tx.logs[0].args.priceInWei.toNumber(),
+								web3.utils.toWei('500')
+							),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[0].args.timeInSecond.toNumber(),
+								secondPeriod.toNumber()
+							),
+							'last price time is not updated correctly'
 						);
 					})
 			);
@@ -709,15 +744,26 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('550')),
-							'second price priceNumber is not accepted'
+					.then(tx => {
+						assert.equal(tx.logs.length, 1, 'more than one event emitted');
+						assert.equal(
+							tx.logs[0].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 10),
-							'second price timeSecond is not accepted'
+							isEqual(
+								tx.logs[0].args.priceInWei.toNumber(),
+								web3.utils.toWei('550')
+							),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[0].args.timeInSecond.toNumber(),
+								firstPeriod.toNumber() - 10
+							),
+							'last price time is not updated correctly'
 						);
 					})
 			);
@@ -789,12 +835,26 @@ contract('Custodian', accounts => {
 				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
 					from: pf3
 				})
-				.then(() => custodianContract.lastPrice.call())
-				.then(res => {
+				.then(tx => {
+					assert.equal(tx.logs.length, 1, 'more than one event emitted');
+					assert.equal(
+						tx.logs[0].event,
+						ACCEPTPRICE,
+						'AcceptPrice Event is not emitted'
+					);
 					assert.isTrue(
-						isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 300),
-						'first price is not taken'
+						isEqual(
+							tx.logs[0].args.priceInWei.toNumber(),
+							web3.utils.toWei('500')
+						),
+						'last price is not updated correctly'
+					);
+					assert.isTrue(
+						isEqual(
+							tx.logs[0].args.timeInSecond.toNumber(),
+							firstPeriod.toNumber() - 300
+						),
+						'last price time is not updated correctly'
 					);
 				});
 		});
@@ -835,15 +895,26 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(web3.utils.fromWei(res[0].valueOf()), 540),
-							'median price is not taken'
+					.then(tx => {
+						assert.equal(tx.logs.length, 1, 'more than one event emitted');
+						assert.equal(
+							tx.logs[0].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 300),
-							'median price timeInSecond is not taken'
+							isEqual(
+								tx.logs[0].args.priceInWei.toNumber(),
+								web3.utils.toWei('540')
+							),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[0].args.timeInSecond.toNumber(),
+								firstPeriod.toNumber() - 300
+							),
+							'last price time is not updated correctly'
 						);
 					})
 			);
@@ -887,15 +958,26 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(web3.utils.fromWei(res[0].valueOf()), 520),
-							'third price is not taken'
+					.then(tx => {
+						assert.equal(tx.logs.length, 1, 'more than one event emitted');
+						assert.equal(
+							tx.logs[0].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
-							'third price is not taken'
+							isEqual(
+								tx.logs[0].args.priceInWei.toNumber(),
+								web3.utils.toWei('520')
+							),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[0].args.timeInSecond.toNumber(),
+								secondPeriod.toNumber()
+							),
+							'last price time is not updated correctly'
 						);
 					})
 			);
@@ -945,18 +1027,53 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(web3.utils.fromWei(res[0].valueOf()), 500),
-							'second price is not taken'
+					.then(tx => {
+						assert.equal(tx.logs.length, 1, 'more than one event emitted');
+						assert.equal(
+							tx.logs[0].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
-							'second price is not taken'
+							isEqual(
+								tx.logs[0].args.priceInWei.toNumber(),
+								web3.utils.toWei('500')
+							),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[0].args.timeInSecond.toNumber(),
+								secondPeriod.toNumber()
+							),
+							'last price time is not updated correctly'
 						);
 					})
 			);
+		});
+
+		it('should not allow price commit during cool down period', () => {
+			return custodianContract
+				.skipCooldown()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (firstPeriod = ts))
+				.then(() =>
+					custodianContract.commitPrice(
+						web3.utils.toWei('400'),
+						firstPeriod.toNumber() - 800,
+						{
+							from: pf1
+						}
+					)
+				)
+				.then(() => assert.isTrue(false, 'can commit price within cooldown period'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						VM_REVERT_MSG,
+						'can commit price within cooldown period'
+					)
+				);
 		});
 
 		it('should transit to reset state based on price accepted', () => {
@@ -985,32 +1102,35 @@ contract('Custodian', accounts => {
 						)
 					)
 					.then(tx => {
+						assert.equal(tx.logs.length, 2, 'not two events emitted');
 						assert.isTrue(
-							tx.logs.length === 1 && tx.logs[0].event === 'StartPreReset',
+							tx.logs[0].event === STARTPRERESET,
 							'no or more than one StartPreReset event was emitted'
 						);
+						assert.equal(
+							tx.logs[1].event,
+							ACCEPTPRICE,
+							'AcceptPrice Event is not emitted'
+						);
+						assert.isTrue(
+							isEqual(tx.logs[1].args.priceInWei.toNumber(), web3.utils.toWei('888')),
+							'last price is not updated correctly'
+						);
+						assert.isTrue(
+							isEqual(
+								tx.logs[1].args.timeInSecond.toNumber(),
+								firstPeriod.toNumber() - 200
+							),
+							'last price time is not updated correctly'
+						);
+
 						return custodianContract.state.call();
 					})
 					.then(state =>
 						assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset')
 					)
-					.then(() => custodianContract.lastPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('888')),
-							'second price priceNumber is not accepted'
-						);
-						assert.isTrue(
-							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 200),
-							'second price timeSecond is not accepted'
-						);
-					})
 			);
 		});
-
-		// it('should not allow price commit during cool down period', () => {
-		// 	return assert.isTrue(false);
-		// });
 	});
 
 	// describe('only admin', () => {

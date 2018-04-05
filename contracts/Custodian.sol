@@ -366,7 +366,6 @@ contract Custodian {
 			state = State.PreReset;
 			lastPreResetBlockNo = block.number;
 			emit StartPreReset();
-			return true;
 		} 
 		emit AcceptPrice(priceInWei, timeInSecond);
 
