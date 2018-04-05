@@ -7,7 +7,7 @@ const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 
 const STATE_TRADING = '0';
-//const STATE_PRE_RESET = '1';
+const STATE_PRE_RESET = '1';
 //const STATE_UPWARD_RESET = '2';
 //const STATE_DOWNWARD_RESET = '3';
 //const STATE_PERIODIC_RESET = '4';
@@ -527,19 +527,10 @@ contract('Custodian', accounts => {
 	});
 
 	describe('commit price', () => {
-		//let initTimeStamp;
 		let firstPeriod;
 		let secondPeriod;
-		//let beta;
 
-		before(
-			//() =>
-			initContracts //()
-			//.then(() => custodianContract.timestamp.call())
-			//.then(ts => (initTimeStamp = ts))
-			//.then(() => custodianContract.betaInWei.call())
-			//.then(betaInWei => (beta = web3.utils.fromWei(betaInWei.valueOf())))
-		);
+		before(initContracts);
 
 		it('non pf address cannot call commitPrice method', () => {
 			return custodianContract.commitPrice
@@ -858,23 +849,160 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		// it('should accept third price arrived if it is from first or second sender and is after cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should accept third price arrived if it is from first or second sender and is after cool down', () => {
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('500'),
+							firstPeriod.toNumber() - 300,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('400'),
+							firstPeriod.toNumber() - 280,
+							{
+								from: pf2
+							}
+						)
+					)
+					// //third price
+					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (secondPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('520'),
+							secondPeriod.toNumber(),
+							{
+								from: pf2
+							}
+						)
+					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(web3.utils.fromWei(res[0].valueOf()), 520),
+							'third price is not taken'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+							'third price is not taken'
+						);
+					})
+			);
+		});
 
-		// it('should accept second price arrived if third price is from a different sender and is after cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should not reset', () => {
+			return custodianContract.state
+				.call()
+				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
+		});
 
-		// it('should update NAV for A and B after pric eis accepted', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should accept second price arrived if third price is from a different sender and is after cool down', () => {
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('580'),
+							firstPeriod.toNumber() - 200,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('500'),
+							firstPeriod.toNumber() - 180,
+							{
+								from: pf2
+							}
+						)
+					)
+					// // //third price
+					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (secondPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('520'),
+							secondPeriod.toNumber(),
+							{
+								from: pf3
+							}
+						)
+					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(web3.utils.fromWei(res[0].valueOf()), 500),
+							'second price is not taken'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), secondPeriod.toNumber()),
+							'second price is not taken'
+						);
+					})
+			);
+		});
+
+		it('should transit to reset state based on price accepted', () => {
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('888'),
+							firstPeriod.toNumber() - 200,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('898'),
+							firstPeriod.toNumber(),
+							{
+								from: pf2
+							}
+						)
+					)
+					.then(() => custodianContract.state.call())
+					.then(state =>
+						assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset')
+					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('888')),
+							'second price priceNumber is not accepted'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 200),
+							'second price timeSecond is not accepted'
+						);
+					})
+			);
+		});
 
 		// it('should not allow price commit during cool down period', () => {
-		// 	return assert.isTrue(false);
-		// });
-
-		// it('should transit to reset state based on price accepted', () => {
 		// 	return assert.isTrue(false);
 		// });
 	});
