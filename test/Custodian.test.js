@@ -490,15 +490,15 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('should calculate median', () => {
-			return custodianContract.getMedian.call(400, 500, 600, { from: alice }).then(median => {
-				assert.equal(median.toNumber(), 500, 'the median is wrong');
-			});
+			return custodianContract.getMedian
+				.call(400, 500, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedian.call(500, 600, 400, { from: alice }).then(median => {
-				assert.equal(median.toNumber(), 500, 'the median is wrong');
-			});
+			return custodianContract.getMedian
+				.call(500, 600, 400, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
@@ -984,7 +984,13 @@ contract('Custodian', accounts => {
 							}
 						)
 					)
-					.then(() => custodianContract.state.call())
+					.then(tx => {
+						assert.isTrue(
+							tx.logs.length === 1 && tx.logs[0].event === 'StartPreReset',
+							'no or more than one StartPreReset event was emitted'
+						);
+						return custodianContract.state.call();
+					})
 					.then(state =>
 						assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset')
 					)

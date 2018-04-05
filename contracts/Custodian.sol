@@ -26,11 +26,11 @@ library SafeMath {
 		return c;
 	}
 
-	function gt(uint x, uint y) internal pure returns(bytes1){
+	function gt(uint x, uint y) internal pure returns(bytes1) {
 		bytes1 b;
-		b = 0x00;
-		if (x > y){
-			b = 0x11;
+		b = 0x0;
+		if (x > y) {
+			b = 0x1;
 		}
 		return b;
 	}
@@ -283,7 +283,7 @@ contract Custodian {
 			newBFromBPerB = state == State.UpwardReset ? navBInWei.sub(WEI_DENOMINATOR).div(bAdj) : 0;
 		}
 
-		while (nextResetAddrIndex < users.length && msg.gas > iterationGasThreshold) {
+		while (nextResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
 			if (state == State.DownwardReset)
 				downwardResetForAddress(
 					users[nextResetAddrIndex], 
@@ -374,9 +374,9 @@ contract Custodian {
 	}
 
 	function getMedian(uint a, uint b, uint c) public pure returns (uint){
-		if (a.gt(b) ^ c.gt(a) == 0x00) {
+		if (a.gt(b) ^ c.gt(a) == 0x0) {
 			return a;
-		} else if(b.gt(a) ^ c.gt(b) == 0x00) {
+		} else if(b.gt(a) ^ c.gt(b) == 0x0) {
 			return b;
 		} else {
 			return c;
@@ -499,7 +499,7 @@ contract Custodian {
 	}
 
 	function withdraw(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
-		require(amtEthInWei > 0 && amtEthInWei <= ethPendingWithdrawal[msg.sender] && amtEthInWei < this.balance);
+		require(amtEthInWei > 0 && amtEthInWei <= ethPendingWithdrawal[msg.sender] && amtEthInWei < address(this).balance);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].sub(amtEthInWei);
 		msg.sender.transfer(amtEthInWei);
 		return true;
