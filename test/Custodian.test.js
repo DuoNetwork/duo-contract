@@ -486,25 +486,25 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('calculate medium', () => {
+	describe('calculate median', () => {
 		before(initContracts);
 
-		it('should calculate medium', () => {
-			return custodianContract.getMedium.call(400, 500, 600, { from: alice }).then(medium => {
-				assert.equal(medium.toNumber(), 500, 'the medium is wrong');
+		it('should calculate median', () => {
+			return custodianContract.getMedian.call(400, 500, 600, { from: alice }).then(median => {
+				assert.equal(median.toNumber(), 500, 'the median is wrong');
 			});
 		});
 
-		it('should calculate medium', () => {
-			return custodianContract.getMedium.call(500, 600, 400, { from: alice }).then(medium => {
-				assert.equal(medium.toNumber(), 500, 'the medium is wrong');
+		it('should calculate median', () => {
+			return custodianContract.getMedian.call(500, 600, 400, { from: alice }).then(median => {
+				assert.equal(median.toNumber(), 500, 'the median is wrong');
 			});
 		});
 
-		it('should calculate medium', () => {
-			return custodianContract.getMedium
+		it('should calculate median', () => {
+			return custodianContract.getMedian
 				.call(600, 400, 500, { from: alice })
-				.then(medium => assert.equal(medium.toNumber(), 500, 'the medium is wrong'));
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 	});
 
@@ -790,7 +790,7 @@ contract('Custodian', accounts => {
 				});
 		});
 
-		it('should accept medium price if third price does not time out', () => {
+		it('should accept median price if third price does not time out', () => {
 			// first price
 			return (
 				custodianContract
@@ -830,11 +830,11 @@ contract('Custodian', accounts => {
 					.then(res => {
 						assert.isTrue(
 							isEqual(web3.utils.fromWei(res[0].valueOf()), 540),
-							'medium price is not taken'
+							'median price is not taken'
 						);
 						assert.isTrue(
 							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 300),
-							'medium price timeInSecond is not taken'
+							'median price timeInSecond is not taken'
 						);
 					})
 			);

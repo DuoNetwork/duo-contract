@@ -373,7 +373,7 @@ contract Custodian {
 		return b;
 	}
 
-	function getMedium(uint a, uint b, uint c) public returns (uint){
+	function getMedian(uint a, uint b, uint c) public returns (uint){
 		if (convertToByte(a,b) ^ convertToByte(c,a) == 0x00) {
 			return a;
 		} else if(convertToByte(b,a) ^ convertToByte(c,b) == 0x00) {
@@ -447,7 +447,7 @@ contract Custodian {
 					if (secondPrice.priceInWei == priceInWei) {
 						acceptedPriceInWei = priceInWei;
 					} else {
-						acceptedPriceInWei = getMedium(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
+						acceptedPriceInWei = getMedian(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
 					}
 				}
 				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond);
