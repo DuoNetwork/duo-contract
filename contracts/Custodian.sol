@@ -364,6 +364,25 @@ contract Custodian {
 		return true;
 	}
 
+	function convertToByte(uint x, uint y) private returns(bytes1){
+		bytes1 b;
+		b = 0x00;
+		if (x > y){
+			b = 0x11;
+		}
+		return b;
+	}
+
+	function getMedium(uint a, uint b, uint c) public returns (uint){
+		if (convertToByte(a,b) ^ convertToByte(c,a) == 0x00) {
+			return a;
+		} else if(convertToByte(b,a) ^ convertToByte(c,b) == 0x00) {
+			return b;
+		} else {
+			return c;
+		}
+	}
+
 	//PriceFeed
 	function commitPrice(uint priceInWei, uint timeInSecond) 
 		public 
@@ -427,16 +446,8 @@ contract Custodian {
 					// if second and third price are the same, they are median
 					if (secondPrice.priceInWei == priceInWei) {
 						acceptedPriceInWei = priceInWei;
-					} else if (firstPrice.priceInWei
-						.sub(secondPrice.priceInWei)
-						.mul(priceInWei.sub(firstPrice.priceInWei)) > 0) {
-						acceptedPriceInWei = firstPrice.priceInWei;
-					} else if (secondPrice.priceInWei
-						.sub(firstPrice.priceInWei)
-						.mul(priceInWei.sub(secondPrice.priceInWei)) > 0) {
-						acceptedPriceInWei = secondPrice.priceInWei;
 					} else {
-						acceptedPriceInWei = priceInWei;
+						acceptedPriceInWei = getMedium(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
 					}
 				}
 				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond);

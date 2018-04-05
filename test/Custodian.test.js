@@ -486,6 +486,28 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe('calculate medium', () => {
+		before(initContracts);
+
+		it('should calculate medium', () => {
+			return custodianContract.getMedium.call(400, 500, 600, { from: alice }).then(medium => {
+				assert.equal(medium.toNumber(), 500, 'the medium is wrong');
+			});
+		});
+
+		it('should calculate medium', () => {
+			return custodianContract.getMedium.call(500, 600, 400, { from: alice }).then(medium => {
+				assert.equal(medium.toNumber(), 500, 'the medium is wrong');
+			});
+		});
+
+		it('should calculate medium', () => {
+			return custodianContract.getMedium
+				.call(600, 400, 500, { from: alice })
+				.then(medium => assert.equal(medium.toNumber(), 500, 'the medium is wrong'));
+		});
+	});
+
 	describe('commit price', () => {
 		//let initTimeStamp;
 		let firstPeriod;
@@ -652,33 +674,171 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		// it('should accept first price arrived if second price is close to it and within cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should accept first price arrived if second price is close to it and within cool down', () => {
+			// first price
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('550'),
+							firstPeriod.toNumber() - 10,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('555'),
+							firstPeriod.toNumber() - 5,
+							{
+								from: pf2
+							}
+						)
+					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('550')),
+							'second price priceNumber is not accepted'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 10),
+							'second price timeSecond is not accepted'
+						);
+					})
+			);
+		});
 
-		// it('should accept second price arrived if it is from the same sender and is after cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should wait for third price if first and second do not agree', () => {
+			// first price
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('500'),
+							firstPeriod.toNumber() - 300,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('700'),
+							firstPeriod.toNumber() - 280,
+							{
+								from: pf2
+							}
+						)
+					)
+					.then(() => custodianContract.getSecondPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(res[0].toNumber(), web3.utils.toWei('700')) &&
+								isEqual(res[1].toNumber(), firstPeriod.toNumber() - 280),
+							'second price is not recorded'
+						);
+					})
+			);
+		});
 
-		// it('should accept first price arrived if second price is from a different sender and is after cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should reject price from first sender within cool down', () => {
+			// third price
+			return custodianContract
+				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+					from: pf1
+				})
+				.then(() => assert.isTrue(false, 'third price is not rejected'))
+				.catch(err =>
+					assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected')
+				);
+		});
 
-		// it('should wait for third price if first and second do not agree', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should reject price from second sender within cool down', () => {
+			// third price
+			return custodianContract
+				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+					from: pf2
+				})
+				.then(() => assert.isTrue(false, 'third price is not rejected'))
+				.catch(err =>
+					assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected')
+				);
+		});
 
-		// it('should reject price from first or second sender within cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should accept first price arrived if third price timed out and within cool down', () => {
+			return custodianContract
+				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+					from: pf3
+				})
+				.then(() => custodianContract.lastPrice.call())
+				.then(res => {
+					assert.isTrue(
+						isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 300),
+						'first price is not taken'
+					);
+				});
+		});
 
-		// it('should accept first price arrived if third price timed out and within cool down', () => {
-		// 	return assert.isTrue(false);
-		// });
-
-		// it('should accept medium price if third price does not time out', () => {
-		// 	return assert.isTrue(false);
-		// });
+		it('should accept medium price if third price does not time out', () => {
+			// first price
+			return (
+				custodianContract
+					.skipCooldown()
+					.then(() => custodianContract.timestamp.call())
+					.then(ts => (firstPeriod = ts))
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('550'),
+							firstPeriod.toNumber() - 300,
+							{
+								from: pf1
+							}
+						)
+					)
+					// second price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('400'),
+							firstPeriod.toNumber() - 280,
+							{
+								from: pf2
+							}
+						)
+					)
+					// //third price
+					.then(() =>
+						custodianContract.commitPrice(
+							web3.utils.toWei('540'),
+							firstPeriod.toNumber() - 260,
+							{
+								from: pf3
+							}
+						)
+					)
+					.then(() => custodianContract.lastPrice.call())
+					.then(res => {
+						assert.isTrue(
+							isEqual(web3.utils.fromWei(res[0].valueOf()), 540),
+							'medium price is not taken'
+						);
+						assert.isTrue(
+							isEqual(res[1].toNumber(), firstPeriod.toNumber() - 300),
+							'medium price timeInSecond is not taken'
+						);
+					})
+			);
+		});
 
 		// it('should accept third price arrived if it is from first or second sender and is after cool down', () => {
 		// 	return assert.isTrue(false);
