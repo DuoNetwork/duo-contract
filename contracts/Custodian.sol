@@ -352,7 +352,7 @@ contract Custodian {
 		balancesB[addr] = balanceB.mul(existingBalanceAdj).add(newBFromA);
 	}
 
-	function acceptPrice(uint priceInWei, uint timeInSecond) internal returns (bool) {
+	function acceptPrice(uint priceInWei, uint timeInSecond) internal {
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.timeInSecond = timeInSecond;
 		numOfPrices = 0;
@@ -368,8 +368,6 @@ contract Custodian {
 			emit StartPreReset();
 		} 
 		emit AcceptPrice(priceInWei, timeInSecond);
-
-		return true;
 	}
 
 	function getMedian(uint a, uint b, uint c) public pure returns (uint){

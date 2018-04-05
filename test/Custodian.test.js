@@ -6,8 +6,8 @@ const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 
-const ACCEPTPRICE = 'AcceptPrice';
-const STARTPRERESET = 'StartPreReset';
+const ACCEPT_PRICE = 'AcceptPrice';
+const START_PRE_RESET = 'StartPreReset';
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
 //const STATE_UPWARD_RESET = '2';
@@ -565,7 +565,7 @@ contract('Custodian', accounts => {
 					assert.equal(tx.logs.length, 1, 'more than one event emitted');
 					assert.equal(
 						tx.logs[0].event,
-						ACCEPTPRICE,
+						ACCEPT_PRICE,
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
@@ -638,7 +638,7 @@ contract('Custodian', accounts => {
 					assert.equal(tx.logs.length, 1, 'more than one event emitted');
 					assert.equal(
 						tx.logs[0].event,
-						ACCEPTPRICE,
+						ACCEPT_PRICE,
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
@@ -697,7 +697,7 @@ contract('Custodian', accounts => {
 						assert.equal(tx.logs.length, 1, 'more than one event emitted');
 						assert.equal(
 							tx.logs[0].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
@@ -748,7 +748,7 @@ contract('Custodian', accounts => {
 						assert.equal(tx.logs.length, 1, 'more than one event emitted');
 						assert.equal(
 							tx.logs[0].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
@@ -839,7 +839,7 @@ contract('Custodian', accounts => {
 					assert.equal(tx.logs.length, 1, 'more than one event emitted');
 					assert.equal(
 						tx.logs[0].event,
-						ACCEPTPRICE,
+						ACCEPT_PRICE,
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
@@ -899,7 +899,7 @@ contract('Custodian', accounts => {
 						assert.equal(tx.logs.length, 1, 'more than one event emitted');
 						assert.equal(
 							tx.logs[0].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
@@ -962,7 +962,7 @@ contract('Custodian', accounts => {
 						assert.equal(tx.logs.length, 1, 'more than one event emitted');
 						assert.equal(
 							tx.logs[0].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
@@ -1031,7 +1031,7 @@ contract('Custodian', accounts => {
 						assert.equal(tx.logs.length, 1, 'more than one event emitted');
 						assert.equal(
 							tx.logs[0].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
@@ -1104,12 +1104,12 @@ contract('Custodian', accounts => {
 					.then(tx => {
 						assert.equal(tx.logs.length, 2, 'not two events emitted');
 						assert.isTrue(
-							tx.logs[0].event === STARTPRERESET,
+							tx.logs[0].event === START_PRE_RESET,
 							'no or more than one StartPreReset event was emitted'
 						);
 						assert.equal(
 							tx.logs[1].event,
-							ACCEPTPRICE,
+							ACCEPT_PRICE,
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
