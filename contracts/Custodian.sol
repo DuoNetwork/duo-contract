@@ -25,6 +25,15 @@ library SafeMath {
 		assert(c >= a);
 		return c;
 	}
+
+	function gt(uint x, uint y) internal pure returns(bytes1){
+		bytes1 b;
+		b = 0x00;
+		if (x > y){
+			b = 0x11;
+		}
+		return b;
+	}
 }
 
 contract Custodian {
@@ -364,19 +373,10 @@ contract Custodian {
 		return true;
 	}
 
-	function convertToByte(uint x, uint y) private returns(bytes1){
-		bytes1 b;
-		b = 0x00;
-		if (x > y){
-			b = 0x11;
-		}
-		return b;
-	}
-
-	function getMedian(uint a, uint b, uint c) public returns (uint){
-		if (convertToByte(a,b) ^ convertToByte(c,a) == 0x00) {
+	function getMedian(uint a, uint b, uint c) public pure returns (uint){
+		if (a.gt(b) ^ c.gt(a) == 0x00) {
 			return a;
-		} else if(convertToByte(b,a) ^ convertToByte(c,b) == 0x00) {
+		} else if(b.gt(a) ^ c.gt(b) == 0x00) {
 			return b;
 		} else {
 			return c;

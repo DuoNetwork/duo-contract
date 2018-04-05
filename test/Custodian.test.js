@@ -506,6 +506,24 @@ contract('Custodian', accounts => {
 				.call(600, 400, 500, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
+
+		it('should calculate median', () => {
+			return custodianContract.getMedian
+				.call(600, 600, 500, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return custodianContract.getMedian
+				.call(500, 600, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return custodianContract.getMedian
+				.call(600, 500, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
 	});
 
 	describe('commit price', () => {
