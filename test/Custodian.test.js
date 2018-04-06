@@ -569,17 +569,11 @@ contract('Custodian', accounts => {
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.priceInWei.toNumber(),
-							web3.utils.toWei('580')
-						),
+						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('580')),
 						'last price is not updated correctly'
 					);
 					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.timeInSecond.toNumber(),
-							firstPeriod.toNumber()
-						),
+						isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber()),
 						'last price time is not updated correctly'
 					);
 				});
@@ -642,17 +636,11 @@ contract('Custodian', accounts => {
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.priceInWei.toNumber(),
-							web3.utils.toWei('550')
-						),
+						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
 						'last price is not updated correctly'
 					);
 					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.timeInSecond.toNumber(),
-							secondPeriod.toNumber()
-						),
+						isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
 						'last price time is not updated correctly'
 					);
 				});
@@ -701,10 +689,7 @@ contract('Custodian', accounts => {
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.priceInWei.toNumber(),
-								web3.utils.toWei('500')
-							),
+							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
 							'last price is not updated correctly'
 						);
 						assert.isTrue(
@@ -752,10 +737,7 @@ contract('Custodian', accounts => {
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.priceInWei.toNumber(),
-								web3.utils.toWei('550')
-							),
+							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
 							'last price is not updated correctly'
 						);
 						assert.isTrue(
@@ -843,10 +825,7 @@ contract('Custodian', accounts => {
 						'AcceptPrice Event is not emitted'
 					);
 					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.priceInWei.toNumber(),
-							web3.utils.toWei('500')
-						),
+						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
 						'last price is not updated correctly'
 					);
 					assert.isTrue(
@@ -903,10 +882,7 @@ contract('Custodian', accounts => {
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.priceInWei.toNumber(),
-								web3.utils.toWei('540')
-							),
+							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('540')),
 							'last price is not updated correctly'
 						);
 						assert.isTrue(
@@ -966,10 +942,7 @@ contract('Custodian', accounts => {
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.priceInWei.toNumber(),
-								web3.utils.toWei('520')
-							),
+							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('520')),
 							'last price is not updated correctly'
 						);
 						assert.isTrue(
@@ -1035,10 +1008,7 @@ contract('Custodian', accounts => {
 							'AcceptPrice Event is not emitted'
 						);
 						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.priceInWei.toNumber(),
-								web3.utils.toWei('500')
-							),
+							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
 							'last price is not updated correctly'
 						);
 						assert.isTrue(
@@ -1133,6 +1103,156 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe.only('pre reset', () => {
+		beforeEach(() =>
+			initContracts()
+				.then(() => custodianContract.skipCooldown())
+				.then(() => custodianContract.timestamp.call())
+				.then(ts =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+							from: pf1
+						})
+						.then(() =>
+							custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
+								from: pf2
+							})
+						)
+				)
+		);
+
+		it('should be in state preReset', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset')
+				);
+		});
+
+		it('should not allow price commit', () => {
+			return custodianContract
+				.skipCooldown()
+				.then(() => custodianContract.timestamp.call())
+				.then(ts =>
+					custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+						from: pf1
+					})
+				)
+				.then(() => assert.isTrue(false, 'still can commit price'))
+				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can commit price '));
+		});
+
+		it('should not allow creation', () => {
+			return custodianContract
+				.create({
+					from: alice,
+					value: web3.utils.toWei('1')
+				})
+
+				.then(() => assert.isTrue(false, 'still can create'))
+				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can create '));
+		});
+
+		it('should not allow redemption', () => {
+			return custodianContract
+				.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), { from: alice })
+				.then(() => assert.isTrue(false, 'still can redeem'))
+				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can redeem '));
+		});
+
+		it('should not allow any transfer or approve of A', () => {
+			return custodianContract
+				.transferA(alice, bob, web3.utils.toWei('1'))
+				.then(() => assert.isTrue(false, 'still can transfer A token'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still can transfer A token')
+				);
+		});
+
+		it('should not allow any transfer or approve of B', () => {
+			return custodianContract
+				.transferB(alice, bob, web3.utils.toWei('1'))
+				.then(() => assert.isTrue(false, 'still can transfer B token'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still can transfer B token')
+				);
+		});
+
+		it('should not allow admin setMemberThresholdInWei', () => {
+			return custodianContract
+				.setMemberThresholdInWei(1000)
+				.then(() => assert.isTrue(false, 'still can setMemberThresholdInWei'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei')
+				);
+		});
+
+		it('should not allow admin setIterationGasThreshold', () => {
+			return custodianContract
+				.setIterationGasThreshold(1000)
+				.then(() => assert.isTrue(false, 'still can setIterationGasThreshold'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold')
+				);
+		});
+
+		it('should not allow admin setPreResetWaitingBlocks', () => {
+			return custodianContract
+				.setPreResetWaitingBlocks(1000)
+				.then(() => assert.isTrue(false, 'still can setPreResetWaitingBlocks'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks')
+				);
+		});
+
+		it('should not allow admin setPostResetWaitingBlocks', () => {
+			return custodianContract
+				.setPostResetWaitingBlocks(1000)
+				.then(() => assert.isTrue(false, 'still can setPostResetWaitingBlocks'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setPostResetWaitingBlocks')
+				);
+		});
+
+		it('should not allow admin setPriceTolInBP', () => {
+			return custodianContract
+				.setPriceTolInBP(1000)
+				.then(() => assert.isTrue(false, 'still can setPriceTolInBP'))
+				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still setPriceTolInBP'));
+		});
+
+		it('should not allow admin setPriceFeedTolInBP', () => {
+			return custodianContract
+				.setPriceFeedTolInBP(1000)
+				.then(() => assert.isTrue(false, 'still can setPriceFeedTolInBP'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP')
+				);
+		});
+
+		it('should not allow admin setPriceFeedTimeTol', () => {
+			return custodianContract
+				.setPriceFeedTimeTol(1000)
+				.then(() => assert.isTrue(false, 'still can setPriceFeedTimeTol'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol')
+				);
+		});
+
+		it('should not allow admin setPriceUpdateCoolDown', () => {
+			return custodianContract
+				.setPriceUpdateCoolDown(1000)
+				.then(() => assert.isTrue(false, 'still can setPriceUpdateCoolDown'))
+				.catch(err =>
+					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown')
+				);
+		});
+
+		// it('should transit to reset state after a given number of blocks but not before that', () => {
+		// 	return custodianContract.startPreReset().then(tx => console.log(tx));
+		// });
+	});
+
 	// describe('only admin', () => {
 	// 	it('should be able to set fee address', () => {
 	// 		return assert.isTrue(false);
@@ -1195,28 +1315,6 @@ contract('Custodian', accounts => {
 	// 	});
 
 	// 	it('should be able to transfer from address', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('pre reset', () => {
-	// 	it('should not allow price commit', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow creation or redemption', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow any transfer or approve of A or B', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow any admin activity', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should transit to reset state after a given number of blocks but not before that', () => {
 	// 		return assert.isTrue(false);
 	// 	});
 	// });
