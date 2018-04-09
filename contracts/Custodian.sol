@@ -206,22 +206,19 @@ contract Custodian {
 		uint bInWei) 
 	public view returns (uint, uint) {
 		uint numOfPeriods = timeInSecond.sub(resetTimeInSecond).div(period);
-		uint navA = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
-		uint navB = priceInWei
-				.mul(WEI_DENOMINATOR)
-				.mul(alphaInBP.add(BP_DENOMINATOR))
-				.div(resetPriceInWei
-		);
-		// stack too deep, has to use second assignment
-		navB = navB
+		uint navParent = priceInWei.mul(WEI_DENOMINATOR).div(resetPriceInWei);
+		navParent = navParent
 			.mul(WEI_DENOMINATOR)
+			.mul(alphaInBP.add(BP_DENOMINATOR))
 			.div(BP_DENOMINATOR)
-			.div(bInWei)
-			.sub(navA
-				.mul(alphaInBP)
-				.div(BP_DENOMINATOR)
+			.div(bInWei
 		);
-		return (navA, navB);
+		uint navA = periodCouponInWei.mul(numOfPeriods).add(WEI_DENOMINATOR);
+		uint navAAdj = navA.mul(alphaInBP).div(BP_DENOMINATOR);
+		if (navParent <= navAAdj)
+			return (navParent.mul(BP_DENOMINATOR).div(alphaInBP), 0);
+		else
+			return (navA, navParent.sub(navAAdj));
 	}
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
