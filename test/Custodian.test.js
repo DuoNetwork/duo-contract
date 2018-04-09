@@ -8,12 +8,14 @@ const DuoInit = InitParas['DUO'];
 
 const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
+const START_RESET = 'StartReset';
+
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
-//const STATE_UPWARD_RESET = '2';
+const STATE_UPWARD_RESET = '2';
 //const STATE_DOWNWARD_RESET = '3';
 //const STATE_PERIODIC_RESET = '4';
-//const STATE_POST_RESET = '5';
+const STATE_POST_RESET = '5';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -35,6 +37,7 @@ contract('Custodian', accounts => {
 	const creator = accounts[0];
 	const alice = accounts[1]; //duoMember
 	const bob = accounts[2];
+	const david = accounts[8];
 	const nonDuoMember = accounts[3];
 	const pf1 = accounts[4];
 	const pf2 = accounts[5];
@@ -1103,7 +1106,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('pre reset', () => {
+	describe('pre reset', () => {
 		beforeEach(() =>
 			initContracts()
 				.then(() => custodianContract.skipCooldown())
@@ -1248,10 +1251,127 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		// it('should transit to reset state after a given number of blocks but not before that', () => {
-		// 	return custodianContract.startPreReset().then(tx => console.log(tx));
-		// });
+		it('should transit to reset state after a given number of blocks but not before that', () => {
+			let numBlocks = 9;
+			return custodianContract.startPreReset().then(() => {
+				let count = 0;
+				let loop = () => {
+					return custodianContract.startPreReset().then(tx => {
+						count = count + 1;
+						if (count < numBlocks) {
+							loop();
+						} else {
+							assert.isTrue(
+								tx.logs.length === 1 && tx.logs[0].event === START_RESET,
+								'not transiting to reset state'
+							);
+							return custodianContract.state
+								.call()
+								.then(state =>
+									assert.equal(
+										state.valueOf(),
+										STATE_UPWARD_RESET,
+										'not transit to upward reset state'
+									)
+								);
+						}
+					});
+				};
+				loop();
+			});
+		});
 	});
+
+	describe.only('upward reset', () => {
+		before(() =>
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() => duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator }))
+				.then(() =>
+					custodianContract.create({
+						from: alice,
+						value: web3.utils.toWei('1')
+					})
+				)
+				.then(() =>
+					custodianContract.create({
+						from: bob,
+						value: web3.utils.toWei('1')
+					})
+				)
+				.then(() => custodianContract.skipCooldown())
+				.then(() => custodianContract.timestamp.call())
+				.then(ts =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
+							from: pf1
+						})
+						.then(() =>
+							custodianContract.commitPrice(web3.utils.toWei('1201'), ts.toNumber(), {
+								from: pf2
+							})
+						)
+						.then(() => {
+							let count = 0;
+							let loop = () => {
+								return custodianContract.startPreReset().then(() => {
+									// console.log(tx);
+									let numBlocks = 10;
+									count = count + 1;
+									if (count < numBlocks) {
+										return loop();
+									}
+								});
+							};
+							return loop();
+						})
+				)
+		);
+
+		it('should in state upwardreset', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
+				);
+		});
+
+		it('should have two users', () => {
+			return custodianContract.getNumOfUsers
+				.call()
+				.then(numOfUsers =>
+					assert.equal(numOfUsers.valueOf(), 2, 'num of users incorrect')
+				);
+		});
+
+		it('should process one user reset', () => {
+			return custodianContract
+				.startReset({ gas: 1000000 })
+				.then(() => {
+					return custodianContract.nextResetAddrIndex
+						.call()
+						.then(nextIndex => assert.equal(nextIndex.valueOf(), 0, 'reset not finished'));
+				});
+		});
+
+		it('should move to post reset state after every account is reset', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state')
+				);
+		});
+	});
+
+	// describe('downward reset', () => {
+	// 	it('should reset accounts based on remaining gas', () => {
+	// 		return assert.isTrue(false);
+	// 	});
+
+	// 	it('should move to post reset state after every account is reset', () => {
+	// 		return assert.isTrue(false);
+	// 	});
+	// });
 
 	// describe('only admin', () => {
 	// 	it('should be able to set fee address', () => {
@@ -1315,26 +1435,6 @@ contract('Custodian', accounts => {
 	// 	});
 
 	// 	it('should be able to transfer from address', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('upward reset', () => {
-	// 	it('should reset accounts based on remaining gas', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should move to post reset state after every account is reset', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('downward reset', () => {
-	// 	it('should reset accounts based on remaining gas', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should move to post reset state after every account is reset', () => {
 	// 		return assert.isTrue(false);
 	// 	});
 	// });

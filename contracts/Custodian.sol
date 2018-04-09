@@ -104,7 +104,7 @@ contract Custodian {
 	uint numOfPrices = 0;
 	uint lastPreResetBlockNo = 0;
 	uint lastPostResetBlockNo = 0;
-	uint nextResetAddrIndex = 0;
+	uint public nextResetAddrIndex = 0;
 	address firstAddr;
 	address secondAddr;
 	Price firstPrice;
@@ -690,6 +690,10 @@ contract Custodian {
 	function setPriceUpdateCoolDown(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
 		priceUpdateCoolDown = newValue;
 		return true;
+	}
+
+	function getNumOfUsers() public view returns (uint256) {
+		return users.length;
 	}
 }
 

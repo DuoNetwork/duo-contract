@@ -13,7 +13,7 @@
 		"commissionRateInBP": 300,
 		"period": 3600,
 		"memberThreshold": "10",
-		"gasThreshhold": 200000
+		"gasThreshhold": 19000
 	},
 	"DUO": {
 		"initSupply": "10000",
