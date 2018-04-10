@@ -22,7 +22,7 @@ const STATE_POST_RESET = '5';
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 15e-17;
+const EPSILON = 6e-14;
 
 const isEqual = (a, b, log = false) => {
 	if (log) {
@@ -1273,7 +1273,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('upward reset', () => {
+	describe.only('upward reset', () => {
 		function upwardReset(preBalanceA, preBalanceB, newBFromAPerA, newBFromBPerB, aAdj) {
 			let newBFromA = preBalanceA * newBFromAPerA;
 			let newAFromA = newBFromA * aAdj;
@@ -1376,6 +1376,7 @@ contract('Custodian', accounts => {
 				);
 		});
 
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		it('should process reset for only one user', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
@@ -1483,13 +1484,286 @@ contract('Custodian', accounts => {
 				.then(() => custodianContract.startPostReset())
 				.then(() => custodianContract.state.call())
 				.then(state =>
-					assert.equal(
-						state.valueOf(),
-						STATE_TRADING,
-						'not transit to trading state'
-					)
+					assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
 				);
 		});
+
+		//case 2: aliceA > 0, aliceB = 0; bobA = 0, bobB > 0
+		it('alice transfer B to bob; bob transfer A to alice', () => {
+			return custodianContract.balancesB
+				.call(alice)
+				.then(aliceB => {
+					// console.log();
+					custodianContract.transferB(alice, bob, aliceB.valueOf(), {
+						from: alice
+					});
+				})
+				// .then(()=>custodianContract.)
+				.then(() =>
+					custodianContract.balancesA.call(bob).then(bobA => {
+						// console.log();
+						custodianContract.transferA(bob, alice, bobA.valueOf(), {
+							from: bob
+						});
+					})
+				)
+				.then(() =>
+					custodianContract.balancesA
+						.call(alice)
+						.then(aliceA => (preBalanceAalice = aliceA.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesB
+						.call(alice)
+						.then(aliceB => (preBalanceBalice = aliceB.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesA
+						.call(bob)
+						.then(bobA => (preBalanceAbob = bobA.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesB
+						.call(bob)
+						.then(bobB => (preBalanceBbob = bobB.toNumber()))
+				)
+				.then(() => custodianContract.skipCooldown())
+				.then(() => custodianContract.timestamp.call())
+				.then(ts =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
+							from: pf1
+						})
+						.then(() =>
+							custodianContract.commitPrice(web3.utils.toWei('1201'), ts.toNumber(), {
+								from: pf2
+							})
+						)
+				)
+				.then(() => custodianContract.navAInWei.call())
+				.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
+				.then(() => custodianContract.navBInWei.call())
+				.then(navBinWei => (currentNavB = web3.utils.fromWei(navBinWei.valueOf())))
+				.then(() => custodianContract.betaInWei.call())
+				.then(betaInWei => {
+					beta = web3.utils.fromWei(betaInWei.valueOf());
+					bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
+					newBFromAPerA = (currentNavA - 1) / bAdj;
+					newBFromBPerB = (currentNavB - 1) / bAdj;
+					aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
+				})
+				.then(() => {
+					let promise = Promise.resolve();
+					for (let i = 0; i < 10; i++)
+						promise = promise.then(() => custodianContract.startPreReset());
+					return promise;
+				});
+		});
+
+		it('should in state upwardreset', () => {
+			return custodianContract.state.call().then(
+				state =>
+					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
+			);
+		});
+
+		it('should have two users', () => {
+			return custodianContract.getNumOfUsers
+				.call()
+				.then(numOfUsers =>
+					assert.equal(numOfUsers.valueOf(), 2, 'num of users incorrect')
+				);
+		});
+
+		it('should process reset for only one user', () => {
+			return custodianContract.startReset({ gas: 100000 }).then(tx => {
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
+					'not only one user processed'
+				);
+				return custodianContract.nextResetAddrIndex
+					.call()
+					.then(nextIndex =>
+						assert.equal(nextIndex.valueOf(), '1', 'not moving to next user')
+					)
+					.then(() => {
+						custodianContract.balancesA.call(alice).then(currentBalanceAalice =>
+							custodianContract.balancesB.call(alice).then(currentBalanceBalice => {
+								let newBalances = upwardReset(
+									preBalanceAalice,
+									preBalanceBalice,
+									newBFromAPerA,
+									newBFromBPerB,
+									aAdj
+								);
+								let newBalanceA = newBalances[0];
+								let newBalanceB = newBalances[1];
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceAalice.valueOf()),
+										newBalanceA / WEI_DENOMINATOR
+									),
+									'BalanceA not updated correctly'
+								);
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceBalice.valueOf()),
+										newBalanceB / WEI_DENOMINATOR
+									),
+									'BalanceB not updated correctly'
+								);
+							})
+						);
+					});
+			});
+		});
+
+		it('should complete reset for second user and transit to postReset', () => {
+			return custodianContract.startReset({ gas: 100000 }).then(tx => {
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
+					'not only one user processed'
+				);
+				return custodianContract.nextResetAddrIndex
+					.call()
+					.then(nextIndex => {
+						assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+					})
+					.then(() => {
+						custodianContract.balancesA.call(bob).then(currentBalanceAbob =>
+							custodianContract.balancesB.call(bob).then(currentBalanceBbob => {
+								let newBalances = upwardReset(
+									preBalanceAbob,
+									preBalanceBbob,
+									newBFromAPerA,
+									newBFromBPerB,
+									aAdj
+								);
+								let newBalanceA = newBalances[0];
+								let newBalanceB = newBalances[1];
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceAbob.valueOf()),
+										newBalanceA / WEI_DENOMINATOR
+									),
+									'BalanceA not updated correctly'
+								);
+								assert.isTrue(
+									isEqual(
+										currentBalanceBbob.toNumber()/WEI_DENOMINATOR,
+										newBalanceB / WEI_DENOMINATOR
+									),
+									'BalanceB not updated correctly'
+								);
+							})
+						);
+					});
+			});
+		});
+
+		it('nav should be reset to 1', () => {
+			return custodianContract.navAInWei.call().then(navA =>
+				custodianContract.navBInWei.call().then(navB => {
+					assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
+					assert.equal(web3.utils.fromWei(navB.valueOf()), '1', 'nav B not reset to 1');
+				})
+			);
+		});
+
+		it('should transit to trading state after a given number of blocks but not before that', () => {
+			let promise = Promise.resolve();
+			for (let i = 0; i < 9; i++)
+				promise = promise.then(() => custodianContract.startPostReset());
+			return promise
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state')
+				)
+				.then(() => custodianContract.startPostReset())
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
+				);
+		});
+
+		//case 3: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		// it('alice transfer A to bob; bob transfer B to alice', () => {
+		// 	return custodianContract.balancesA
+		// 		.call(alice)
+		// 		.then(aliceA => {
+		// 			// console.log();
+		// 			custodianContract.transferA(alice, bob, aliceA.valueOf(), {
+		// 				from: alice
+		// 			});
+		// 		})
+		// 		// .then(()=>custodianContract.)
+		// 		.then(() =>
+		// 			custodianContract.balancesB.call(bob).then(bobB => {
+		// 				// console.log();
+		// 				custodianContract.transferB(bob, alice, bobB.valueOf(), {
+		// 					from: bob
+		// 				});
+		// 			})
+		// 		)
+		// 		.then(() =>
+		// 			custodianContract.balancesA
+		// 				.call(alice)
+		// 				.then(aliceA => (preBalanceAalice = aliceA.toNumber()))
+		// 		)
+		// 		.then(() =>
+		// 			custodianContract.balancesB
+		// 				.call(alice)
+		// 				.then(aliceB => (preBalanceBalice = aliceB.toNumber()))
+		// 		)
+		// 		.then(() =>
+		// 			custodianContract.balancesA
+		// 				.call(bob)
+		// 				.then(bobA => (preBalanceAbob = bobA.toNumber()))
+		// 		)
+		// 		.then(() =>
+		// 			custodianContract.balancesB
+		// 				.call(bob)
+		// 				.then(bobB => (preBalanceBbob = bobB.toNumber()))
+		// 		)
+		// 		.then(()=>{
+		// 			console.log(preBalanceAalice);
+		// 			console.log(preBalanceBalice);
+		// 			console.log(preBalanceAbob);
+		// 			console.log(preBalanceBbob);
+		// 		});
+				// .then(() => custodianContract.skipCooldown())
+				// .then(() => custodianContract.timestamp.call())
+				
+				// .then(ts =>
+				// 	custodianContract
+				// 		.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
+				// 			from: pf1
+				// 		})
+				// 		.then(() =>
+				// 			custodianContract.commitPrice(web3.utils.toWei('1201'), ts.toNumber(), {
+				// 				from: pf2
+				// 			})
+				// 		)
+				// );
+				// .then(() => custodianContract.navAInWei.call())
+				// .then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
+				// .then(() => custodianContract.navBInWei.call())
+				// .then(navBinWei => (currentNavB = web3.utils.fromWei(navBinWei.valueOf())))
+				// .then(() => custodianContract.betaInWei.call())
+				// .then(betaInWei => {
+				// 	beta = web3.utils.fromWei(betaInWei.valueOf());
+				// 	bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
+				// 	newBFromAPerA = (currentNavA - 1) / bAdj;
+				// 	newBFromBPerB = (currentNavB - 1) / bAdj;
+				// 	aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
+				// })
+				// .then(() => {
+				// 	let promise = Promise.resolve();
+				// 	for (let i = 0; i < 10; i++)
+				// 		promise = promise.then(() => custodianContract.startPreReset());
+				// 	return promise;
+				// });
+		// });
 	});
 
 	// describe('downward reset', () => {
