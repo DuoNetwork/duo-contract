@@ -9,6 +9,7 @@ const DuoInit = InitParas['DUO'];
 const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
 const START_RESET = 'StartReset';
+const START_POST_RESET = 'StartPostReset';
 
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
@@ -30,6 +31,16 @@ const isEqual = (a, b, log = false) => {
 	return Math.abs(Number(a) - Number(b)) <= EPSILON;
 };
 
+const upwardReset = (preBalanceA, preBalanceB, newBFromAPerA, newBFromBPerB, aAdj) => {
+	let newBFromA = preBalanceA * newBFromAPerA;
+	let newAFromA = newBFromA * aAdj;
+	let newBFromB = preBalanceB * newBFromBPerB;
+	let newAFromB = newBFromB * aAdj;
+	let newBalanceA = preBalanceA + newAFromA + newAFromB;
+	let newBalanceB = preBalanceB + newBFromA + newBFromB;
+	return [newBalanceA, newBalanceB];
+};
+
 contract('Custodian', accounts => {
 	let custodianContract;
 	let duoContract;
@@ -37,7 +48,6 @@ contract('Custodian', accounts => {
 	const creator = accounts[0];
 	const alice = accounts[1]; //duoMember
 	const bob = accounts[2];
-	const david = accounts[8];
 	const nonDuoMember = accounts[3];
 	const pf1 = accounts[4];
 	const pf2 = accounts[5];
@@ -1282,7 +1292,14 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('upward reset', () => {
+	describe('upward reset', () => {
+		let preBalanceAalice, preBalanceBalice;
+		let preBalanceAbob, preBalanceBbob;
+		let currentNavA;
+		let currentNavB;
+		let beta;
+		let bAdj, newBFromAPerA, newBFromBPerB, aAdj;
+
 		before(() =>
 			initContracts()
 				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
@@ -1299,18 +1316,52 @@ contract('Custodian', accounts => {
 						value: web3.utils.toWei('1')
 					})
 				)
+				.then(() =>
+					custodianContract.balancesA
+						.call(alice)
+						.then(aliceA => (preBalanceAalice = aliceA.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesB
+						.call(alice)
+						.then(aliceB => (preBalanceBalice = aliceB.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesA
+						.call(bob)
+						.then(bobA => (preBalanceAbob = bobA.toNumber()))
+				)
+				.then(() =>
+					custodianContract.balancesB
+						.call(bob)
+						.then(bobB => (preBalanceBbob = bobB.toNumber()))
+				)
+
 				.then(() => custodianContract.skipCooldown())
 				.then(() => custodianContract.timestamp.call())
 				.then(ts =>
 					custodianContract
-						.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
+						.commitPrice(web3.utils.toWei('900'), ts.toNumber() - 200, {
 							from: pf1
 						})
 						.then(() =>
-							custodianContract.commitPrice(web3.utils.toWei('1201'), ts.toNumber(), {
+							custodianContract.commitPrice(web3.utils.toWei('901'), ts.toNumber(), {
 								from: pf2
 							})
 						)
+						.then(() => custodianContract.navAInWei.call())
+						.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
+						.then(() => custodianContract.navBInWei.call())
+						.then(naBinWei => (currentNavB = web3.utils.fromWei(naBinWei.valueOf())))
+						.then(() => custodianContract.betaInWei.call())
+						.then(betaInWei => {
+							beta = web3.utils.fromWei(betaInWei.valueOf());
+							bAdj =
+								(CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
+							newBFromAPerA = (currentNavA - 1) / bAdj;
+							newBFromBPerB = (currentNavB - 1) / bAdj;
+							aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
+						})
 						.then(() => {
 							let count = 0;
 							let loop = () => {
@@ -1344,22 +1395,99 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('should process one user reset', () => {
-			return custodianContract
-				.startReset({ gas: 1000000 })
-				.then(() => {
-					return custodianContract.nextResetAddrIndex
-						.call()
-						.then(nextIndex => assert.equal(nextIndex.valueOf(), 0, 'reset not finished'));
-				});
+		it('should process reset for only one user', () => {
+			return custodianContract.startReset({ gas: 100000 }).then(tx => {
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
+					'not only one user processed'
+				);
+				return custodianContract.nextResetAddrIndex
+					.call()
+					.then(nextIndex =>
+						assert.equal(nextIndex.valueOf(), '1', 'not moving to next user')
+					)
+					.then(() => {
+						custodianContract.balancesA.call(alice).then(currentBalanceAalice =>
+							custodianContract.balancesB.call(alice).then(currentBalanceBalice => {
+								let newBalances = upwardReset(
+									preBalanceAalice,
+									preBalanceBalice,
+									newBFromAPerA,
+									newBFromBPerB,
+									aAdj
+								);
+								let newBalanceA = newBalances[0];
+								let newBalanceB = newBalances[1];
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceAalice.valueOf()),
+										newBalanceA / WEI_DENOMINATOR
+									),
+									'BalanceA not updated correctly'
+								);
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceBalice.valueOf()),
+										newBalanceB / WEI_DENOMINATOR
+									),
+									'BalanceB not updated correctly'
+								);
+							})
+						);
+					});
+			});
 		});
 
-		it('should move to post reset state after every account is reset', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state')
+		it('should complete reset for second user and transit to postReset', () => {
+			return custodianContract.startReset({ gas: 100000 }).then(tx => {
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
+					'not only one user processed'
 				);
+				return custodianContract.nextResetAddrIndex
+					.call()
+					.then(nextIndex => {
+						assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+					})
+					.then(() => {
+						custodianContract.balancesA.call(bob).then(currentBalanceAbob =>
+							custodianContract.balancesB.call(bob).then(currentBalanceBbob => {
+								let newBalances = upwardReset(
+									preBalanceAbob,
+									preBalanceBbob,
+									newBFromAPerA,
+									newBFromBPerB,
+									aAdj
+								);
+								let newBalanceA = newBalances[0];
+								let newBalanceB = newBalances[1];
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceAbob.valueOf()),
+										newBalanceA / WEI_DENOMINATOR
+									),
+									'BalanceA not updated correctly'
+								);
+								assert.isTrue(
+									isEqual(
+										web3.utils.fromWei(currentBalanceBbob.valueOf()),
+										newBalanceB / WEI_DENOMINATOR
+									),
+									'BalanceB not updated correctly'
+								);
+							})
+						);
+					});
+			});
+		});
+
+		it('nav should be reset to 1', () => {
+			return custodianContract.navAInWei.call().then(navA =>
+				custodianContract.navBInWei.call().then(navB => {
+					assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
+					assert.equal(web3.utils.fromWei(navB.valueOf()), '1', 'nav B not reset to 1');
+				})
+			);
 		});
 	});
 

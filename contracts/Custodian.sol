@@ -279,18 +279,26 @@ contract Custodian {
 		}
 
 		while (nextResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
+			uint currentBalanceA = balancesA[users[nextResetAddrIndex]];
+			uint currentBalanceB = balancesB[users[nextResetAddrIndex]];
+			uint newBalanceA;
+			uint newBalanceB;
 			if (state == State.DownwardReset)
-				downwardResetForAddress(
-					users[nextResetAddrIndex], 
+				(newBalanceA, newBalanceB) = downwardResetForAddress(
+					currentBalanceA,
+					currentBalanceB, 
 					newBFromAPerA,
-					aAdj);
+					aAdj,
+					navBInWei);
 			else // periodic and upward has similar logic in issuing new A and B
-				upwardResetForAddress(
-					users[nextResetAddrIndex], 
+				(newBalanceA, newBalanceB) = upwardResetForAddress(
+					currentBalanceA, 
+					currentBalanceB,
 					newBFromAPerA, 
 					newBFromBPerB,
 					aAdj); 
-				
+			balancesA[users[nextResetAddrIndex]] = newBalanceA;
+			balancesB[users[nextResetAddrIndex]] = newBalanceB;
 			nextResetAddrIndex++;
 		}
 
@@ -315,34 +323,37 @@ contract Custodian {
 	}
 
 	function upwardResetForAddress(
-		address addr, 
+		uint balanceA,
+		uint balanceB, 
 		uint newBFromAPerA, 
 		uint newBFromBPerB, 
 		uint aAdj) 
+		pure
 		internal 
+		returns(uint newBalanceA, uint newBalanceB)
 	{
-		uint balanceA = balancesA[addr];
-		uint balanceB = balancesB[addr];
 		uint newBFromA = balanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 		uint newAFromA = newBFromA.mul(aAdj);
 		uint newBFromB = balanceB.mul(newBFromBPerB).div(WEI_DENOMINATOR);
 		uint newAFromB = newBFromB.mul(aAdj);
-		balancesA[addr] = balanceA.add(newAFromA).add(newAFromB);
-		balancesB[addr] = balanceB.add(newBFromA).add(newBFromB);
+		newBalanceA = balanceA.add(newAFromA).add(newAFromB);
+		newBalanceB = balanceB.add(newBFromA).add(newBFromB);
 	}
 
 	function downwardResetForAddress(
-		address addr, 
+		uint balanceA, 
+		uint balanceB,
 		uint newBFromAPerA,
-		uint aAdj) 
+		uint aAdj,
+		uint navB) 
+		pure
 		internal 
+		returns(uint newBalanceA, uint newBalanceB)
 	{
-		uint balanceA = balancesA[addr];
-		uint balanceB = balancesB[addr];
 		uint newBFromA = balanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 		uint newAFromA = newBFromA.mul(aAdj);
-		balancesA[addr] = balanceA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
-		balancesB[addr] = balanceB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
+		newBalanceA = balanceA.mul(navB).div(WEI_DENOMINATOR).add(newAFromA);
+		newBalanceB = balanceB.mul(navB).div(WEI_DENOMINATOR).add(newBFromA);
 	}
 
 	function acceptPrice(uint priceInWei, uint timeInSecond) internal {
