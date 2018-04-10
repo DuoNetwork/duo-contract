@@ -10,6 +10,7 @@ const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
 const START_RESET = 'StartReset';
 const START_POST_RESET = 'StartPostReset';
+const START_TRADING = 'StartTrading';
 
 const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
@@ -29,16 +30,6 @@ const isEqual = (a, b, log = false) => {
 		console.log(b);
 	}
 	return Math.abs(Number(a) - Number(b)) <= EPSILON;
-};
-
-const upwardReset = (preBalanceA, preBalanceB, newBFromAPerA, newBFromBPerB, aAdj) => {
-	let newBFromA = preBalanceA * newBFromAPerA;
-	let newAFromA = newBFromA * aAdj;
-	let newBFromB = preBalanceB * newBFromBPerB;
-	let newAFromB = newBFromB * aAdj;
-	let newBalanceA = preBalanceA + newAFromA + newAFromB;
-	let newBalanceB = preBalanceB + newBFromA + newBFromB;
-	return [newBalanceA, newBalanceB];
 };
 
 contract('Custodian', accounts => {
@@ -1261,38 +1252,38 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('should transit to reset state after a given number of blocks but not before that', () => {
-			let numBlocks = 9;
-			return custodianContract.startPreReset().then(() => {
-				let count = 0;
-				let loop = () => {
-					return custodianContract.startPreReset().then(tx => {
-						count = count + 1;
-						if (count < numBlocks) {
-							loop();
-						} else {
-							assert.isTrue(
-								tx.logs.length === 1 && tx.logs[0].event === START_RESET,
-								'not transiting to reset state'
-							);
-							return custodianContract.state
-								.call()
-								.then(state =>
-									assert.equal(
-										state.valueOf(),
-										STATE_UPWARD_RESET,
-										'not transit to upward reset state'
-									)
-								);
-						}
-					});
-				};
-				loop();
-			});
+		it('should only transit to reset state after a given number of blocks but not before that', () => {
+			let promise = Promise.resolve();
+			for (let i = 0; i < 9; i++)
+				promise = promise.then(() => custodianContract.startPreReset());
+			return promise
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in pre reset state')
+				)
+				.then(() => custodianContract.startPreReset())
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(
+						state.valueOf(),
+						STATE_UPWARD_RESET,
+						'not transit to upward reset state'
+					)
+				);
 		});
 	});
 
 	describe('upward reset', () => {
+		function upwardReset(preBalanceA, preBalanceB, newBFromAPerA, newBFromBPerB, aAdj) {
+			let newBFromA = preBalanceA * newBFromAPerA;
+			let newAFromA = newBFromA * aAdj;
+			let newBFromB = preBalanceB * newBFromBPerB;
+			let newAFromB = newBFromB * aAdj;
+			let newBalanceA = preBalanceA + newAFromA + newAFromB;
+			let newBalanceB = preBalanceB + newBFromA + newBFromB;
+			return [newBalanceA, newBalanceB];
+		}
+
 		let preBalanceAalice, preBalanceBalice;
 		let preBalanceAbob, preBalanceBbob;
 		let currentNavA;
@@ -1336,7 +1327,6 @@ contract('Custodian', accounts => {
 						.call(bob)
 						.then(bobB => (preBalanceBbob = bobB.toNumber()))
 				)
-
 				.then(() => custodianContract.skipCooldown())
 				.then(() => custodianContract.timestamp.call())
 				.then(ts =>
@@ -1349,42 +1339,33 @@ contract('Custodian', accounts => {
 								from: pf2
 							})
 						)
-						.then(() => custodianContract.navAInWei.call())
-						.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
-						.then(() => custodianContract.navBInWei.call())
-						.then(naBinWei => (currentNavB = web3.utils.fromWei(naBinWei.valueOf())))
-						.then(() => custodianContract.betaInWei.call())
-						.then(betaInWei => {
-							beta = web3.utils.fromWei(betaInWei.valueOf());
-							bAdj =
-								(CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
-							newBFromAPerA = (currentNavA - 1) / bAdj;
-							newBFromBPerB = (currentNavB - 1) / bAdj;
-							aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
-						})
-						.then(() => {
-							let count = 0;
-							let loop = () => {
-								return custodianContract.startPreReset().then(() => {
-									// console.log(tx);
-									let numBlocks = 10;
-									count = count + 1;
-									if (count < numBlocks) {
-										return loop();
-									}
-								});
-							};
-							return loop();
-						})
 				)
+				.then(() => custodianContract.navAInWei.call())
+				.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
+				.then(() => custodianContract.navBInWei.call())
+				.then(navBinWei => (currentNavB = web3.utils.fromWei(navBinWei.valueOf())))
+				.then(() => custodianContract.betaInWei.call())
+				.then(betaInWei => {
+					beta = web3.utils.fromWei(betaInWei.valueOf());
+					bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
+					newBFromAPerA = (currentNavA - 1) / bAdj;
+					newBFromBPerB = (currentNavB - 1) / bAdj;
+					aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
+				})
+				.then(() => {
+					let promise = Promise.resolve();
+					for (let i = 0; i < 10; i++)
+						promise = promise.then(() => custodianContract.startPreReset());
+					return promise;
+				})
 		);
 
 		it('should in state upwardreset', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
+			return custodianContract.state.call().then(
+				state =>
 					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
-				);
+				// console.log(state)
+			);
 		});
 
 		it('should have two users', () => {
@@ -1488,6 +1469,26 @@ contract('Custodian', accounts => {
 					assert.equal(web3.utils.fromWei(navB.valueOf()), '1', 'nav B not reset to 1');
 				})
 			);
+		});
+
+		it('should transit to trading state after a given number of blocks but not before that', () => {
+			let promise = Promise.resolve();
+			for (let i = 0; i < 9; i++)
+				promise = promise.then(() => custodianContract.startPostReset());
+			return promise
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state')
+				)
+				.then(() => custodianContract.startPostReset())
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(
+						state.valueOf(),
+						STATE_TRADING,
+						'not transit to trading state'
+					)
+				);
 		});
 	});
 

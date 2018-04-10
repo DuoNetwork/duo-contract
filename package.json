@@ -7,7 +7,7 @@
   "scripts": {
     "test": "truffle.cmd test",
     "clean": "rimraf build",
-    "start": "ganache-cli",
+    "start": "ganache-cli --defaultBalanceEther 1000",
     "deploy": "truffle.cmd migrate --reset --compile-all",
     "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
     "deployLive": "npm run clean && truffle.cmd migrate --reset --compile-all --network live"
