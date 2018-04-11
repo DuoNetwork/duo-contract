@@ -454,14 +454,17 @@ contract('Custodian', accounts => {
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
 			let numOfPeriods = Math.floor((time - resetTime) / CustodianInit.period);
-			let navA = 1 + numOfPeriods * Number(CustodianInit.couponRate);
-			let navB =
-				price / resetPrice / beta * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) -
-				navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+			let navParent =
+				price / resetPrice / beta * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 
-			return [navA, navB];
+			let navA = 1 + numOfPeriods * Number(CustodianInit.couponRate);
+			let navAAdj = navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+			if (navParent <= navAAdj)
+				return [navParent * BP_DENOMINATOR / CustodianInit.alphaInBP, 0];
+			else return [navA, navParent - navAAdj];
 		}
 
+		// for non reset case
 		it('it should calculate nav correclty case 1', () => {
 			let resetPriceInWei = web3.utils.toWei('582');
 			let resetPriceTimeSeconds = 1522745087;
@@ -480,8 +483,6 @@ contract('Custodian', accounts => {
 				.then(res => {
 					let navAInWei = res[0].valueOf();
 					let navBInWei = res[1].valueOf();
-					console.log(navAInWei/WEI_DENOMINATOR);
-					console.log(navBInWei/WEI_DENOMINATOR);
 					assert.isTrue(
 						isEqual(web3.utils.fromWei(navAInWei), navA),
 						'navA not calculated correctly'
@@ -493,13 +494,14 @@ contract('Custodian', accounts => {
 				});
 		});
 
+		//for upward reset case
 		it('it should calculate nav correclty case 2', () => {
-			let resetPriceInWei = web3.utils.toWei('1200');
+			let resetPriceInWei = web3.utils.toWei('800');
 			let resetPriceTimeSeconds = 1522745087;
-			let lastPriceInWei = web3.utils.toWei('1200');
+			let lastPriceInWei = web3.utils.toWei('1500');
 			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
 			let betaInWei = web3.utils.toWei('1.0');
-			let [navA, navB] = calcNav(1200, lastPriceTimeSeconds, 1200, resetPriceTimeSeconds, 1.0);
+			let [navA, navB] = calcNav(1500, lastPriceTimeSeconds, 800, resetPriceTimeSeconds, 1.0);
 			return custodianContract.calculateNav
 				.call(
 					lastPriceInWei,
@@ -511,9 +513,66 @@ contract('Custodian', accounts => {
 				.then(res => {
 					let navAInWei = res[0].valueOf();
 					let navBInWei = res[1].valueOf();
-					console.log(navAInWei/WEI_DENOMINATOR);
-					console.log(navBInWei/WEI_DENOMINATOR);
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navAInWei), navA),
+						'navA not calculated correctly'
+					);
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navBInWei), navB),
+						'navB not calculated correctly'
+					);
+				});
+		});
 
+		//for downward reset case
+		it('it should calculate nav correclty case 3', () => {
+			let resetPriceInWei = web3.utils.toWei('1000');
+			let resetPriceTimeSeconds = 1522745087;
+			let lastPriceInWei = web3.utils.toWei('600');
+			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
+			let betaInWei = web3.utils.toWei('1.0');
+			let [navA, navB] = calcNav(600, lastPriceTimeSeconds, 1000, resetPriceTimeSeconds, 1.0);
+			return custodianContract.calculateNav
+				.call(
+					lastPriceInWei,
+					lastPriceTimeSeconds,
+					resetPriceInWei,
+					resetPriceTimeSeconds,
+					betaInWei
+				)
+				.then(res => {
+					let navAInWei = res[0].valueOf();
+					let navBInWei = res[1].valueOf();
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navAInWei), navA),
+						'navA not calculated correctly'
+					);
+					assert.isTrue(
+						isEqual(web3.utils.fromWei(navBInWei), navB),
+						'navB not calculated correctly'
+					);
+				});
+		});
+
+		//for downward reset case where navB goes to 0
+		it('it should calculate nav correclty case 4', () => {
+			let resetPriceInWei = web3.utils.toWei('1000');
+			let resetPriceTimeSeconds = 1522745087;
+			let lastPriceInWei = web3.utils.toWei('200');
+			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
+			let betaInWei = web3.utils.toWei('1.0');
+			let [navA, navB] = calcNav(200, lastPriceTimeSeconds, 1000, resetPriceTimeSeconds, 1.0);
+			return custodianContract.calculateNav
+				.call(
+					lastPriceInWei,
+					lastPriceTimeSeconds,
+					resetPriceInWei,
+					resetPriceTimeSeconds,
+					betaInWei
+				)
+				.then(res => {
+					let navAInWei = res[0].valueOf();
+					let navBInWei = res[1].valueOf();
 					assert.isTrue(
 						isEqual(web3.utils.fromWei(navAInWei), navA),
 						'navA not calculated correctly'
@@ -1524,81 +1583,88 @@ contract('Custodian', accounts => {
 
 		//case 2: aliceA > 0, aliceB = 0; bobA = 0, bobB > 0
 		it('alice transfer B to bob; bob transfer A to alice case 2', () => {
-			return custodianContract.balancesB
-				.call(alice)
-				.then(aliceB => {
-					// console.log();
-					custodianContract.transferB(alice, bob, aliceB.valueOf(), {
-						from: alice
-					});
-				})
-				// .then(()=>custodianContract.)
-				.then(() =>
-					custodianContract.balancesA.call(bob).then(bobA => {
+			return (
+				custodianContract.balancesB
+					.call(alice)
+					.then(aliceB => {
 						// console.log();
-						custodianContract.transferA(bob, alice, bobA.valueOf(), {
-							from: bob
+						custodianContract.transferB(alice, bob, aliceB.valueOf(), {
+							from: alice
 						});
 					})
-				)
-				.then(() =>
-					custodianContract.balancesA
-						.call(alice)
-						.then(aliceA => (preBalanceAalice = aliceA.toNumber()))
-				)
-				.then(() =>
-					custodianContract.balancesB
-						.call(alice)
-						.then(aliceB => (preBalanceBalice = aliceB.toNumber()))
-				)
-				.then(() =>
-					custodianContract.balancesA
-						.call(bob)
-						.then(bobA => (preBalanceAbob = bobA.toNumber()))
-				)
-				.then(() =>
-					custodianContract.balancesB
-						.call(bob)
-						.then(bobB => (preBalanceBbob = bobB.toNumber()))
-				)
-				.then(() => custodianContract.skipCooldown())
-				.then(() => custodianContract.timestamp.call())
-				.then(ts =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
-							from: pf1
+					// .then(()=>custodianContract.)
+					.then(() =>
+						custodianContract.balancesA.call(bob).then(bobA => {
+							// console.log();
+							custodianContract.transferA(bob, alice, bobA.valueOf(), {
+								from: bob
+							});
 						})
-						.then(() =>
-							custodianContract.commitPrice(web3.utils.toWei('1201'), ts.toNumber(), {
-								from: pf2
+					)
+					.then(() =>
+						custodianContract.balancesA
+							.call(alice)
+							.then(aliceA => (preBalanceAalice = aliceA.toNumber()))
+					)
+					.then(() =>
+						custodianContract.balancesB
+							.call(alice)
+							.then(aliceB => (preBalanceBalice = aliceB.toNumber()))
+					)
+					.then(() =>
+						custodianContract.balancesA
+							.call(bob)
+							.then(bobA => (preBalanceAbob = bobA.toNumber()))
+					)
+					.then(() =>
+						custodianContract.balancesB
+							.call(bob)
+							.then(bobB => (preBalanceBbob = bobB.toNumber()))
+					)
+					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.timestamp.call())
+					.then(ts =>
+						custodianContract
+							.commitPrice(web3.utils.toWei('1200'), ts.toNumber() - 200, {
+								from: pf1
 							})
-						)
-				)
-				.then(() => custodianContract.navAInWei.call())
-				.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
-				.then(() => custodianContract.navBInWei.call())
-				.then(navBinWei => (currentNavB = web3.utils.fromWei(navBinWei.valueOf())))
-				.then(() => custodianContract.betaInWei.call())
-				.then(betaInWei => {
-					beta = web3.utils.fromWei(betaInWei.valueOf());
-					bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
-					newBFromAPerA = (currentNavA - 1) / bAdj;
-					newBFromBPerB = (currentNavB - 1) / bAdj;
-					aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
-				})
-				.then(() => {
-					let promise = Promise.resolve();
-					for (let i = 0; i < 10; i++)
-						promise = promise.then(() => custodianContract.startPreReset());
-					return promise;
-				});
+							.then(() =>
+								custodianContract.commitPrice(
+									web3.utils.toWei('1201'),
+									ts.toNumber(),
+									{
+										from: pf2
+									}
+								)
+							)
+					)
+					.then(() => custodianContract.navAInWei.call())
+					.then(navAinWei => (currentNavA = web3.utils.fromWei(navAinWei.valueOf())))
+					.then(() => custodianContract.navBInWei.call())
+					.then(navBinWei => (currentNavB = web3.utils.fromWei(navBinWei.valueOf())))
+					.then(() => custodianContract.betaInWei.call())
+					.then(betaInWei => {
+						beta = web3.utils.fromWei(betaInWei.valueOf());
+						bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
+						newBFromAPerA = (currentNavA - 1) / bAdj;
+						newBFromBPerB = (currentNavB - 1) / bAdj;
+						aAdj = CustodianInit.alphaInBP / BP_DENOMINATOR;
+					})
+					.then(() => {
+						let promise = Promise.resolve();
+						for (let i = 0; i < 10; i++)
+							promise = promise.then(() => custodianContract.startPreReset());
+						return promise;
+					})
+			);
 		});
 
 		it('should in state upwardreset case 2', () => {
-			return custodianContract.state.call().then(
-				state =>
+			return custodianContract.state
+				.call()
+				.then(state =>
 					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
-			);
+				);
 		});
 
 		it('should have two users case 2', () => {
@@ -1758,7 +1824,7 @@ contract('Custodian', accounts => {
 				)
 				.then(() => custodianContract.skipCooldown())
 				.then(() => custodianContract.timestamp.call())
-				
+
 				.then(ts =>
 					custodianContract
 						.commitPrice(web3.utils.toWei('1500'), ts.toNumber() - 200, {
@@ -1769,15 +1835,14 @@ contract('Custodian', accounts => {
 								from: pf2
 							})
 						)
-					
 				)
 				.then(() => custodianContract.navAInWei.call())
-				.then(navAinWei => (currentNavA =navAinWei.toNumber() / WEI_DENOMINATOR))
+				.then(navAinWei => (currentNavA = navAinWei.toNumber() / WEI_DENOMINATOR))
 				.then(() => custodianContract.navBInWei.call())
 				.then(navBinWei => (currentNavB = navBinWei.toNumber() / WEI_DENOMINATOR))
 				.then(() => custodianContract.betaInWei.call())
 				.then(betaInWei => {
-					beta =betaInWei.toNumber() / WEI_DENOMINATOR;
+					beta = betaInWei.toNumber() / WEI_DENOMINATOR;
 					bAdj = (CustodianInit.alphaInBP + BP_DENOMINATOR) / BP_DENOMINATOR / beta;
 					newBFromAPerA = (currentNavA - 1) / bAdj;
 					newBFromBPerB = (currentNavB - 1) / bAdj;
@@ -1789,14 +1854,14 @@ contract('Custodian', accounts => {
 						promise = promise.then(() => custodianContract.startPreReset());
 					return promise;
 				});
-			
 		});
 
 		it('should in state upwardreset case 3', () => {
-			return custodianContract.state.call().then(
-				state =>
+			return custodianContract.state
+				.call()
+				.then(state =>
 					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
-			);
+				);
 		});
 
 		it('should have two users case 3', () => {
