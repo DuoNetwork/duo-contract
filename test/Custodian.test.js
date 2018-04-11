@@ -1411,7 +1411,7 @@ contract('Custodian', accounts => {
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
-		it('should process reset for only one user', () => {
+		it('should process reset for only one user case 1', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
@@ -1454,11 +1454,11 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('should complete reset for second user and transit to postReset', () => {
+		it('should complete reset for second user and transit to postReset case 1', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
-					'not only one user processed'
+					'reset not completed'
 				);
 				return custodianContract.nextResetAddrIndex
 					.call()
@@ -1497,7 +1497,7 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('nav should be reset to 1', () => {
+		it('nav should be reset to 1 case 1', () => {
 			return custodianContract.navAInWei.call().then(navA =>
 				custodianContract.navBInWei.call().then(navB => {
 					assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
@@ -1506,7 +1506,7 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('should transit to trading state after a given number of blocks but not before that', () => {
+		it('should transit to trading state after a given number of blocks but not before that case 1', () => {
 			let promise = Promise.resolve();
 			for (let i = 0; i < 9; i++)
 				promise = promise.then(() => custodianContract.startPostReset());
@@ -1523,7 +1523,7 @@ contract('Custodian', accounts => {
 		});
 
 		//case 2: aliceA > 0, aliceB = 0; bobA = 0, bobB > 0
-		it('alice transfer B to bob; bob transfer A to alice', () => {
+		it('alice transfer B to bob; bob transfer A to alice case 2', () => {
 			return custodianContract.balancesB
 				.call(alice)
 				.then(aliceB => {
@@ -1594,14 +1594,14 @@ contract('Custodian', accounts => {
 				});
 		});
 
-		it('should in state upwardreset', () => {
+		it('should in state upwardreset case 2', () => {
 			return custodianContract.state.call().then(
 				state =>
 					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
 			);
 		});
 
-		it('should have two users', () => {
+		it('should have two users case 2', () => {
 			return custodianContract.getNumOfUsers
 				.call()
 				.then(numOfUsers =>
@@ -1609,7 +1609,7 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('should process reset for only one user', () => {
+		it('should process reset for only one user case 2', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
@@ -1634,14 +1634,14 @@ contract('Custodian', accounts => {
 								let newBalanceB = newBalances[1];
 								assert.isTrue(
 									isEqual(
-										web3.utils.fromWei(currentBalanceAalice.valueOf()),
+										currentBalanceAalice.toNumber() / WEI_DENOMINATOR,
 										newBalanceA / WEI_DENOMINATOR
 									),
 									'BalanceA not updated correctly'
 								);
 								assert.isTrue(
 									isEqual(
-										web3.utils.fromWei(currentBalanceBalice.valueOf()),
+										currentBalanceBalice.toNumber() / WEI_DENOMINATOR,
 										newBalanceB / WEI_DENOMINATOR
 									),
 									'BalanceB not updated correctly'
@@ -1652,11 +1652,11 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('should complete reset for second user and transit to postReset', () => {
+		it('should complete reset for second user and transit to postReset case 2', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
-					'not only one user processed'
+					'reset not completed'
 				);
 				return custodianContract.nextResetAddrIndex
 					.call()
@@ -1695,7 +1695,7 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('nav should be reset to 1', () => {
+		it('nav should be reset to 1 case 2', () => {
 			return custodianContract.navAInWei.call().then(navA =>
 				custodianContract.navBInWei.call().then(navB => {
 					assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
@@ -1704,7 +1704,7 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('should transit to trading state after a given number of blocks but not before that', () => {
+		it('should transit to trading state after a given number of blocks but not before that case 2', () => {
 			let promise = Promise.resolve();
 			for (let i = 0; i < 9; i++)
 				promise = promise.then(() => custodianContract.startPostReset());
@@ -1721,7 +1721,7 @@ contract('Custodian', accounts => {
 		});
 
 		// case 3: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
-		it('alice transfer A to bob; bob transfer B to alice', () => {
+		it('alice transfer A to bob; bob transfer B to alice case 3', () => {
 			return custodianContract.balancesA
 				.call(alice)
 				.then(aliceA => {
@@ -1792,14 +1792,14 @@ contract('Custodian', accounts => {
 			
 		});
 
-		it('should in state upwardreset', () => {
+		it('should in state upwardreset case 3', () => {
 			return custodianContract.state.call().then(
 				state =>
 					assert.equal(state.valueOf(), STATE_UPWARD_RESET, 'not in state upward reset')
 			);
 		});
 
-		it('should have two users', () => {
+		it('should have two users case 3', () => {
 			return custodianContract.getNumOfUsers
 				.call()
 				.then(numOfUsers =>
@@ -1807,7 +1807,7 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('should process reset for only one user', () => {
+		it('should process reset for only one user case 3', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
@@ -1850,11 +1850,11 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('should complete reset for second user and transit to postReset', () => {
+		it('should complete reset for second user and transit to postReset case 3', () => {
 			return custodianContract.startReset({ gas: 100000 }).then(tx => {
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
-					'not only one user processed'
+					'reset not completed'
 				);
 				return custodianContract.nextResetAddrIndex
 					.call()
@@ -1893,7 +1893,7 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('nav should be reset to 1', () => {
+		it('nav should be reset to 1 case 3', () => {
 			return custodianContract.navAInWei.call().then(navA =>
 				custodianContract.navBInWei.call().then(navB => {
 					assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
@@ -1902,7 +1902,7 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('should transit to trading state after a given number of blocks but not before that', () => {
+		it('should transit to trading state after a given number of blocks but not before that case 3', () => {
 			let promise = Promise.resolve();
 			for (let i = 0; i < 9; i++)
 				promise = promise.then(() => custodianContract.startPostReset());
