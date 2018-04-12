@@ -1489,7 +1489,7 @@ contract('Custodian', accounts => {
 					.then(betaInWei => (beta = betaInWei.valueOf() / WEI_DENOMINATOR))
 			);
 
-			it('should reset update beta correctly', () => {
+			it('should update beta correctly', () => {
 				if (isPeriodicReset) {
 					let newBeta = updateBeta(
 						prevBeta,
@@ -1497,7 +1497,7 @@ contract('Custodian', accounts => {
 						Number(CustodianInit.ethInitPrice),
 						currentNavA
 					);
-					return assert.equal(beta, newBeta, 'beta is not updated correctly');
+					return assert.isTrue(isEqual(beta, newBeta), 'beta is not updated correctly');
 				} else {
 					return assert.equal(beta, 1, 'beta is not reset to 1');
 				}
@@ -1604,7 +1604,7 @@ contract('Custodian', accounts => {
 					.then(() => assertBBalanceForAddress(bob, newBalanceB));
 			});
 
-			it('nav should be reset to 1', () => {
+			it('should update nav', () => {
 				return custodianContract.navAInWei
 					.call()
 					.then(navA =>
@@ -1614,21 +1614,19 @@ contract('Custodian', accounts => {
 							'nav A not reset to 1'
 						)
 					)
-					.then(() => {
-						if (!isPeriodicReset) {
-							custodianContract.navBInWei.call().then(navB => {
-								assert.equal(
-									web3.utils.fromWei(navB.valueOf()),
-									'1',
-									'nav B not reset to 1'
-								);
-							});
-						}
-					});
+					.then(() => custodianContract.navBInWei.call())
+					.then(navB =>
+						assert.isTrue(
+							isPeriodicReset
+								? isEqual(web3.utils.fromWei(navB.valueOf()), currentNavB)
+								: web3.utils.fromWei(navB.valueOf()) === '1',
+							'nav B not updated correctly'
+						)
+					);
 			});
 
-			if (!isPeriodicReset) {
-				it('should update reset price', () => {
+			it('should update reset price', () => {
+				if (!isPeriodicReset) {
 					return custodianContract.resetPrice
 						.call()
 						.then(resetPrice =>
@@ -1638,8 +1636,8 @@ contract('Custodian', accounts => {
 								'resetprice not updated'
 							)
 						);
-				});
-			}
+				}
+			});
 		}
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
