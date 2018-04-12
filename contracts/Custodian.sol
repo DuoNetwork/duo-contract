@@ -233,9 +233,7 @@ contract Custodian {
 				state = State.PeriodicReset;
 				uint num = alphaInBP
 					.add(BP_DENOMINATOR)
-					.mul(lastPrice.priceInWei)
-					.mul(WEI_DENOMINATOR)
-					.mul(WEI_DENOMINATOR);
+					.mul(lastPrice.priceInWei);
 				uint den = num
 					.sub(
 						resetPrice.priceInWei
@@ -243,6 +241,8 @@ contract Custodian {
 							.mul(betaInWei)
 							.mul(navAInWei
 								.sub(WEI_DENOMINATOR))
+							.div(WEI_DENOMINATOR)
+							.div(WEI_DENOMINATOR)
 				);
 				betaInWei = betaInWei.mul(num).div(den);
 			}
