@@ -267,15 +267,14 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset || state == State.PeriodicReset);
-		uint bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR).div(betaInWei);
+		uint bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 		uint newBFromAPerA;
 		uint newBFromBPerB;
-		uint aAdj = alphaInBP.div(BP_DENOMINATOR);
 		if (state == State.DownwardReset){
-			newBFromAPerA = navAInWei.sub(navBInWei).div(bAdj);
+			newBFromAPerA = navAInWei.sub(navBInWei).mul(betaInWei).div(bAdj);
 		} else {
-			newBFromAPerA = navAInWei.sub(WEI_DENOMINATOR).div(bAdj);
-			newBFromBPerB = state == State.UpwardReset ? navBInWei.sub(WEI_DENOMINATOR).div(bAdj) : 0;
+			newBFromAPerA = navAInWei.sub(WEI_DENOMINATOR).mul(betaInWei).div(bAdj);
+			newBFromBPerB = state == State.UpwardReset ? navBInWei.sub(WEI_DENOMINATOR).mul(betaInWei).div(bAdj) : 0;
 		}
 
 		while (nextResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
@@ -288,7 +287,7 @@ contract Custodian {
 					currentBalanceA,
 					currentBalanceB, 
 					newBFromAPerA,
-					aAdj,
+					alphaInBP,
 					navBInWei);
 			else // periodic and upward has similar logic in issuing new A and B
 				(newBalanceA, newBalanceB) = upwardResetForAddress(
@@ -296,7 +295,7 @@ contract Custodian {
 					currentBalanceB,
 					newBFromAPerA, 
 					newBFromBPerB,
-					aAdj); 
+					alphaInBP); 
 			balancesA[users[nextResetAddrIndex]] = newBalanceA;
 			balancesB[users[nextResetAddrIndex]] = newBalanceB;
 			nextResetAddrIndex++;
@@ -326,16 +325,16 @@ contract Custodian {
 		uint balanceA,
 		uint balanceB, 
 		uint newBFromAPerA, 
-		uint newBFromBPerB, 
-		uint aAdj) 
+		uint newBFromBPerB,
+		uint alpha) 
 		pure
 		internal 
 		returns(uint newBalanceA, uint newBalanceB)
 	{
 		uint newBFromA = balanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
-		uint newAFromA = newBFromA.mul(aAdj);
+		uint newAFromA = newBFromA.mul(alpha).div(BP_DENOMINATOR);
 		uint newBFromB = balanceB.mul(newBFromBPerB).div(WEI_DENOMINATOR);
-		uint newAFromB = newBFromB.mul(aAdj);
+		uint newAFromB = newBFromB.mul(alpha).div(BP_DENOMINATOR);
 		newBalanceA = balanceA.add(newAFromA).add(newAFromB);
 		newBalanceB = balanceB.add(newBFromA).add(newBFromB);
 	}
@@ -344,14 +343,14 @@ contract Custodian {
 		uint balanceA, 
 		uint balanceB,
 		uint newBFromAPerA,
-		uint aAdj,
+		uint alpha,
 		uint navB) 
 		pure
 		internal 
 		returns(uint newBalanceA, uint newBalanceB)
 	{
 		uint newBFromA = balanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
-		uint newAFromA = newBFromA.mul(aAdj);
+		uint newAFromA = newBFromA.mul(alpha).div(BP_DENOMINATOR);
 		newBalanceA = balanceA.mul(navB).div(WEI_DENOMINATOR).add(newAFromA);
 		newBalanceB = balanceB.mul(navB).div(WEI_DENOMINATOR).add(newBFromA);
 	}
