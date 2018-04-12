@@ -16,7 +16,7 @@ const STATE_TRADING = '0';
 const STATE_PRE_RESET = '1';
 const STATE_UPWARD_RESET = '2';
 const STATE_DOWNWARD_RESET = '3';
-//const STATE_PERIODIC_RESET = '4';
+const STATE_PERIODIC_RESET = '4';
 const STATE_POST_RESET = '5';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
@@ -575,7 +575,7 @@ contract('Custodian', accounts => {
 
 		it('should accept first price arrived if it is not too far away', () => {
 			return custodianContract
-				.skipCooldown()
+				.skipCooldown(1)
 				.then(() => custodianContract.timestamp.call())
 				.then(ts => (firstPeriod = ts))
 				.then(() =>
@@ -619,7 +619,7 @@ contract('Custodian', accounts => {
 
 		it('should not accept first price arrived if it is too far away', () => {
 			return custodianContract
-				.skipCooldown()
+				.skipCooldown(1)
 				.then(() => custodianContract.timestamp.call())
 				.then(ts => (firstPeriod = ts))
 				.then(() =>
@@ -648,7 +648,7 @@ contract('Custodian', accounts => {
 
 		it('should accept second price arrived if second price timed out and sent by the same address as first price', () => {
 			return custodianContract
-				.skipCooldown()
+				.skipCooldown(1)
 				.then(() => custodianContract.timestamp.call())
 				.then(ts => (secondPeriod = ts))
 				.then(() =>
@@ -688,7 +688,7 @@ contract('Custodian', accounts => {
 			// first price
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -701,7 +701,7 @@ contract('Custodian', accounts => {
 						)
 					)
 					// second price
-					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.skipCooldown(1))
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (secondPeriod = ts))
 					.then(() =>
@@ -739,7 +739,7 @@ contract('Custodian', accounts => {
 			// first price
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -787,7 +787,7 @@ contract('Custodian', accounts => {
 			// first price
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -874,7 +874,7 @@ contract('Custodian', accounts => {
 			// first price
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -931,7 +931,7 @@ contract('Custodian', accounts => {
 		it('should accept third price arrived if it is from first or second sender and is after cool down', () => {
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -954,7 +954,7 @@ contract('Custodian', accounts => {
 						)
 					)
 					// //third price
-					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.skipCooldown(1))
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (secondPeriod = ts))
 					.then(() =>
@@ -997,7 +997,7 @@ contract('Custodian', accounts => {
 		it('should accept second price arrived if third price is from a different sender and is after cool down', () => {
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -1020,7 +1020,7 @@ contract('Custodian', accounts => {
 						)
 					)
 					// // //third price
-					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.skipCooldown(1))
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (secondPeriod = ts))
 					.then(() =>
@@ -1056,7 +1056,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow price commit during cool down period', () => {
 			return custodianContract
-				.skipCooldown()
+				.skipCooldown(1)
 				.then(() => custodianContract.timestamp.call())
 				.then(ts => (firstPeriod = ts))
 				.then(() =>
@@ -1081,7 +1081,7 @@ contract('Custodian', accounts => {
 		it('should transit to reset state based on price accepted', () => {
 			return (
 				custodianContract
-					.skipCooldown()
+					.skipCooldown(1)
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (firstPeriod = ts))
 					.then(() =>
@@ -1138,7 +1138,7 @@ contract('Custodian', accounts => {
 	describe('pre reset', () => {
 		beforeEach(() =>
 			initContracts()
-				.then(() => custodianContract.skipCooldown())
+				.then(() => custodianContract.skipCooldown(1))
 				.then(() => custodianContract.timestamp.call())
 				.then(ts =>
 					custodianContract
@@ -1163,7 +1163,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow price commit', () => {
 			return custodianContract
-				.skipCooldown()
+				.skipCooldown(1)
 				.then(() => custodianContract.timestamp.call())
 				.then(ts =>
 					custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
@@ -1314,11 +1314,21 @@ contract('Custodian', accounts => {
 
 		function downwardReset(prevBalanceA, prevBalanceB, currentNavA, currentNavB, beta) {
 			let newBFromA =
-				(currentNavA - currentNavB) / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) / beta;
+				(currentNavA - currentNavB) / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * beta;
 			let newAFromA = newBFromA * CustodianInit.alphaInBP / BP_DENOMINATOR;
 
 			let newBalanceA = prevBalanceA * (currentNavB + newAFromA);
 			let newBalanceB = prevBalanceB * currentNavB + prevBalanceA * newBFromA;
+			return [newBalanceA, newBalanceB];
+		}
+
+		function periodicReset(prevBalanceA, prevBalanceB, currentNavA, currentNavB, beta) {
+			let newBFromA =
+				(currentNavA - 1) / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * beta;
+			let newAFromA = newBFromA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+
+			let newBalanceA = prevBalanceA * (1 + newAFromA);
+			let newBalanceB = prevBalanceB * 1 + prevBalanceA * newBFromA;
 			return [newBalanceA, newBalanceB];
 		}
 
@@ -1342,13 +1352,30 @@ contract('Custodian', accounts => {
 				);
 		}
 
-		function resetTest(price, resetFunc, resetState, transferABRequired) {
+		function updateBeta(prevBeta, lastPrice, lastResetPrice, currentNavA) {
+			return (
+				(1 + CustodianInit.alphaInBP / BP_DENOMINATOR) *
+				lastPrice /
+				((1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * lastPrice -
+					lastResetPrice *
+						CustodianInit.alphaInBP /
+						BP_DENOMINATOR *
+						prevBeta *
+						(currentNavA - 1))
+			);
+		}
+
+		function resetTest(price, resetFunc, resetState, isPeriodicReset, transferABRequired) {
 			let prevBalanceAalice, prevBalanceBalice;
 			let prevBalanceAbob, prevBalanceBbob;
 			let currentNavA;
 			let currentNavB;
 			let timestamp;
-			let beta;
+			let prevBeta, beta;
+
+			let skipNum = isPeriodicReset
+				? Math.ceil((Number(CustodianInit.hp) - 1) / Number(CustodianInit.couponRate)) + 1
+				: 1;
 
 			before(() =>
 				initContracts()
@@ -1412,30 +1439,46 @@ contract('Custodian', accounts => {
 							.call(bob)
 							.then(bobB => (prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR))
 					)
-
-					.then(() => custodianContract.skipCooldown())
+					.then(() => custodianContract.skipCooldown(skipNum))
 					.then(() => custodianContract.timestamp.call())
 					.then(ts => (timestamp = ts))
-					.then(() =>
-						custodianContract
-							.commitPrice(web3.utils.toWei(price + ''), timestamp.toNumber() - 200, {
-								from: pf1
-							})
-							.then(() =>
-								custodianContract.commitPrice(
-									web3.utils.toWei(price + 1 + ''),
-									timestamp.toNumber(),
+					.then(() => {
+						if (isPeriodicReset) {
+							return custodianContract.commitPrice(
+								web3.utils.toWei(price + ''),
+								timestamp.toNumber(),
+								{
+									from: pf1
+								}
+							);
+						} else {
+							return custodianContract
+								.commitPrice(
+									web3.utils.toWei(price + ''),
+									timestamp.toNumber() - 200,
 									{
-										from: pf2
+										from: pf1
 									}
 								)
-							)
-					)
+								.then(() =>
+									custodianContract.commitPrice(
+										web3.utils.toWei(price + 1 + ''),
+										timestamp.toNumber(),
+										{
+											from: pf2
+										}
+									)
+								);
+						}
+					})
 					.then(() => custodianContract.navAInWei.call())
-					.then(navAinWei => (currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR))
+					.then(navAinWei => {
+						currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
+					})
 					.then(() => custodianContract.navBInWei.call())
 					.then(navBinWei => (currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR))
-
+					.then(() => custodianContract.betaInWei.call())
+					.then(betaInWei => (prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR))
 					.then(() => {
 						let promise = Promise.resolve();
 						for (let i = 0; i < 10; i++)
@@ -1446,7 +1489,19 @@ contract('Custodian', accounts => {
 					.then(betaInWei => (beta = betaInWei.valueOf() / WEI_DENOMINATOR))
 			);
 
-			it('should reset beta to 1', () => assert.equal(beta, 1, 'beta is not reset to 1'));
+			it('should reset update beta correctly', () => {
+				if (isPeriodicReset) {
+					let newBeta = updateBeta(
+						prevBeta,
+						price,
+						Number(CustodianInit.ethInitPrice),
+						currentNavA
+					);
+					return assert.equal(beta, newBeta, 'beta is not updated correctly');
+				} else {
+					return assert.equal(beta, 1, 'beta is not reset to 1');
+				}
+			});
 
 			it('should in corect reset state', () => {
 				return custodianContract.state.call().then(state => {
@@ -1559,35 +1614,74 @@ contract('Custodian', accounts => {
 							'nav A not reset to 1'
 						)
 					)
-					.then(() => custodianContract.navBInWei.call())
-					.then(navB => {
-						assert.equal(
-							web3.utils.fromWei(navB.valueOf()),
-							'1',
-							'nav B not reset to 1'
-						);
+					.then(() => {
+						if (!isPeriodicReset) {
+							custodianContract.navBInWei.call().then(navB => {
+								assert.equal(
+									web3.utils.fromWei(navB.valueOf()),
+									'1',
+									'nav B not reset to 1'
+								);
+							});
+						}
 					});
 			});
+
+			if (!isPeriodicReset) {
+				it('should update reset price', () => {
+					return custodianContract.resetPrice
+						.call()
+						.then(resetPrice =>
+							assert.equal(
+								resetPrice[0].valueOf() / WEI_DENOMINATOR,
+								price,
+								'resetprice not updated'
+							)
+						);
+				});
+			}
 		}
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, false);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, true);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, true);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, true);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('periodic reset case 1', () => {
+			resetTest(
+				Number(CustodianInit.ethInitPrice),
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				true,
+				false
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('periodic reset case 2', () => {
+			resetTest(
+				Number(CustodianInit.ethInitPrice),
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				true,
+				true
+			);
 		});
 	});
 

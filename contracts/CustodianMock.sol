@@ -45,8 +45,8 @@ contract CustodianMock is Custodian {
 		timestamp = ts;
 	}
 
-	function skipCooldown() public {
-		timestamp = timestamp.add(priceUpdateCoolDown + 5 minutes);
+	function skipCooldown(uint numOfPeriods) public {
+		timestamp = timestamp.add(period * numOfPeriods - 5 minutes);
 	}
 
 	function getNowTimestamp() internal view returns (uint) {
