@@ -1980,43 +1980,210 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	// describe('only admin', () => {
-	// 	before(initContracts);
+	describe('only admin', () => {
+		before(initContracts);
 
-	// 	it('should be able to set fee address', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('admin should be able to set fee address', () => {
+			return custodianContract.setFeeAddress
+				.call(creator , {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set fee address'));
+		});
 
-	// 	it('should be able to set commission', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('non admin should not be able to set fee address', () => {
+			return custodianContract.setFeeAddress
+				.call(creator, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change fee address'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
 
-	// 	it('should be able to set member threshold', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('admin should be able to set commission', () => {
+			return custodianContract.setCommission
+				.call(100 , {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set commissison'));
+		});
 
-	// 	it('should be able to set iteration gas threshold', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('should not be able to set commission higher than 10000', () => {
+			return custodianContract.setCommission
+				.call(10001 , {from: creator})
+				.then(() => assert.isTrue(false, 'admin can set comission higher than 10000'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
 
-	// 	it('should be able to set pre reset waiting blocks', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('non admin should not be able to set comm', () => {
+			return custodianContract.setCommission
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change comm'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
 
-	// 	it('should be able to set post reset waiting blocks', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('admin should be able to set member threshold', () => {
+			return custodianContract.setMemberThresholdInWei
+				.call(100 , {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set member threshhold'));
+		});
 
-	// 	it('should be able to set price tolerance', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('non admin should not be able to set member Threshold', () => {
+			return custodianContract.setMemberThresholdInWei
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change member threshhold'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
 
-	// 	it('should be able to set price feed time tolerance', () => {
-	// 		return assert.isTrue(false);
-	// 	});
+		it('admin should be able to set iteration gas threshold', () => {
+			return custodianContract.setIterationGasThreshold
+				.call(100000, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set gas threshhold'));
+		});
 
-	// 	it('should be able to set price update cool down', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
+		it('non admin should not be able to set gas threshhold', () => {
+			return custodianContract.setIterationGasThreshold
+				.call(100000, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change gas threshhold'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set pre reset waiting blocks', () => {
+			return custodianContract.setPreResetWaitingBlocks
+				.call(100, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set pre reset waiting block'));
+		});
+
+		it('non admin should not be able to set pre reset waiting blocks', () => {
+			return custodianContract.setPreResetWaitingBlocks
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change pre reset waiting block'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set post reset waiting blocks', () => {
+			return custodianContract.setPostResetWaitingBlocks
+				.call(100, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set post reset waiting block'));
+		});
+
+		it('non admin should not be able to set post reset waiting blocks', () => {
+			return custodianContract.setPostResetWaitingBlocks
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change post reset waiting block'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set price tolerance', () => {
+			return custodianContract.setPriceTolInBP
+				.call(100, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set price tolerance'));
+		});
+
+		it('non admin should not be able to set price tolerance', () => {
+			return custodianContract.setPriceTolInBP
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change price tolerance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set price feed tolerance', () => {
+			return custodianContract.setPriceFeedTolInBP
+				.call(100, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set price feed tolerance'));
+		});
+
+		it('non admin should not be able to set price tolerance', () => {
+			return custodianContract.setPriceFeedTolInBP
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change price feed tolerance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set price feed time tolerance', () => {
+			return custodianContract.setPriceFeedTimeTol
+				.call(100, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set price feed time tolerance'));
+		});
+
+		it('non admin should not be able to set price feed time tolerance', () => {
+			return custodianContract.setPriceFeedTimeTol
+				.call(100, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change price feed time tolerance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('admin should be able to set price update coolupdate', () => {
+			return custodianContract.setPriceUpdateCoolDown
+				.call(10000, {from: creator})
+				.then(success => assert.isTrue(success, 'not be able to set price update coolupdate'));
+		});
+
+		it('non admin should not be able to set price update coolupdate', () => {
+			return custodianContract.setPriceUpdateCoolDown
+				.call(10000, {from: alice})
+				.then(() => assert.isTrue(false, 'non admin can change price update coolupdate'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+	});
 });

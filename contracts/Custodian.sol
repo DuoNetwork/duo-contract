@@ -540,16 +540,6 @@ contract Custodian {
 		return true;
 	}
 
-	function setFeeAddress(address newAddress) public only(admin) inState(State.Trading) {
-		feeCollector = newAddress;
-	}
-
-	function setCommission(uint newComm) public only(admin) inState(State.Trading) {
-		require(newComm > 0);
-		require(newComm < BP_DENOMINATOR);
-		commissionRateInBP = newComm;
-	}
-	
 	function checkBalanceA(address add) public constant returns(uint) {
 		return balancesA[add];
 	}
@@ -658,6 +648,18 @@ contract Custodian {
 	}
 
 	//admin function
+	function setFeeAddress(address newAddress) public only(admin) inState(State.Trading) returns (bool success) {
+		feeCollector = newAddress;
+		return true;
+	}
+
+	function setCommission(uint newComm) public only(admin) inState(State.Trading) returns (bool success) {
+		require(newComm > 0);
+		require(newComm < BP_DENOMINATOR);
+		commissionRateInBP = newComm;
+		return true;
+	}
+
 	function setMemberThresholdInWei(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
 		memberThresholdInWei = newValue;
 		return true;
