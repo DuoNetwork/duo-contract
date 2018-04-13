@@ -7,5 +7,4 @@ node_modules
 # temporary files
 *.tmp
 *~
-package-lock.json
 build
