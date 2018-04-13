@@ -1772,9 +1772,11 @@ contract('Custodian', accounts => {
 		);
 
 		it('should show balance', () => {
-			return custodianContract.balancesA.call(alice).then(balance => {
-				return assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
-			});
+			return custodianContract.balancesA
+				.call(alice)
+				.then(balance =>
+					assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown')
+				);
 		});
 
 		it('should be able to approve', () => {
@@ -1787,13 +1789,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show allowance', () => {
-			return custodianContract.allowanceA.call(alice, bob).then(allowance => {
-				assert.equal(
-					allowance.toNumber() / WEI_DENOMINATOR,
-					100,
-					'allowance of bob not equal to 100'
+			return custodianContract.allowanceA
+				.call(alice, bob)
+				.then(allowance =>
+					assert.equal(
+						allowance.toNumber() / WEI_DENOMINATOR,
+						100,
+						'allowance of bob not equal to 100'
+					)
 				);
-			});
 		});
 
 		it('should be able to transfer', () => {
@@ -1805,13 +1809,15 @@ contract('Custodian', accounts => {
 				);
 		});
 
-		it('should balance of bob equal to 10', () => {
-			return custodianContract.balancesA.call(bob).then(balance => {
-				return assert.isTrue(
-					balance.toNumber() === 10 * WEI_DENOMINATOR,
-					'balance of bob not shown'
+		it('should show balance of bob equal to 10', () => {
+			return custodianContract.balancesA
+				.call(bob)
+				.then(balance =>
+					assert.isTrue(
+						balance.toNumber() === 10 * WEI_DENOMINATOR,
+						'balance of bob not shown'
+					)
 				);
-			});
 		});
 
 		it('should not transfer more than balance', () => {
@@ -1850,13 +1856,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('allowance for bob should be 50', () => {
-			return custodianContract.allowanceA.call(alice, bob).then(allowance => {
-				assert.equal(
-					allowance.toNumber() / WEI_DENOMINATOR,
-					50,
-					'allowance of bob not equal to 50'
+			return custodianContract.allowanceA
+				.call(alice, bob)
+				.then(allowance =>
+					assert.equal(
+						allowance.toNumber() / WEI_DENOMINATOR,
+						50,
+						'allowance of bob not equal to 50'
+					)
 				);
-			});
 		});
 
 		it('check balance of charles equal 50', () => {
@@ -1880,9 +1888,11 @@ contract('Custodian', accounts => {
 		);
 
 		it('should show balance', () => {
-			return custodianContract.balancesB.call(alice).then(balance => {
-				return assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
-			});
+			return custodianContract.balancesB
+				.call(alice)
+				.then(balance =>
+					assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown')
+				);
 		});
 
 		it('should be able to approve', () => {
@@ -1985,13 +1995,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set fee address', () => {
 			return custodianContract.setFeeAddress
-				.call(creator , {from: creator})
+				.call(creator, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set fee address'));
 		});
 
 		it('non admin should not be able to set fee address', () => {
 			return custodianContract.setFeeAddress
-				.call(creator, {from: alice})
+				.call(creator, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change fee address'))
 				.catch(err =>
 					assert.equal(
@@ -2004,13 +2014,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set commission', () => {
 			return custodianContract.setCommission
-				.call(100 , {from: creator})
+				.call(100, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set commissison'));
 		});
 
 		it('should not be able to set commission higher than 10000', () => {
 			return custodianContract.setCommission
-				.call(10001 , {from: creator})
+				.call(10001, { from: creator })
 				.then(() => assert.isTrue(false, 'admin can set comission higher than 10000'))
 				.catch(err =>
 					assert.equal(
@@ -2023,7 +2033,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set comm', () => {
 			return custodianContract.setCommission
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change comm'))
 				.catch(err =>
 					assert.equal(
@@ -2036,13 +2046,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set member threshold', () => {
 			return custodianContract.setMemberThresholdInWei
-				.call(100 , {from: creator})
+				.call(100, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set member threshhold'));
 		});
 
 		it('non admin should not be able to set member Threshold', () => {
 			return custodianContract.setMemberThresholdInWei
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change member threshhold'))
 				.catch(err =>
 					assert.equal(
@@ -2055,13 +2065,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set iteration gas threshold', () => {
 			return custodianContract.setIterationGasThreshold
-				.call(100000, {from: creator})
+				.call(100000, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set gas threshhold'));
 		});
 
 		it('non admin should not be able to set gas threshhold', () => {
 			return custodianContract.setIterationGasThreshold
-				.call(100000, {from: alice})
+				.call(100000, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change gas threshhold'))
 				.catch(err =>
 					assert.equal(
@@ -2074,13 +2084,15 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set pre reset waiting blocks', () => {
 			return custodianContract.setPreResetWaitingBlocks
-				.call(100, {from: creator})
-				.then(success => assert.isTrue(success, 'not be able to set pre reset waiting block'));
+				.call(100, { from: creator })
+				.then(success =>
+					assert.isTrue(success, 'not be able to set pre reset waiting block')
+				);
 		});
 
 		it('non admin should not be able to set pre reset waiting blocks', () => {
 			return custodianContract.setPreResetWaitingBlocks
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change pre reset waiting block'))
 				.catch(err =>
 					assert.equal(
@@ -2093,13 +2105,15 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set post reset waiting blocks', () => {
 			return custodianContract.setPostResetWaitingBlocks
-				.call(100, {from: creator})
-				.then(success => assert.isTrue(success, 'not be able to set post reset waiting block'));
+				.call(100, { from: creator })
+				.then(success =>
+					assert.isTrue(success, 'not be able to set post reset waiting block')
+				);
 		});
 
 		it('non admin should not be able to set post reset waiting blocks', () => {
 			return custodianContract.setPostResetWaitingBlocks
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change post reset waiting block'))
 				.catch(err =>
 					assert.equal(
@@ -2112,13 +2126,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set price tolerance', () => {
 			return custodianContract.setPriceTolInBP
-				.call(100, {from: creator})
+				.call(100, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set price tolerance'));
 		});
 
 		it('non admin should not be able to set price tolerance', () => {
 			return custodianContract.setPriceTolInBP
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change price tolerance'))
 				.catch(err =>
 					assert.equal(
@@ -2131,13 +2145,13 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set price feed tolerance', () => {
 			return custodianContract.setPriceFeedTolInBP
-				.call(100, {from: creator})
+				.call(100, { from: creator })
 				.then(success => assert.isTrue(success, 'not be able to set price feed tolerance'));
 		});
 
 		it('non admin should not be able to set price tolerance', () => {
 			return custodianContract.setPriceFeedTolInBP
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change price feed tolerance'))
 				.catch(err =>
 					assert.equal(
@@ -2150,13 +2164,15 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set price feed time tolerance', () => {
 			return custodianContract.setPriceFeedTimeTol
-				.call(100, {from: creator})
-				.then(success => assert.isTrue(success, 'not be able to set price feed time tolerance'));
+				.call(100, { from: creator })
+				.then(success =>
+					assert.isTrue(success, 'not be able to set price feed time tolerance')
+				);
 		});
 
 		it('non admin should not be able to set price feed time tolerance', () => {
 			return custodianContract.setPriceFeedTimeTol
-				.call(100, {from: alice})
+				.call(100, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change price feed time tolerance'))
 				.catch(err =>
 					assert.equal(
@@ -2169,13 +2185,15 @@ contract('Custodian', accounts => {
 
 		it('admin should be able to set price update coolupdate', () => {
 			return custodianContract.setPriceUpdateCoolDown
-				.call(10000, {from: creator})
-				.then(success => assert.isTrue(success, 'not be able to set price update coolupdate'));
+				.call(10000, { from: creator })
+				.then(success =>
+					assert.isTrue(success, 'not be able to set price update coolupdate')
+				);
 		});
 
 		it('non admin should not be able to set price update coolupdate', () => {
 			return custodianContract.setPriceUpdateCoolDown
-				.call(10000, {from: alice})
+				.call(10000, { from: alice })
 				.then(() => assert.isTrue(false, 'non admin can change price update coolupdate'))
 				.catch(err =>
 					assert.equal(
