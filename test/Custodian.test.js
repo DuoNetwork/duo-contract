@@ -1739,9 +1739,7 @@ contract('Custodian', accounts => {
 		it('should transit to trading state after a given number of blocks but not before that case 1', () => {
 			let promise = Promise.resolve();
 			for (let i = 0; i < 9; i++)
-				promise = promise.then(() =>
-					custodianContract.startPostReset().then(tx => console.log(tx))
-				);
+				promise = promise.then(() => custodianContract.startPostReset());
 			return promise
 				.then(() => custodianContract.state.call())
 				.then(state => {
@@ -1752,12 +1750,18 @@ contract('Custodian', accounts => {
 					);
 				})
 				.then(() => custodianContract.startPostReset())
+				.then(tx => {
+					assert.equal(tx.logs.length, 1, 'not only one events emitted');
+					return assert.isTrue(
+						tx.logs[0].event === START_TRADING,
+						'not emititng startTrading event'
+					);
+				})
 				.then(() => custodianContract.state.call())
 				.then(state =>
 					assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
 				);
 		});
-
 	});
 
 	describe('A token test', () => {
@@ -1803,7 +1807,10 @@ contract('Custodian', accounts => {
 
 		it('should balance of bob equal to 10', () => {
 			return custodianContract.balancesA.call(bob).then(balance => {
-				return assert.isTrue(balance.toNumber() === 10*WEI_DENOMINATOR, 'balance of bob not shown');
+				return assert.isTrue(
+					balance.toNumber() === 10 * WEI_DENOMINATOR,
+					'balance of bob not shown'
+				);
 			});
 		});
 
@@ -1908,7 +1915,10 @@ contract('Custodian', accounts => {
 
 		it('should balance of bob equal to 10', () => {
 			return custodianContract.balancesB.call(bob).then(balance => {
-				return assert.isTrue(balance.toNumber() === 10*WEI_DENOMINATOR, 'balance of bob not shown');
+				return assert.isTrue(
+					balance.toNumber() === 10 * WEI_DENOMINATOR,
+					'balance of bob not shown'
+				);
 			});
 		});
 
@@ -1969,7 +1979,10 @@ contract('Custodian', accounts => {
 				);
 		});
 	});
+
 	// describe('only admin', () => {
+	// 	before(initContracts);
+
 	// 	it('should be able to set fee address', () => {
 	// 		return assert.isTrue(false);
 	// 	});
