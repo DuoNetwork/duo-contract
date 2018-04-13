@@ -39,11 +39,12 @@ contract('Custodian', accounts => {
 	const creator = accounts[0];
 	const alice = accounts[1]; //duoMember
 	const bob = accounts[2];
-	const nonDuoMember = accounts[3];
-	const pf1 = accounts[4];
-	const pf2 = accounts[5];
-	const pf3 = accounts[6];
-	const fc = accounts[7];
+	const charles = accounts[3];
+	const nonDuoMember = accounts[4];
+	const pf1 = accounts[5];
+	const pf2 = accounts[6];
+	const pf3 = accounts[7];
+	const fc = accounts[8];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -1135,32 +1136,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('pre reset', () => {
-		beforeEach(() =>
-			initContracts()
-				.then(() => custodianContract.skipCooldown(1))
-				.then(() => custodianContract.timestamp.call())
-				.then(ts =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
-							from: pf1
-						})
-						.then(() =>
-							custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
-								from: pf2
-							})
-						)
-				)
-		);
-
-		it('should be in state preReset', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset')
-				);
-		});
-
+	function shouldNotAdminAndTrading() {
 		it('should not allow price commit', () => {
 			return custodianContract
 				.skipCooldown(1)
@@ -1279,6 +1255,35 @@ contract('Custodian', accounts => {
 					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown')
 				);
 		});
+	}
+
+	describe('pre reset', () => {
+		beforeEach(() =>
+			initContracts()
+				.then(() => custodianContract.skipCooldown(1))
+				.then(() => custodianContract.timestamp.call())
+				.then(ts =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+							from: pf1
+						})
+						.then(() =>
+							custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
+								from: pf2
+							})
+						)
+				)
+		);
+
+		it('should be in state preReset', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset')
+				);
+		});
+
+		shouldNotAdminAndTrading();
 
 		it('should only transit to reset state after a given number of blocks but not before that', () => {
 			let promise = Promise.resolve();
@@ -1683,6 +1688,287 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe('post reset', () => {
+		let timestamp;
+		beforeEach(() =>
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() =>
+					custodianContract.create({
+						from: alice,
+						value: web3.utils.toWei('1')
+					})
+				)
+				.then(() => custodianContract.skipCooldown(1))
+				.then(() => custodianContract.timestamp.call())
+				.then(ts => (timestamp = ts))
+				.then(() =>
+					custodianContract
+						.commitPrice(web3.utils.toWei('900'), timestamp.toNumber() - 200, {
+							from: pf1
+						})
+						.then(() =>
+							custodianContract.commitPrice(
+								web3.utils.toWei('901'),
+								timestamp.toNumber(),
+								{
+									from: pf2
+								}
+							)
+						)
+				)
+				.then(() => {
+					let promise = Promise.resolve();
+					for (let i = 0; i < 10; i++)
+						promise = promise.then(() => custodianContract.startPreReset());
+					return promise;
+				})
+				.then(() => custodianContract.startReset())
+		);
+
+		it('should in state post reset', () => {
+			return custodianContract.state
+				.call()
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in state postReset')
+				);
+		});
+
+		shouldNotAdminAndTrading();
+
+		it('should transit to trading state after a given number of blocks but not before that case 1', () => {
+			let promise = Promise.resolve();
+			for (let i = 0; i < 9; i++)
+				promise = promise.then(() =>
+					custodianContract.startPostReset().then(tx => console.log(tx))
+				);
+			return promise
+				.then(() => custodianContract.state.call())
+				.then(state => {
+					return assert.equal(
+						state.valueOf(),
+						STATE_POST_RESET,
+						'not in post reset state'
+					);
+				})
+				.then(() => custodianContract.startPostReset())
+				.then(() => custodianContract.state.call())
+				.then(state =>
+					assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
+				);
+		});
+
+	});
+
+	describe('A token test', () => {
+		before(() =>
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
+		);
+
+		it('should show balance', () => {
+			return custodianContract.balancesA.call(alice).then(balance => {
+				return assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
+			});
+		});
+
+		it('should be able to approve', () => {
+			return custodianContract.approveA
+				.call(alice, bob, web3.utils.toWei('100'), { from: alice })
+				.then(success => assert.isTrue(success, 'Not able to approve'))
+				.then(() =>
+					custodianContract.approveA(alice, bob, web3.utils.toWei('100'), { from: alice })
+				);
+		});
+
+		it('should show allowance', () => {
+			return custodianContract.allowanceA.call(alice, bob).then(allowance => {
+				assert.equal(
+					allowance.toNumber() / WEI_DENOMINATOR,
+					100,
+					'allowance of bob not equal to 100'
+				);
+			});
+		});
+
+		it('should be able to transfer', () => {
+			return custodianContract.transferA
+				.call(alice, bob, web3.utils.toWei('10'), { from: alice })
+				.then(success => assert.isTrue(success, 'Not able to transfer'))
+				.then(() =>
+					custodianContract.transferA(alice, bob, web3.utils.toWei('10'), { from: alice })
+				);
+		});
+
+		it('should balance of bob equal to 10', () => {
+			return custodianContract.balancesA.call(bob).then(balance => {
+				return assert.isTrue(balance.toNumber() === 10*WEI_DENOMINATOR, 'balance of bob not shown');
+			});
+		});
+
+		it('should not transfer more than balance', () => {
+			return custodianContract.transferA
+				.call(alice, bob, web3.utils.toWei('10000000'), { from: alice })
+				.then(() => assert.isTrue(false, 'able to transfer more than balance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('should transferAFrom less than allowance', () => {
+			return custodianContract.transferAFrom
+				.call(bob, alice, charles, web3.utils.toWei('50'), { form: bob })
+				.then(success => assert.isTrue(success, 'Not able to transfer'))
+				.then(() =>
+					custodianContract.transferAFrom(bob, alice, charles, web3.utils.toWei('50'))
+				);
+		});
+
+		it('should not transferFrom more than allowance', () => {
+			return custodianContract.transferAFrom
+				.call(bob, alice, bob, web3.utils.toWei('200'), { from: bob })
+				.then(() => assert.isTrue(false, 'can transferFrom of more than allowance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('allowance for bob should be 50', () => {
+			return custodianContract.allowanceA.call(alice, bob).then(allowance => {
+				assert.equal(
+					allowance.toNumber() / WEI_DENOMINATOR,
+					50,
+					'allowance of bob not equal to 50'
+				);
+			});
+		});
+
+		it('check balance of charles equal 50', () => {
+			return custodianContract.balancesA
+				.call(charles)
+				.then(balance =>
+					assert.equal(
+						balance.toNumber() / WEI_DENOMINATOR,
+						50,
+						'balance of charles not equal to 50'
+					)
+				);
+		});
+	});
+
+	describe('B token test', () => {
+		before(() =>
+			initContracts()
+				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
+				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
+		);
+
+		it('should show balance', () => {
+			return custodianContract.balancesB.call(alice).then(balance => {
+				return assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
+			});
+		});
+
+		it('should be able to approve', () => {
+			return custodianContract.approveB
+				.call(alice, bob, web3.utils.toWei('100'), { from: alice })
+				.then(success => assert.isTrue(success, 'Not able to approve'))
+				.then(() =>
+					custodianContract.approveB(alice, bob, web3.utils.toWei('100'), { from: alice })
+				);
+		});
+
+		it('should show allowance', () => {
+			return custodianContract.allowanceB.call(alice, bob).then(allowance => {
+				assert.equal(
+					allowance.toNumber() / WEI_DENOMINATOR,
+					100,
+					'allowance of bob not equal to 100'
+				);
+			});
+		});
+
+		it('should be able to transfer', () => {
+			return custodianContract.transferB
+				.call(alice, bob, web3.utils.toWei('10'), { from: alice })
+				.then(success => assert.isTrue(success, 'Not able to transfer'))
+				.then(() =>
+					custodianContract.transferB(alice, bob, web3.utils.toWei('10'), { from: alice })
+				);
+		});
+
+		it('should balance of bob equal to 10', () => {
+			return custodianContract.balancesB.call(bob).then(balance => {
+				return assert.isTrue(balance.toNumber() === 10*WEI_DENOMINATOR, 'balance of bob not shown');
+			});
+		});
+
+		it('should not transfer more than balance', () => {
+			return custodianContract.transferB
+				.call(alice, bob, web3.utils.toWei('10000000'), { from: alice })
+				.then(() => assert.isTrue(false, 'able to transfer more than balance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('should transferAFrom less than allowance', () => {
+			return custodianContract.transferBFrom
+				.call(bob, alice, charles, web3.utils.toWei('50'), { form: bob })
+				.then(success => assert.isTrue(success, 'Not able to transfer'))
+				.then(() =>
+					custodianContract.transferBFrom(bob, alice, charles, web3.utils.toWei('50'))
+				);
+		});
+
+		it('should not transferFrom more than allowance', () => {
+			return custodianContract.transferBFrom
+				.call(bob, alice, bob, web3.utils.toWei('200'), { from: bob })
+				.then(() => assert.isTrue(false, 'can transferFrom of more than allowance'))
+				.catch(err =>
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					)
+				);
+		});
+
+		it('allowance for bob should be 50', () => {
+			return custodianContract.allowanceB.call(alice, bob).then(allowance => {
+				assert.equal(
+					allowance.toNumber() / WEI_DENOMINATOR,
+					50,
+					'allowance of bob not equal to 50'
+				);
+			});
+		});
+
+		it('check balance of charles equal 50', () => {
+			return custodianContract.balancesB
+				.call(charles)
+				.then(balance =>
+					assert.equal(
+						balance.toNumber() / WEI_DENOMINATOR,
+						50,
+						'balance of charles not equal to 50'
+					)
+				);
+		});
+	});
 	// describe('only admin', () => {
 	// 	it('should be able to set fee address', () => {
 	// 		return assert.isTrue(false);
@@ -1717,71 +2003,6 @@ contract('Custodian', accounts => {
 	// 	});
 
 	// 	it('should be able to set price update cool down', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('A', () => {
-	// 	it('should be able to transfer', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should be able to approve', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should be able to transfer from address', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('B', () => {
-	// 	it('should be able to transfer', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should be able to approve', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should be able to transfer from address', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-	// });
-
-	// describe('post reset', () => {
-	// it('should transit to trading state after a given number of blocks but not before that case 1', () => {
-	// 	let promise = Promise.resolve();
-	// 	for (let i = 0; i < 9; i++)
-	// 		promise = promise.then(() => custodianContract.startPostReset());
-	// 	return promise
-	// 		.then(() => custodianContract.state.call())
-	// 		.then(state =>
-	// 			assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state')
-	// 		)
-	// 		.then(() => custodianContract.startPostReset())
-	// 		.then(() => custodianContract.state.call())
-	// 		.then(state =>
-	// 			assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
-	// 		);
-	// });
-	// 	it('should not allow price commit', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow creation or redemption', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow any transfer or approve of A or B', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should not allow any admin activity', () => {
-	// 		return assert.isTrue(false);
-	// 	});
-
-	// 	it('should transit to trading state after a given number of blocks but not before that', () => {
 	// 		return assert.isTrue(false);
 	// 	});
 	// });
