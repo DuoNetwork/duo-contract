@@ -23,153 +23,130 @@ contract('TokenA', accounts => {
 
 	const WEI_DENOMINATOR = 1e18;
 
-	before(() =>
-		DUO.new(web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol, {
+	before(async () => {
+		duoContract = await DUO.new(
+			web3.utils.toWei(DuoInit.initSupply),
+			DuoInit.tokenName,
+			DuoInit.tokenSymbol,
+			{
+				from: creator
+			}
+		);
+		custodianContract = await Custodian.new(
+			web3.utils.toWei(CustodianInit.ethInitPrice),
+			feeCollector,
+			duoContract.address,
+			pf1,
+			pf2,
+			pf3,
+			CustodianInit.alphaInBP,
+			web3.utils.toWei(CustodianInit.couponRate),
+			web3.utils.toWei(CustodianInit.hp),
+			web3.utils.toWei(CustodianInit.hu),
+			web3.utils.toWei(CustodianInit.hd),
+			CustodianInit.commissionRateInBP,
+			CustodianInit.period,
+			web3.utils.toWei(CustodianInit.memberThreshold),
+			CustodianInit.gasThreshhold,
+			{
+				from: creator
+			}
+		);
+
+		await custodianContract.create({ from: creator, value: web3.utils.toWei('1') });
+		tokenAContract = await TokenA.new(
+			TokenAInit.tokenName,
+			TokenAInit.tokenSymbol,
+			custodianContract.address
+		);
+	});
+
+	it('total supply should be 0', async () => {
+		let totalSupply = await tokenAContract.totalSupply.call();
+		assert.equal(totalSupply.valueOf(), 0, 'totalSupply not equal to 0');
+	});
+
+	it('should show balance', async () => {
+		let balance = await tokenAContract.balanceOf.call(creator);
+		assert.isTrue(balance.toNumber() > 0, 'balance of creator not equal to created amount');
+	});
+
+	it('should be able to approve', async () => {
+		let success = await tokenAContract.approve(alice, web3.utils.toWei('100'), {
 			from: creator
-		})
-			.then(instance => (duoContract = instance))
-			.then(() =>
-				Custodian.new(
-					web3.utils.toWei(CustodianInit.ethInitPrice),
-					feeCollector,
-					duoContract.address,
-					pf1,
-					pf2,
-					pf3,
-					CustodianInit.alphaInBP,
-					web3.utils.toWei(CustodianInit.couponRate),
-					web3.utils.toWei(CustodianInit.hp),
-					web3.utils.toWei(CustodianInit.hu),
-					web3.utils.toWei(CustodianInit.hd),
-					CustodianInit.commissionRateInBP,
-					CustodianInit.period,
-					web3.utils.toWei(CustodianInit.memberThreshold),
-					CustodianInit.gasThreshhold,
-					{
-						from: creator
-					}
-				).then(instance => {
-					custodianContract = instance;
-					return custodianContract.create({ from: creator, value: web3.utils.toWei('1') });
-				})
-			)
-			.then(() =>
-				TokenA.new(
-					TokenAInit.tokenName,
-					TokenAInit.tokenSymbol,
-					custodianContract.address
-				).then(instance => (tokenAContract = instance))
-			)
-	);
-
-	it('total supply should be 0', () => {
-		return tokenAContract.totalSupply
-			.call()
-			.then(totalSupply =>
-				assert.equal(totalSupply.valueOf(), 0, 'totalSupply not equal to 0')
-			);
-	});
-
-	it('should show balance', () => {
-		return tokenAContract.balanceOf.call(creator).then(balance => {
-			return assert.isTrue(
-				balance.toNumber() > 0,
-				'balance of creator not equal to created amount'
-			);
 		});
+		assert.isTrue(!!success, 'Not able to approve');
 	});
 
-	it('should be able to approve', () => {
-		return tokenAContract
-			.approve(alice, web3.utils.toWei('100'), { from: creator })
-			.then(success => {
-				assert.isTrue(!!success, 'Not able to approve');
+	it('should show allowance', async () => {
+		let allowance = await tokenAContract.allowance.call(creator, alice);
+		assert.equal(
+			allowance.valueOf() / WEI_DENOMINATOR,
+			100,
+			'allowance of alice not equal to 100'
+		);
+	});
+
+	it('creator should be able to transfer to bob', async () => {
+		let transfer = await tokenAContract.transfer(bob, web3.utils.toWei('10'), {
+			from: creator
+		});
+		assert.isTrue(!!transfer, 'Not able to approve');
+	});
+
+	it('should show balance of bob', async () => {
+		let balance = await tokenAContract.balanceOf.call(bob);
+		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 10, 'balance of bob not equal to 10');
+	});
+
+	it('alice cannot transfer 200 from creator to bob', async () => {
+		try {
+			await tokenAContract.transferFrom(creator, bob, web3.utils.toWei('200'), {
+				from: alice
 			});
-	});
-
-	it('should show allowance', () => {
-		return tokenAContract.allowance.call(creator, alice).then(allowance => {
+			assert.isTrue(false, 'can transfer of more than balance');
+		} catch (err) {
 			assert.equal(
-				allowance.toNumber() / WEI_DENOMINATOR,
-				100,
-				'allowance of alice not equal to 100'
+				err.message,
+				'VM Exception while processing transaction: revert',
+				'transaction not reverted'
 			);
+		}
+	});
+
+	it('alice should transfer 50 from creator to bob', async () => {
+		let transferFrom = await tokenAContract.transferFrom(creator, bob, web3.utils.toWei('50'), {
+			from: alice
 		});
+		assert.isTrue(!!transferFrom, 'Not able to transferFrom');
 	});
 
-	it('creator should be able to transfer to bob', () => {
-		return tokenAContract
-			.transfer(bob, web3.utils.toWei('10'), { from: creator })
-			.then(transfer => {
-				assert.isTrue(!!transfer, 'Not able to approve');
+	it('allowance for alice should be 50', async () => {
+		let allowance = await tokenAContract.allowance.call(creator, alice);
+		assert.equal(
+			allowance.toNumber() / WEI_DENOMINATOR,
+			50,
+			'allowance of alice not equal to 50'
+		);
+	});
+
+	it('check balance of bob equal 60', async () => {
+		let balance = await tokenAContract.balanceOf.call(bob);
+		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 60, 'balance of bob not equal to 60');
+	});
+
+	it('should not transfer more than balance', async () => {
+		try {
+			await tokenAContract.transfer(bob, web3.utils.toWei('10000000000000000000000'), {
+				from: creator
 			});
-	});
-
-	it('should show balance of bob', () => {
-		return tokenAContract.balanceOf
-			.call(bob)
-			.then(balance =>
-				assert.equal(
-					balance.toNumber() / WEI_DENOMINATOR,
-					10,
-					'balance of bob not equal to 10'
-				)
-			);
-	});
-
-	it('alice cannot transfer 200 from creator to bob', () => {
-		return tokenAContract
-			.transferFrom(creator, bob, web3.utils.toWei('200'), { from: alice })
-			.then(() => assert.isTrue(false, 'can transfer of more than balance'))
-			.catch(err =>
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				)
-			);
-	});
-
-	it('alice should transfer 50 from creator to bob', () => {
-		return tokenAContract
-			.transferFrom(creator, bob, web3.utils.toWei('50'), { from: alice })
-			.then(transferFrom => {
-				assert.isTrue(!!transferFrom, 'Not able to transferFrom');
-			});
-	});
-
-	it('allowance for alice should be 50', () => {
-		return tokenAContract.allowance.call(creator, alice).then(allowance => {
+			assert.isTrue(false, 'can transfer of more than balance');
+		} catch (err) {
 			assert.equal(
-				allowance.toNumber() / WEI_DENOMINATOR,
-				50,
-				'allowance of alice not equal to 50'
+				err.message,
+				'VM Exception while processing transaction: revert',
+				'transaction not reverted'
 			);
-		});
-	});
-
-	it('check balance of bob equal 60', () => {
-		return tokenAContract.balanceOf
-			.call(bob)
-			.then(balance =>
-				assert.equal(
-					balance.toNumber() / WEI_DENOMINATOR,
-					60,
-					'balance of bob not equal to 60'
-				)
-			);
-	});
-
-	it('should not transfer more than balance', () => {
-		return tokenAContract
-			.transfer(bob, web3.utils.toWei('10000000000000000000000'), { from: creator })
-			.then(() => assert.isTrue(false, 'can transfer of more than balance'))
-			.catch(err =>
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				)
-			);
+		}
 	});
 });

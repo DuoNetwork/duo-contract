@@ -49,113 +49,88 @@ contract('Custodian', accounts => {
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
 
-	const initContracts = () =>
-		DUO.new(web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol, {
-			from: creator
-		})
-			.then(instance => (duoContract = instance))
-			.then(() =>
-				Custodian.new(
-					web3.utils.toWei(CustodianInit.ethInitPrice),
-					fc,
-					duoContract.address,
-					pf1,
-					pf2,
-					pf3,
-					CustodianInit.alphaInBP,
-					web3.utils.toWei(CustodianInit.couponRate),
-					web3.utils.toWei(CustodianInit.hp),
-					web3.utils.toWei(CustodianInit.hu),
-					web3.utils.toWei(CustodianInit.hd),
-					CustodianInit.commissionRateInBP,
-					CustodianInit.period,
-					web3.utils.toWei(CustodianInit.memberThreshold),
-					CustodianInit.gasThreshhold,
-					{
-						from: creator
-					}
-				).then(instance => (custodianContract = instance))
-			);
+	const initContracts = async () => {
+		duoContract = await DUO.new(
+			web3.utils.toWei(DuoInit.initSupply),
+			DuoInit.tokenName,
+			DuoInit.tokenSymbol,
+			{
+				from: creator
+			}
+		);
+
+		custodianContract = await Custodian.new(
+			web3.utils.toWei(CustodianInit.ethInitPrice),
+			fc,
+			duoContract.address,
+			pf1,
+			pf2,
+			pf3,
+			CustodianInit.alphaInBP,
+			web3.utils.toWei(CustodianInit.couponRate),
+			web3.utils.toWei(CustodianInit.hp),
+			web3.utils.toWei(CustodianInit.hu),
+			web3.utils.toWei(CustodianInit.hd),
+			CustodianInit.commissionRateInBP,
+			CustodianInit.period,
+			web3.utils.toWei(CustodianInit.memberThreshold),
+			CustodianInit.gasThreshhold,
+			{
+				from: creator
+			}
+		);
+	};
 
 	describe('constructor', () => {
 		before(initContracts);
 
-		it('state should be trading', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading')
-				);
+		it('state should be trading', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
 		});
 
-		it('feeCollector should equal specified value', () => {
-			return custodianContract.getFeeCollector
-				.call()
-				.then(feeCollector =>
-					assert.equal(feeCollector.valueOf(), fc, 'feeCollector specified incorrect')
-				);
+		it('feeCollector should equal specified value', async () => {
+			let feeCollector = await custodianContract.getFeeCollector.call();
+			assert.equal(feeCollector.valueOf(), fc, 'feeCollector specified incorrect');
 		});
 
-		it('priceFeed1 should equal specified value', () => {
-			return custodianContract.getPriceFeed1
-				.call()
-				.then(priceFeed1 =>
-					assert.equal(priceFeed1.valueOf(), pf1, 'priceFeed1 specified incorrect')
-				);
+		it('priceFeed1 should equal specified value', async () => {
+			let priceFeed1 = await custodianContract.getPriceFeed1.call();
+			assert.equal(priceFeed1.valueOf(), pf1, 'priceFeed1 specified incorrect');
 		});
 
-		it('priceFeed2 should equal specified value', () => {
-			return custodianContract.getPriceFeed2
-				.call()
-				.then(priceFeed2 =>
-					assert.equal(priceFeed2.valueOf(), pf2, 'priceFeed2 specified incorrect')
-				);
+		it('priceFeed2 should equal specified value', async () => {
+			let priceFeed2 = await custodianContract.getPriceFeed2.call();
+			assert.equal(priceFeed2.valueOf(), pf2, 'priceFeed2 specified incorrect');
 		});
 
-		it('priceFeed3 should equal specified value', () => {
-			return custodianContract.getPriceFeed3
-				.call()
-				.then(priceFeed3 =>
-					assert.equal(priceFeed3.valueOf(), pf3, 'priceFeed3 specified incorrect')
-				);
+		it('priceFeed3 should equal specified value', async () => {
+			let priceFeed3 = await custodianContract.getPriceFeed3.call();
+			assert.equal(priceFeed3.valueOf(), pf3, 'priceFeed3 specified incorrect');
 		});
 
-		it('admin should equal specified value', () => {
-			return custodianContract.getAdmin
-				.call()
-				.then(admin => assert.equal(admin.valueOf(), creator, 'admin specified incorrect'));
+		it('admin should equal specified value', async () => {
+			let admin = await custodianContract.getAdmin.call();
+			assert.equal(admin.valueOf(), creator, 'admin specified incorrect');
 		});
 
-		it('priceTolInBP should equal 500', () => {
-			return custodianContract.getPriceTolInBP
-				.call()
-				.then(getPriceTolInBP =>
-					assert.equal(getPriceTolInBP.valueOf(), 500, 'priceTolInBP specified incorrect')
-				);
+		it('priceTolInBP should equal 500', async () => {
+			let getPriceTolInBP = await custodianContract.getPriceTolInBP.call();
+			assert.equal(getPriceTolInBP.valueOf(), 500, 'priceTolInBP specified incorrect');
 		});
 
-		it('period should equal specified value', () => {
-			return custodianContract.period
-				.call()
-				.then(period =>
-					assert.equal(
-						period.valueOf(),
-						CustodianInit.period,
-						'period specified incorrect'
-					)
-				);
+		it('period should equal specified value', async () => {
+			let period = await custodianContract.period.call();
+			assert.equal(period.valueOf(), CustodianInit.period, 'period specified incorrect');
 		});
 
-		it('priceUpdateCoolDown should equal period minus 600', () => {
-			return custodianContract.getPriceUpdateCoolDown
-				.call()
-				.then(priceUpdateCoolDown =>
-					assert.equal(
-						priceUpdateCoolDown.valueOf(),
-						CustodianInit.period - 600,
-						'priceUpdateCoolDown specified incorrect'
-					)
-				);
+		it('priceUpdateCoolDown should equal period minus 600', async () => {
+			let priceUpdateCoolDown = await custodianContract.getPriceUpdateCoolDown.call();
+			assert.equal(
+				priceUpdateCoolDown.valueOf(),
+				CustodianInit.period - 600,
+				'priceUpdateCoolDown specified incorrect'
+			);
 		});
 	});
 
@@ -168,123 +143,114 @@ contract('Custodian', accounts => {
 		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 		let prevFeeAccumulated;
 
-		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() =>
-					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-				)
-		);
+		before(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
+		});
 
-		it('should only allow duo member to create', () => {
-			return custodianContract
-				.create({ from: nonDuoMember, value: web3.utils.toWei(amtEth + '') })
-				.then(() => {
-					assert.isTrue(false, 'the transaction should revert');
-				})
-				.catch(err => {
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can create Tranche Token'
-					);
+		it('should only allow duo member to create', async () => {
+			try {
+				await custodianContract.create({
+					from: nonDuoMember,
+					value: web3.utils.toWei(amtEth + '')
 				});
+				assert.isTrue(false, 'the transaction should revert');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can create Tranche Token'
+				);
+			}
 		});
 
-		it('should create token A and B', () => {
-			return custodianContract.create
-				.call({ from: alice, value: web3.utils.toWei(amtEth + '') })
-				.then(success => {
-					// first check return value with call()
-					assert.isTrue(success, 'duo member is not able to create');
-					// then send transaction to check effects
-					return custodianContract.create({
-						from: alice,
-						value: web3.utils.toWei(amtEth + '')
-					});
-				});
-		});
-
-		it('feeAccumulated should be updated', () => {
-			return custodianContract.feeAccumulatedInWei.call().then(feeAccumulated => {
-				let fee = web3.utils.toWei(
-					1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR + ''
-				);
-				assert.isTrue(
-					isEqual(feeAccumulated.valueOf(), fee),
-					'feeAccumulated not updated correctly'
-				);
+		it('should create token A and B', async () => {
+			let success = await custodianContract.create.call({
+				from: alice,
+				value: web3.utils.toWei(amtEth + '')
+			});
+			// first check return value with call()
+			assert.isTrue(success, 'duo member is not able to create');
+			// then send transaction to check effects
+			await custodianContract.create({
+				from: alice,
+				value: web3.utils.toWei(amtEth + '')
 			});
 		});
 
-		it('should update user list if required', () => {
-			return custodianContract.existingUsers
-				.call(alice)
-				.then(isUser => assert.isTrue(isUser, 'new user is not updated'));
+		it('feeAccumulated should be updated', async () => {
+			let feeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let fee = web3.utils.toWei(1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR + '');
+			assert.isTrue(
+				isEqual(feeAccumulated.valueOf(), fee),
+				'feeAccumulated not updated correctly'
+			);
 		});
 
-		it('should update balance of A correctly', () => {
-			return custodianContract.balancesA.call(alice).then(balanceA => {
-				assert.isTrue(
-					isEqual(balanceA.toString(), web3.utils.toWei(tokenValueA + '')),
-					'balance A not updated correctly'
+		it('should update user list if required', async () => {
+			let isUser = await custodianContract.existingUsers.call(alice);
+			assert.isTrue(isUser, 'new user is not updated');
+		});
+
+		it('should update balance of A correctly', async () => {
+			let balanceA = await custodianContract.balancesA.call(alice);
+			assert.isTrue(
+				isEqual(balanceA.toString(), web3.utils.toWei(tokenValueA + '')),
+				'balance A not updated correctly'
+			);
+		});
+
+		it('should update balance of B correctly', async () => {
+			let balanceB = await custodianContract.balancesB.call(alice);
+			assert.isTrue(
+				isEqual(balanceB.toString(), web3.utils.toWei(tokenValueB + '')),
+				'balance B not updated correctly'
+			);
+		});
+
+		it('only allowed account can withdraw fee', async () => {
+			try {
+				await custodianContract.collectFee.call(web3.utils.toWei('0.001'), { from: alice });
+
+				assert.isTrue(false, 'can collect fee more than allowed');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can create Tranche Token'
 				);
+			}
+		});
+
+		it('should only collect fee less than allowed', async () => {
+			try {
+				await custodianContract.collectFee.call(web3.utils.toWei('1'), { from: fc });
+				assert.isTrue(false, 'can collect fee more than allowed');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can create Tranche Token'
+				);
+			}
+		});
+
+		it('should collect fee', async () => {
+			prevFeeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let success = await custodianContract.collectFee.call(web3.utils.toWei('0.0001'), {
+				from: fc
 			});
+			assert.isTrue(success);
+			await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
 		});
 
-		it('should update balance of B correctly', () => {
-			return custodianContract.balancesB.call(alice).then(balanceB => {
-				assert.isTrue(
-					isEqual(balanceB.toString(), web3.utils.toWei(tokenValueB + '')),
-					'balance B not updated correctly'
-				);
-			});
-		});
-
-		it('only allowed account can withdraw fee', () => {
-			return custodianContract.collectFee
-				.call(web3.utils.toWei('0.001'), { from: alice })
-				.then(() => assert.isTrue(false, 'can collect fee more than allowed'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can create Tranche Token'
-					)
-				);
-		});
-
-		it('should only collect fee less than allowed', () => {
-			return custodianContract.collectFee
-				.call(web3.utils.toWei('1'), { from: fc })
-				.then(() => assert.isTrue(false, 'can collect fee more than allowed'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can create Tranche Token'
-					)
-				);
-		});
-
-		it('should collect fee', () => {
-			return custodianContract.feeAccumulatedInWei
-				.call()
-				.then(prevFee => (prevFeeAccumulated = prevFee))
-				.then(() =>
-					custodianContract.collectFee.call(web3.utils.toWei('0.0001'), { from: fc })
-				)
-				.then(success => assert.isTrue(success))
-				.then(() => custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc }));
-		});
-
-		it('should fee pending withdrawal amount should be updated correctly', () => {
-			return custodianContract.feeAccumulatedInWei.call().then(currentFee => {
-				assert.isTrue(
-					isEqual(currentFee.toNumber(), prevFeeAccumulated.toNumber()),
-					'fee not updated correctly'
-				);
-			});
+		it('should fee pending withdrawal amount should be updated correctly', async () => {
+			let currentFee = await custodianContract.feeAccumulatedInWei.call();
+			assert.isTrue(
+				isEqual(currentFee.toNumber(), prevFeeAccumulated.toNumber()),
+				'fee not updated correctly'
+			);
 		});
 	});
 
@@ -298,155 +264,133 @@ contract('Custodian', accounts => {
 		let amtEth = (deductAmtA + deductAmtA) / CustodianInit.ethInitPrice;
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
-		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() =>
-					duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator })
-				)
-				.then(() => duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator }))
-				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
-				.then(() => custodianContract.balancesA.call(alice))
-				.then(prevA => (prevBalanceA = prevA))
-				.then(() => custodianContract.balancesB.call(alice))
-				.then(prevB => (prevBalanceB = prevB))
-				.then(() => custodianContract.feeAccumulatedInWei.call())
-				.then(prevFee => (prevFeeAccumulated = prevFee))
-		);
-
-		it('should only redeem token value less than balance', () => {
-			return custodianContract
-				.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), { from: alice })
-				.then(() => {
-					assert.isTrue(false, 'duomember not able to create more than allowed');
-					// console.log(redeem);
-				})
-				.catch(err => {
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can create Tranche Token'
-					);
-				});
+		before(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
+			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
+			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
+			prevBalanceA = await custodianContract.balancesA.call(alice);
+			prevBalanceB = await custodianContract.balancesB.call(alice);
+			prevFeeAccumulated = await custodianContract.feeAccumulatedInWei.call();
 		});
 
-		it('only duo member can redeem', () => {
-			return custodianContract.redeem
-				.call(web3.utils.toWei('28'), web3.utils.toWei('29'), { from: nonDuoMember })
-				.then(() => {
-					assert.isTrue(false, 'the transaction should revert');
-				})
-				.catch(err => {
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can redeem Tranche Token'
-					);
+		it('should only redeem token value less than balance', async () => {
+			try {
+				await custodianContract.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), {
+					from: alice
 				});
-		});
-
-		it('should redeem token A and B', () => {
-			return custodianContract.redeem
-				.call(web3.utils.toWei(amtA + ''), web3.utils.toWei(amtB + ''), { from: alice })
-				.then(success => {
-					// first check return value with call()
-					assert.isTrue(success, 'duo member is not able to redeem');
-					// then send transaction to check effects
-					return custodianContract.redeem(
-						web3.utils.toWei(amtA + ''),
-						web3.utils.toWei(amtB + ''),
-						{ from: alice }
-					);
-				});
-		});
-
-		it('feeAccumulated should be updated', () => {
-			return custodianContract.feeAccumulatedInWei.call().then(feeAccumulated => {
-				assert.isTrue(
-					isEqual(
-						feeAccumulated.minus(prevFeeAccumulated).toNumber() / WEI_DENOMINATOR,
-						fee
-					),
-					'feeAccumulated not updated correctly'
+				assert.isTrue(false, 'duomember not able to create more than allowed');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can create Tranche Token'
 				);
+			}
+		});
+
+		it('only duo member can redeem', async () => {
+			try {
+				await custodianContract.redeem.call(
+					web3.utils.toWei('28'),
+					web3.utils.toWei('29'),
+					{ from: nonDuoMember }
+				);
+				assert.isTrue(false, 'the transaction should revert');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can redeem Tranche Token'
+				);
+			}
+		});
+
+		it('should redeem token A and B', async () => {
+			let success = await custodianContract.redeem.call(
+				web3.utils.toWei(amtA + ''),
+				web3.utils.toWei(amtB + ''),
+				{ from: alice }
+			);
+			assert.isTrue(success, 'duo member is not able to redeem');
+			await custodianContract.redeem(
+				web3.utils.toWei(amtA + ''),
+				web3.utils.toWei(amtB + ''),
+				{ from: alice }
+			);
+		});
+
+		it('feeAccumulated should be updated', async () => {
+			let feeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			assert.isTrue(
+				isEqual(feeAccumulated.minus(prevFeeAccumulated).toNumber() / WEI_DENOMINATOR, fee),
+				'feeAccumulated not updated correctly'
+			);
+		});
+
+		it('should update balance of A correctly', async () => {
+			let currentBalanceA = await custodianContract.balancesA.call(alice);
+			assert.isTrue(
+				isEqual(
+					currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
+					prevBalanceA.toNumber() / WEI_DENOMINATOR
+				),
+				'balance A not updated correctly after redeed'
+			);
+		});
+
+		it('should update balance of B correctly', async () => {
+			let currentBalanceB = await custodianContract.balancesB.call(alice);
+			assert.isTrue(
+				isEqual(
+					currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
+					prevBalanceB.toNumber() / WEI_DENOMINATOR
+				),
+				'balance B not updated correctly after redeed'
+			);
+		});
+
+		it('should update pending withdraw amount correctly', async () => {
+			let pendingWithdrawAMT = await custodianContract.ethPendingWithdrawal.call(alice);
+			assert.isTrue(
+				isEqual(amtEth - pendingWithdrawAMT.toNumber() / WEI_DENOMINATOR, fee),
+				'pending withdraw not updated correctly'
+			);
+		});
+
+		it('should not withdraw more than pending withdrawl amount', async () => {
+			try {
+				await custodianContract.withdraw.call(web3.utils.toWei('0.1'), { from: alice });
+				assert.isTrue(false, 'is able to with withdaw more than allowed');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					VM_REVERT_MSG,
+					'non DUO member still can create Tranche Token'
+				);
+			}
+		});
+
+		it('should withdraw from pending withdrawal', async () => {
+			prevPendingWithdrawalAMT = await custodianContract.ethPendingWithdrawal.call(alice);
+			let success = await custodianContract.withdraw.call(web3.utils.toWei('0.01'), {
+				from: alice
 			});
+			assert.isTrue(success, 'cannot withdraw fee');
+			await custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice });
 		});
 
-		it('should update balance of A correctly', () => {
-			return custodianContract.balancesA
-				.call(alice)
-				.then(currentBalanceA =>
-					assert.isTrue(
-						isEqual(
-							currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
-							prevBalanceA.toNumber() / WEI_DENOMINATOR
-						),
-						'balance A not updated correctly after redeed'
-					)
-				);
-		});
-
-		it('should update balance of B correctly', () => {
-			return custodianContract.balancesB
-				.call(alice)
-				.then(currentBalanceB =>
-					assert.isTrue(
-						isEqual(
-							currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
-							prevBalanceB.toNumber() / WEI_DENOMINATOR
-						),
-						'balance B not updated correctly after redeed'
-					)
-				);
-		});
-
-		it('should update pending withdraw amount correctly', () => {
-			return custodianContract.ethPendingWithdrawal.call(alice).then(pendingWithdrawAMT => {
-				assert.isTrue(
-					isEqual(amtEth - pendingWithdrawAMT.toNumber() / WEI_DENOMINATOR, fee),
-					'pending withdraw not updated correctly'
-				);
-			});
-		});
-
-		it('should not withdraw more than pending withdrawl amount', () => {
-			return custodianContract.withdraw
-				.call(web3.utils.toWei('0.1'), { from: alice })
-				.then(() => assert.isTrue(false, 'is able to with withdaw more than allowed'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'non DUO member still can create Tranche Token'
-					)
-				);
-		});
-
-		it('should withdraw from pending withdrawal', () => {
-			return custodianContract.ethPendingWithdrawal
-				.call(alice)
-				.then(prePendingWithdrawal => (prevPendingWithdrawalAMT = prePendingWithdrawal))
-				.then(() =>
-					custodianContract.withdraw.call(web3.utils.toWei('0.01'), { from: alice })
-				)
-				.then(success => assert.isTrue(success, 'cannot withdraw fee'))
-				.then(() => custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice }));
-		});
-
-		it('pending eth withdrawal should be updated correctly', () => {
-			return custodianContract.ethPendingWithdrawal
-				.call(alice)
-				.then(currentPendingWithdrawal =>
-					assert.isTrue(
-						isEqual(
-							(prevPendingWithdrawalAMT.toNumber() -
-								currentPendingWithdrawal.toNumber()) /
-								WEI_DENOMINATOR,
-							0.01
-						),
-						'pending withdrawal eth not updated correctly'
-					)
-				);
+		it('pending eth withdrawal should be updated correctly', async () => {
+			let currentPendingWithdrawal = await custodianContract.ethPendingWithdrawal.call(alice);
+			assert.isTrue(
+				isEqual(
+					(prevPendingWithdrawalAMT.toNumber() - currentPendingWithdrawal.toNumber()) /
+						WEI_DENOMINATOR,
+					0.01
+				),
+				'pending withdrawal eth not updated correctly'
+			);
 		});
 	});
 
@@ -567,742 +511,604 @@ contract('Custodian', accounts => {
 
 		before(initContracts);
 
-		it('non pf address cannot call commitPrice method', () => {
-			return custodianContract.commitPrice
-				.call(web3.utils.toWei('400'), 1522745087, { from: alice })
-				.then(() => assert.isTrue(false, 'non pf address can commit price'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, ''));
-		});
-
-		it('should accept first price arrived if it is not too far away', () => {
-			return custodianContract
-				.skipCooldown(1)
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (firstPeriod = ts))
-				.then(() =>
-					custodianContract.commitPrice.call(
-						web3.utils.toWei('580'),
-						firstPeriod.toNumber(),
-						{
-							from: pf1
-						}
-					)
-				)
-				.then(success => assert.isTrue(success))
-				.then(() =>
-					custodianContract.commitPrice(web3.utils.toWei('580'), firstPeriod.toNumber(), {
-						from: pf1
-					})
-				)
-				.then(tx => {
-					assert.equal(tx.logs.length, 1, 'more than one event emitted');
-					assert.equal(
-						tx.logs[0].event,
-						ACCEPT_PRICE,
-						'AcceptPrice Event is not emitted'
-					);
-					assert.isTrue(
-						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('580')),
-						'last price is not updated correctly'
-					);
-					assert.isTrue(
-						isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber()),
-						'last price time is not updated correctly'
-					);
+		it('non pf address cannot call commitPrice method', async () => {
+			try {
+				await custodianContract.commitPrice.call(web3.utils.toWei('400'), 1522745087, {
+					from: alice
 				});
+				assert.isTrue(false, 'non pf address can commit price');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, '');
+			}
 		});
 
-		it('should not reset', () => {
-			return custodianContract.state
-				.call()
-				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
+		it('should accept first price arrived if it is not too far away', async () => {
+			await custodianContract.skipCooldown(1);
+			firstPeriod = await custodianContract.timestamp.call();
+			let success = await custodianContract.commitPrice.call(
+				web3.utils.toWei('580'),
+				firstPeriod.toNumber(),
+				{
+					from: pf1
+				}
+			);
+			assert.isTrue(success);
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('580'),
+				firstPeriod.toNumber(),
+				{
+					from: pf1
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('580')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber()),
+				'last price time is not updated correctly'
+			);
 		});
 
-		it('should not accept first price arrived if it is too far away', () => {
-			return custodianContract
-				.skipCooldown(1)
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (firstPeriod = ts))
-				.then(() =>
-					custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+		it('should not reset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+		});
+
+		it('should not accept first price arrived if it is too far away', async () => {
+			await custodianContract.skipCooldown(1);
+
+			firstPeriod = await custodianContract.timestamp.call();
+
+			await custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+				from: pf1
+			});
+			let res = await custodianContract.getFirstPrice.call();
+			assert.isTrue(
+				isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
+					isEqual(res[1].toNumber(), firstPeriod.toNumber()),
+				'first price is not recorded'
+			);
+		});
+
+		it('should reject price from the same sender within cool down', async () => {
+			try {
+				await custodianContract.commitPrice(
+					web3.utils.toWei('570'),
+					firstPeriod.toNumber(),
+					{
 						from: pf1
-					})
-				)
-				.then(() => custodianContract.getFirstPrice.call())
-				.then(res =>
-					assert.isTrue(
-						isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-							isEqual(res[1].toNumber(), firstPeriod.toNumber()),
-						'first price is not recorded'
-					)
+					}
 				);
+
+				assert.isTrue(false, 'the price is not rejected');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'the VM is not reverted');
+			}
 		});
 
-		it('should reject price from the same sender within cool down', () => {
-			return custodianContract
-				.commitPrice(web3.utils.toWei('570'), firstPeriod.toNumber(), {
+		it('should accept second price arrived if second price timed out and sent by the same address as first price', async () => {
+			await custodianContract.skipCooldown(1);
+
+			secondPeriod = await custodianContract.timestamp.call();
+
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('550'),
+				secondPeriod.toNumber(),
+				{
 					from: pf1
-				})
-				.then(() => assert.isTrue(false, 'the price is not rejected'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'the VM is not reverted'));
-		});
-
-		it('should accept second price arrived if second price timed out and sent by the same address as first price', () => {
-			return custodianContract
-				.skipCooldown(1)
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (secondPeriod = ts))
-				.then(() =>
-					custodianContract.commitPrice(
-						web3.utils.toWei('550'),
-						secondPeriod.toNumber(),
-						{
-							from: pf1
-						}
-					)
-				)
-				.then(tx => {
-					assert.equal(tx.logs.length, 1, 'more than one event emitted');
-					assert.equal(
-						tx.logs[0].event,
-						ACCEPT_PRICE,
-						'AcceptPrice Event is not emitted'
-					);
-					assert.isTrue(
-						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
-						'last price is not updated correctly'
-					);
-					assert.isTrue(
-						isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
-						'last price time is not updated correctly'
-					);
-				});
-		});
-
-		it('should not reset', () => {
-			return custodianContract.state
-				.call()
-				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
-		});
-
-		it('should accept first price arrived if second price timed out and sent by the different address as first price', () => {
-			// first price
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('500'),
-							firstPeriod.toNumber(),
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() => custodianContract.skipCooldown(1))
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (secondPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('550'),
-							secondPeriod.toNumber(),
-							{
-								from: pf2
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 1, 'more than one event emitted');
-						assert.equal(
-							tx.logs[0].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.timeInSecond.toNumber(),
-								secondPeriod.toNumber()
-							),
-							'last price time is not updated correctly'
-						);
-					})
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
+				'last price time is not updated correctly'
 			);
 		});
 
-		it('should accept first price arrived if second price is close to it and within cool down', () => {
+		it('should not reset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+		});
+
+		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
 			// first price
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('550'),
-							firstPeriod.toNumber() - 10,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('555'),
-							firstPeriod.toNumber() - 5,
-							{
-								from: pf2
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 1, 'more than one event emitted');
-						assert.equal(
-							tx.logs[0].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.timeInSecond.toNumber(),
-								firstPeriod.toNumber() - 10
-							),
-							'last price time is not updated correctly'
-						);
-					})
-			);
-		});
+			await custodianContract.skipCooldown(1);
 
-		it('should wait for third price if first and second do not agree', () => {
-			// first price
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('500'),
-							firstPeriod.toNumber() - 300,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('700'),
-							firstPeriod.toNumber() - 280,
-							{
-								from: pf2
-							}
-						)
-					)
-					.then(() => custodianContract.getSecondPrice.call())
-					.then(res => {
-						assert.isTrue(
-							isEqual(res[0].toNumber(), web3.utils.toWei('700')) &&
-								isEqual(res[1].toNumber(), firstPeriod.toNumber() - 280),
-							'second price is not recorded'
-						);
-					})
-			);
-		});
+			firstPeriod = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+				from: pf1
+			});
 
-		it('should reject price from first sender within cool down', () => {
-			// third price
-			return custodianContract
-				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
-					from: pf1
-				})
-				.then(() => assert.isTrue(false, 'third price is not rejected'))
-				.catch(err =>
-					assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected')
-				);
-		});
-
-		it('should reject price from second sender within cool down', () => {
-			// third price
-			return custodianContract
-				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+			// second price
+			await custodianContract.skipCooldown(1);
+			secondPeriod = await custodianContract.timestamp.call();
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('550'),
+				secondPeriod.toNumber(),
+				{
 					from: pf2
-				})
-				.then(() => assert.isTrue(false, 'third price is not rejected'))
-				.catch(err =>
-					assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected')
-				);
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
+				'last price time is not updated correctly'
+			);
 		});
 
-		it('should accept first price arrived if third price timed out and within cool down', () => {
-			return custodianContract
-				.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
-					from: pf3
-				})
-				.then(tx => {
-					assert.equal(tx.logs.length, 1, 'more than one event emitted');
-					assert.equal(
-						tx.logs[0].event,
-						ACCEPT_PRICE,
-						'AcceptPrice Event is not emitted'
-					);
-					assert.isTrue(
-						isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
-						'last price is not updated correctly'
-					);
-					assert.isTrue(
-						isEqual(
-							tx.logs[0].args.timeInSecond.toNumber(),
-							firstPeriod.toNumber() - 300
-						),
-						'last price time is not updated correctly'
-					);
-				});
-		});
-
-		it('should accept median price if third price does not time out', () => {
+		it('should accept first price arrived if second price is close to it and within cool down', async () => {
 			// first price
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('550'),
-							firstPeriod.toNumber() - 300,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('400'),
-							firstPeriod.toNumber() - 280,
-							{
-								from: pf2
-							}
-						)
-					)
-					// //third price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('540'),
-							firstPeriod.toNumber() - 260,
-							{
-								from: pf3
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 1, 'more than one event emitted');
-						assert.equal(
-							tx.logs[0].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('540')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.timeInSecond.toNumber(),
-								firstPeriod.toNumber() - 300
-							),
-							'last price time is not updated correctly'
-						);
-					})
+			await custodianContract.skipCooldown(1);
+			firstPeriod = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(
+				web3.utils.toWei('550'),
+				firstPeriod.toNumber() - 10,
+				{
+					from: pf1
+				}
+			);
+			// second price
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('555'),
+				firstPeriod.toNumber() - 5,
+				{
+					from: pf2
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 10),
+				'last price time is not updated correctly'
 			);
 		});
 
-		it('should accept third price arrived if it is from first or second sender and is after cool down', () => {
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('500'),
-							firstPeriod.toNumber() - 300,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('400'),
-							firstPeriod.toNumber() - 280,
-							{
-								from: pf2
-							}
-						)
-					)
-					// //third price
-					.then(() => custodianContract.skipCooldown(1))
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (secondPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('520'),
-							secondPeriod.toNumber(),
-							{
-								from: pf2
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 1, 'more than one event emitted');
-						assert.equal(
-							tx.logs[0].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('520')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.timeInSecond.toNumber(),
-								secondPeriod.toNumber()
-							),
-							'last price time is not updated correctly'
-						);
-					})
+		it('should wait for third price if first and second do not agree', async () => {
+			// first price
+			await custodianContract.skipCooldown(1);
+			firstPeriod = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(
+				web3.utils.toWei('500'),
+				firstPeriod.toNumber() - 300,
+				{
+					from: pf1
+				}
+			);
+			// second price
+			await custodianContract.commitPrice(
+				web3.utils.toWei('700'),
+				firstPeriod.toNumber() - 280,
+				{
+					from: pf2
+				}
+			);
+			let res = await custodianContract.getSecondPrice.call();
+			assert.isTrue(
+				isEqual(res[0].toNumber(), web3.utils.toWei('700')) &&
+					isEqual(res[1].toNumber(), firstPeriod.toNumber() - 280),
+				'second price is not recorded'
 			);
 		});
 
-		it('should not reset', () => {
-			return custodianContract.state
-				.call()
-				.then(state => assert.equal(state.valueOf(), STATE_TRADING, 'state is changed'));
-		});
-
-		it('should accept second price arrived if third price is from a different sender and is after cool down', () => {
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('580'),
-							firstPeriod.toNumber() - 200,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('500'),
-							firstPeriod.toNumber() - 180,
-							{
-								from: pf2
-							}
-						)
-					)
-					// // //third price
-					.then(() => custodianContract.skipCooldown(1))
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (secondPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('520'),
-							secondPeriod.toNumber(),
-							{
-								from: pf3
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 1, 'more than one event emitted');
-						assert.equal(
-							tx.logs[0].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[0].args.timeInSecond.toNumber(),
-								secondPeriod.toNumber()
-							),
-							'last price time is not updated correctly'
-						);
-					})
-			);
-		});
-
-		it('should not allow price commit during cool down period', () => {
-			return custodianContract
-				.skipCooldown(1)
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (firstPeriod = ts))
-				.then(() =>
-					custodianContract.commitPrice(
-						web3.utils.toWei('400'),
-						firstPeriod.toNumber() - 800,
-						{
-							from: pf1
-						}
-					)
-				)
-				.then(() => assert.isTrue(false, 'can commit price within cooldown period'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						VM_REVERT_MSG,
-						'can commit price within cooldown period'
-					)
+		it('should reject price from first sender within cool down', async () => {
+			// third price
+			try {
+				await custodianContract.commitPrice(
+					web3.utils.toWei('500'),
+					firstPeriod.toNumber(),
+					{
+						from: pf1
+					}
 				);
+
+				assert.isTrue(false, 'third price is not rejected');
+			} catch (err) {
+				assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected');
+			}
 		});
 
-		it('should transit to reset state based on price accepted', () => {
-			return (
-				custodianContract
-					.skipCooldown(1)
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (firstPeriod = ts))
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('888'),
-							firstPeriod.toNumber() - 200,
-							{
-								from: pf1
-							}
-						)
-					)
-					// second price
-					.then(() =>
-						custodianContract.commitPrice(
-							web3.utils.toWei('898'),
-							firstPeriod.toNumber(),
-							{
-								from: pf2
-							}
-						)
-					)
-					.then(tx => {
-						assert.equal(tx.logs.length, 2, 'not two events emitted');
-						assert.isTrue(
-							tx.logs[0].event === START_PRE_RESET,
-							'no or more than one StartPreReset event was emitted'
-						);
-						assert.equal(
-							tx.logs[1].event,
-							ACCEPT_PRICE,
-							'AcceptPrice Event is not emitted'
-						);
-						assert.isTrue(
-							isEqual(tx.logs[1].args.priceInWei.toNumber(), web3.utils.toWei('888')),
-							'last price is not updated correctly'
-						);
-						assert.isTrue(
-							isEqual(
-								tx.logs[1].args.timeInSecond.toNumber(),
-								firstPeriod.toNumber() - 200
-							),
-							'last price time is not updated correctly'
-						);
+		it('should reject price from second sender within cool down', async () => {
+			// third price
+			try {
+				await custodianContract.commitPrice(
+					web3.utils.toWei('500'),
+					firstPeriod.toNumber(),
+					{
+						from: pf2
+					}
+				);
+				assert.isTrue(false, 'third price is not rejected');
+			} catch (err) {
+				assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected');
+			}
+		});
 
-						return custodianContract.state.call();
-					})
-					.then(state =>
-						assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset')
-					)
+		it('should accept first price arrived if third price timed out and within cool down', async () => {
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('500'),
+				firstPeriod.toNumber(),
+				{
+					from: pf3
+				}
 			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 300),
+				'last price time is not updated correctly'
+			);
+		});
+
+		it('should accept median price if third price does not time out', async () => {
+			// first price
+			await custodianContract.skipCooldown(1);
+			firstPeriod = await custodianContract.timestamp.call();
+
+			await custodianContract.commitPrice(
+				web3.utils.toWei('550'),
+				firstPeriod.toNumber() - 300,
+				{
+					from: pf1
+				}
+			);
+			// second price
+			await custodianContract.commitPrice(
+				web3.utils.toWei('400'),
+				firstPeriod.toNumber() - 280,
+				{
+					from: pf2
+				}
+			);
+			// //third price
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('540'),
+				firstPeriod.toNumber() - 260,
+				{
+					from: pf3
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('540')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 300),
+				'last price time is not updated correctly'
+			);
+		});
+
+		it('should accept third price arrived if it is from first or second sender and is after cool down', async () => {
+			await custodianContract.skipCooldown(1);
+
+			firstPeriod = await custodianContract.timestamp.call();
+
+			await custodianContract.commitPrice(
+				web3.utils.toWei('500'),
+				firstPeriod.toNumber() - 300,
+				{
+					from: pf1
+				}
+			);
+			// second price
+			await custodianContract.commitPrice(
+				web3.utils.toWei('400'),
+				firstPeriod.toNumber() - 280,
+				{
+					from: pf2
+				}
+			);
+			// //third price
+			await custodianContract.skipCooldown(1);
+			secondPeriod = await custodianContract.timestamp.call();
+
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('520'),
+				secondPeriod.toNumber(),
+				{
+					from: pf2
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('520')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
+				'last price time is not updated correctly'
+			);
+		});
+
+		it('should not reset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+		});
+
+		it('should accept second price arrived if third price is from a different sender and is after cool down', async () => {
+			await custodianContract.skipCooldown(1);
+			firstPeriod = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(
+				web3.utils.toWei('580'),
+				firstPeriod.toNumber() - 200,
+				{
+					from: pf1
+				}
+			);
+			// second price
+			await custodianContract.commitPrice(
+				web3.utils.toWei('500'),
+				firstPeriod.toNumber() - 180,
+				{
+					from: pf2
+				}
+			);
+			// // //third price
+			await custodianContract.skipCooldown(1);
+
+			secondPeriod = await custodianContract.timestamp.call();
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('520'),
+				secondPeriod.toNumber(),
+				{
+					from: pf3
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('500')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
+				'last price time is not updated correctly'
+			);
+		});
+
+		it('should not allow price commit during cool down period', async () => {
+			try {
+				await custodianContract.skipCooldown(1);
+
+				firstPeriod = await custodianContract.timestamp.call();
+				await custodianContract.commitPrice(
+					web3.utils.toWei('400'),
+					firstPeriod.toNumber() - 800,
+					{
+						from: pf1
+					}
+				);
+				assert.isTrue(false, 'can commit price within cooldown period');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'can commit price within cooldown period');
+			}
+		});
+
+		it('should transit to reset state based on price accepted', async () => {
+			await custodianContract.skipCooldown(1);
+
+			firstPeriod = await custodianContract.timestamp.call();
+
+			custodianContract.commitPrice(web3.utils.toWei('888'), firstPeriod.toNumber() - 200, {
+				from: pf1
+			});
+			// second price
+			let tx = await custodianContract.commitPrice(
+				web3.utils.toWei('898'),
+				firstPeriod.toNumber(),
+				{
+					from: pf2
+				}
+			);
+			assert.equal(tx.logs.length, 2, 'not two events emitted');
+			assert.isTrue(
+				tx.logs[0].event === START_PRE_RESET,
+				'no or more than one StartPreReset event was emitted'
+			);
+			assert.equal(tx.logs[1].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				isEqual(tx.logs[1].args.priceInWei.toNumber(), web3.utils.toWei('888')),
+				'last price is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[1].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 200),
+				'last price time is not updated correctly'
+			);
+
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset');
 		});
 	});
 
 	function shouldNotAdminAndTrading() {
-		it('should not allow price commit', () => {
-			return custodianContract
-				.skipCooldown(1)
-				.then(() => custodianContract.timestamp.call())
-				.then(ts =>
-					custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
-						from: pf1
-					})
-				)
-				.then(() => assert.isTrue(false, 'still can commit price'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can commit price '));
+		it('should not allow price commit', async () => {
+			try {
+				await custodianContract.skipCooldown(1);
+				let ts = await custodianContract.timestamp.call();
+				await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+					from: pf1
+				});
+				assert.isTrue(false, 'still can commit price');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still can commit price ');
+			}
 		});
 
-		it('should not allow creation', () => {
-			return custodianContract
-				.create({
+		it('should not allow creation', async () => {
+			try {
+				await custodianContract.create({
 					from: alice,
 					value: web3.utils.toWei('1')
-				})
-
-				.then(() => assert.isTrue(false, 'still can create'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can create '));
+				});
+				assert.isTrue(false, 'still can create');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still can create ');
+			}
 		});
 
-		it('should not allow redemption', () => {
-			return custodianContract
-				.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), { from: alice })
-				.then(() => assert.isTrue(false, 'still can redeem'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still can redeem '));
+		it('should not allow redemption', async () => {
+			try {
+				await custodianContract.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), {
+					from: alice
+				});
+
+				assert.isTrue(false, 'still can redeem');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still can redeem ');
+			}
 		});
 
-		it('should not allow any transfer or approve of A', () => {
-			return custodianContract
-				.transferA(alice, bob, web3.utils.toWei('1'))
-				.then(() => assert.isTrue(false, 'still can transfer A token'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still can transfer A token')
-				);
+		it('should not allow any transfer or approve of A', async () => {
+			try {
+				await custodianContract.transferA(alice, bob, web3.utils.toWei('1'));
+
+				assert.isTrue(false, 'still can transfer A token');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still can transfer A token');
+			}
 		});
 
-		it('should not allow any transfer or approve of B', () => {
-			return custodianContract
-				.transferB(alice, bob, web3.utils.toWei('1'))
-				.then(() => assert.isTrue(false, 'still can transfer B token'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still can transfer B token')
-				);
+		it('should not allow any transfer or approve of B', async () => {
+			try {
+				await custodianContract.transferB(alice, bob, web3.utils.toWei('1'));
+
+				assert.isTrue(false, 'still can transfer B token');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still can transfer B token');
+			}
 		});
 
-		it('should not allow admin setMemberThresholdInWei', () => {
-			return custodianContract
-				.setMemberThresholdInWei(1000)
-				.then(() => assert.isTrue(false, 'still can setMemberThresholdInWei'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei')
-				);
+		it('should not allow admin setMemberThresholdInWei', async () => {
+			try {
+				await custodianContract.setMemberThresholdInWei(1000);
+
+				assert.isTrue(false, 'still can setMemberThresholdInWei');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei');
+			}
 		});
 
-		it('should not allow admin setIterationGasThreshold', () => {
-			return custodianContract
-				.setIterationGasThreshold(1000)
-				.then(() => assert.isTrue(false, 'still can setIterationGasThreshold'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold')
-				);
+		it('should not allow admin setIterationGasThreshold', async () => {
+			try {
+				await custodianContract.setIterationGasThreshold(1000);
+				assert.isTrue(false, 'still can setIterationGasThreshold');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold');
+			}
 		});
 
-		it('should not allow admin setPreResetWaitingBlocks', () => {
-			return custodianContract
-				.setPreResetWaitingBlocks(1000)
-				.then(() => assert.isTrue(false, 'still can setPreResetWaitingBlocks'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks')
-				);
+		it('should not allow admin setPreResetWaitingBlocks', async () => {
+			try {
+				await custodianContract.setPreResetWaitingBlocks(1000);
+				assert.isTrue(false, 'still can setPreResetWaitingBlocks');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks');
+			}
 		});
 
-		it('should not allow admin setPostResetWaitingBlocks', () => {
-			return custodianContract
-				.setPostResetWaitingBlocks(1000)
-				.then(() => assert.isTrue(false, 'still can setPostResetWaitingBlocks'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setPostResetWaitingBlocks')
-				);
+		it('should not allow admin setPostResetWaitingBlocks', async () => {
+			try {
+				await custodianContract.setPostResetWaitingBlocks(1000);
+				assert.isTrue(false, 'still can setPostResetWaitingBlocks');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPostResetWaitingBlocks');
+			}
 		});
 
-		it('should not allow admin setPriceTolInBP', () => {
-			return custodianContract
-				.setPriceTolInBP(1000)
-				.then(() => assert.isTrue(false, 'still can setPriceTolInBP'))
-				.catch(err => assert.equal(err.message, VM_REVERT_MSG, 'still setPriceTolInBP'));
+		it('should not allow admin setPriceTolInBP', async () => {
+			try {
+				await custodianContract.setPriceTolInBP(1000);
+
+				assert.isTrue(false, 'still can setPriceTolInBP');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceTolInBP');
+			}
 		});
 
-		it('should not allow admin setPriceFeedTolInBP', () => {
-			return custodianContract
-				.setPriceFeedTolInBP(1000)
-				.then(() => assert.isTrue(false, 'still can setPriceFeedTolInBP'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP')
-				);
+		it('should not allow admin setPriceFeedTolInBP', async () => {
+			try {
+				await custodianContract.setPriceFeedTolInBP(1000);
+				assert.isTrue(false, 'still can setPriceFeedTolInBP');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP');
+			}
 		});
 
-		it('should not allow admin setPriceFeedTimeTol', () => {
-			return custodianContract
-				.setPriceFeedTimeTol(1000)
-				.then(() => assert.isTrue(false, 'still can setPriceFeedTimeTol'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol')
-				);
+		it('should not allow admin setPriceFeedTimeTol', async () => {
+			try {
+				await custodianContract.setPriceFeedTimeTol(1000);
+				assert.isTrue(false, 'still can setPriceFeedTimeTol');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol');
+			}
 		});
 
-		it('should not allow admin setPriceUpdateCoolDown', () => {
-			return custodianContract
-				.setPriceUpdateCoolDown(1000)
-				.then(() => assert.isTrue(false, 'still can setPriceUpdateCoolDown'))
-				.catch(err =>
-					assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown')
-				);
+		it('should not allow admin setPriceUpdateCoolDown', async () => {
+			try {
+				await custodianContract.setPriceUpdateCoolDown(1000);
+				assert.isTrue(false, 'still can setPriceUpdateCoolDown');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown');
+			}
 		});
 	}
 
 	describe('pre reset', () => {
-		beforeEach(() =>
-			initContracts()
-				.then(() => custodianContract.skipCooldown(1))
-				.then(() => custodianContract.timestamp.call())
-				.then(ts =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
-							from: pf1
-						})
-						.then(() =>
-							custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
-								from: pf2
-							})
-						)
-				)
-		);
+		beforeEach(async () => {
+			await initContracts();
+			await custodianContract.skipCooldown(1);
 
-		it('should be in state preReset', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset')
-				);
+			let ts = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+				from: pf1
+			});
+			await custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
+				from: pf2
+			});
+		});
+
+		it('should be in state preReset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset');
 		});
 
 		shouldNotAdminAndTrading();
 
-		it('should only transit to reset state after a given number of blocks but not before that', () => {
-			let promise = Promise.resolve();
-			for (let i = 0; i < 9; i++)
-				promise = promise.then(() => custodianContract.startPreReset());
-			return promise
-				.then(() => custodianContract.state.call())
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in pre reset state')
-				)
-				.then(() => custodianContract.startPreReset())
-				.then(() => custodianContract.state.call())
-				.then(state =>
-					assert.equal(
-						state.valueOf(),
-						STATE_UPWARD_RESET,
-						'not transit to upward reset state'
-					)
-				);
+		it('should only transit to reset state after a given number of blocks but not before that', async () => {
+			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in pre reset state');
+
+			await custodianContract.startPreReset();
+			let stateAfter = await custodianContract.state.call();
+			assert.equal(
+				stateAfter.valueOf(),
+				STATE_UPWARD_RESET,
+				'not transit to upward reset state'
+			);
 		});
 	});
 
@@ -1382,117 +1188,87 @@ contract('Custodian', accounts => {
 				? Math.ceil((Number(CustodianInit.hp) - 1) / Number(CustodianInit.couponRate)) + 1
 				: 1;
 
-			before(() =>
-				initContracts()
-					.then(() =>
-						duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator })
-					)
-					.then(() =>
-						duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator })
-					)
-					.then(() =>
-						custodianContract.create({
-							from: alice,
-							value: web3.utils.toWei('1')
-						})
-					)
-					.then(() =>
-						custodianContract.create({
-							from: bob,
-							value: web3.utils.toWei('1')
-						})
-					)
-					.then(() => {
-						if (transferABRequired) {
-							return custodianContract.balancesA
-								.call(alice)
-								.then(aliceA => {
-									custodianContract.transferA(alice, bob, aliceA.valueOf(), {
-										from: alice
-									});
-								})
-								.then(() =>
-									custodianContract.balancesB.call(bob).then(bobB => {
-										custodianContract.transferB(bob, alice, bobB.valueOf(), {
-											from: bob
-										});
-									})
-								);
+			before(async () => {
+				await initContracts();
+				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
+				await custodianContract.create({
+					from: alice,
+					value: web3.utils.toWei('1')
+				});
+				await custodianContract.create({
+					from: bob,
+					value: web3.utils.toWei('1')
+				});
+
+				if (transferABRequired) {
+					let aliceA = await custodianContract.balancesA.call(alice);
+
+					custodianContract.transferA(alice, bob, aliceA.valueOf(), {
+						from: alice
+					});
+					await custodianContract.balancesB.call(bob).then(bobB => {
+						custodianContract.transferB(bob, alice, bobB.valueOf(), {
+							from: bob
+						});
+					});
+				}
+
+				await custodianContract.balancesA
+					.call(alice)
+					.then(aliceA => (prevBalanceAalice = aliceA.toNumber() / WEI_DENOMINATOR));
+				let aliceB = await custodianContract.balancesB.call(alice);
+
+				prevBalanceBalice = aliceB.toNumber() / WEI_DENOMINATOR;
+
+				await custodianContract.balancesA
+					.call(bob)
+					.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR));
+				let bobB = await custodianContract.balancesB.call(bob);
+				prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR;
+
+				await custodianContract.skipCooldown(skipNum);
+
+				timestamp = await custodianContract.timestamp.call();
+
+				if (isPeriodicReset) {
+					await custodianContract.commitPrice(
+						web3.utils.toWei(price + ''),
+						timestamp.toNumber(),
+						{
+							from: pf1
 						}
-					})
-					.then(() =>
-						custodianContract.balancesA
-							.call(alice)
-							.then(
-								aliceA => (prevBalanceAalice = aliceA.toNumber() / WEI_DENOMINATOR)
-							)
-					)
-					.then(() =>
-						custodianContract.balancesB
-							.call(alice)
-							.then(
-								aliceB => (prevBalanceBalice = aliceB.toNumber() / WEI_DENOMINATOR)
-							)
-					)
-					.then(() =>
-						custodianContract.balancesA
-							.call(bob)
-							.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR))
-					)
-					.then(() =>
-						custodianContract.balancesB
-							.call(bob)
-							.then(bobB => (prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR))
-					)
-					.then(() => custodianContract.skipCooldown(skipNum))
-					.then(() => custodianContract.timestamp.call())
-					.then(ts => (timestamp = ts))
-					.then(() => {
-						if (isPeriodicReset) {
-							return custodianContract.commitPrice(
-								web3.utils.toWei(price + ''),
-								timestamp.toNumber(),
-								{
-									from: pf1
-								}
-							);
-						} else {
-							return custodianContract
-								.commitPrice(
-									web3.utils.toWei(price + ''),
-									timestamp.toNumber() - 200,
-									{
-										from: pf1
-									}
-								)
-								.then(() =>
-									custodianContract.commitPrice(
-										web3.utils.toWei(price + 1 + ''),
-										timestamp.toNumber(),
-										{
-											from: pf2
-										}
-									)
-								);
+					);
+				} else {
+					await custodianContract.commitPrice(
+						web3.utils.toWei(price + ''),
+						timestamp.toNumber() - 200,
+						{
+							from: pf1
 						}
-					})
-					.then(() => custodianContract.navAInWei.call())
-					.then(navAinWei => {
-						currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
-					})
-					.then(() => custodianContract.navBInWei.call())
-					.then(navBinWei => (currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR))
-					.then(() => custodianContract.betaInWei.call())
-					.then(betaInWei => (prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR))
-					.then(() => {
-						let promise = Promise.resolve();
-						for (let i = 0; i < 10; i++)
-							promise = promise.then(() => custodianContract.startPreReset());
-						return promise;
-					})
-					.then(() => custodianContract.betaInWei.call())
-					.then(betaInWei => (beta = betaInWei.valueOf() / WEI_DENOMINATOR))
-			);
+					);
+					await custodianContract.commitPrice(
+						web3.utils.toWei(price + 1 + ''),
+						timestamp.toNumber(),
+						{
+							from: pf2
+						}
+					);
+				}
+				let navAinWei = await custodianContract.navAInWei.call();
+				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
+
+				let navBinWei = await custodianContract.navBInWei.call();
+				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
+
+				let betaInWei = await custodianContract.betaInWei.call();
+				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
+
+				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
+
+				let betaInWeiAfter = await custodianContract.betaInWei.call();
+				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
+			});
 
 			it('should update beta correctly', () => {
 				if (isPeriodicReset) {
@@ -1508,18 +1284,16 @@ contract('Custodian', accounts => {
 				}
 			});
 
-			it('should in corect reset state', () => {
-				return custodianContract.state.call().then(state => {
-					assert.equal(state.valueOf(), resetState, 'not in correct reset state');
-				});
+			it('should in corect reset state', async () => {
+				let state = await custodianContract.state.call();
+
+				assert.equal(state.valueOf(), resetState, 'not in correct reset state');
 			});
 
-			it('should have two users', () => {
-				return custodianContract.getNumOfUsers
-					.call()
-					.then(numOfUsers =>
-						assert.equal(numOfUsers.valueOf(), 2, 'num of users incorrect')
-					);
+			it('should have two users', async () => {
+				let numOfUsers = await custodianContract.getNumOfUsers.call();
+
+				assert.equal(numOfUsers.valueOf(), 2, 'num of users incorrect');
 			});
 
 			it('should have correct setup', () => {
@@ -1541,50 +1315,35 @@ contract('Custodian', accounts => {
 					);
 			});
 
-			it('should process reset for only one user', () => {
-				return custodianContract.startReset({ gas: 120000 }).then(tx => {
-					assert.isTrue(
-						tx.logs.length === 1 && tx.logs[0].event === START_RESET,
-						'not only one user processed'
-					);
-					return custodianContract.nextResetAddrIndex
-						.call()
-						.then(nextIndex =>
-							assert.equal(nextIndex.valueOf(), '1', 'not moving to next user')
-						)
-						.then(() => {
-							custodianContract.balancesA.call(alice).then(currentBalanceAalice =>
-								custodianContract.balancesB
-									.call(alice)
-									.then(currentBalanceBalice => {
-										let [newBalanceA, newBalanceB] = resetFunc(
-											prevBalanceAalice,
-											prevBalanceBalice,
-											currentNavA,
-											currentNavB,
-											beta
-										);
-										assert.isTrue(
-											isEqual(
-												currentBalanceAalice.toNumber() / WEI_DENOMINATOR,
-												newBalanceA
-											),
-											'BalanceA not updated correctly'
-										);
-										assert.isTrue(
-											isEqual(
-												currentBalanceBalice.toNumber() / WEI_DENOMINATOR,
-												newBalanceB
-											),
-											'BalanceB not updated correctly'
-										);
-									})
-							);
-						});
-				});
+			it('should process reset for only one user', async () => {
+				let tx = await custodianContract.startReset({ gas: 120000 });
+
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
+					'not only one user processed'
+				);
+				let nextIndex = await custodianContract.nextResetAddrIndex.call();
+				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
+				let currentBalanceAalice = await custodianContract.balancesA.call(alice);
+				let currentBalanceBalice = await custodianContract.balancesB.call(alice);
+				let [newBalanceA, newBalanceB] = resetFunc(
+					prevBalanceAalice,
+					prevBalanceBalice,
+					currentNavA,
+					currentNavB,
+					beta
+				);
+				assert.isTrue(
+					isEqual(currentBalanceAalice.toNumber() / WEI_DENOMINATOR, newBalanceA),
+					'BalanceA not updated correctly'
+				);
+				assert.isTrue(
+					isEqual(currentBalanceBalice.toNumber() / WEI_DENOMINATOR, newBalanceB),
+					'BalanceB not updated correctly'
+				);
 			});
 
-			it('should complete reset for second user and transit to postReset', () => {
+			it('should complete reset for second user and transit to postReset', async () => {
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAbob,
 					prevBalanceBbob,
@@ -1592,55 +1351,40 @@ contract('Custodian', accounts => {
 					currentNavB,
 					beta
 				);
-				return custodianContract
-					.startReset({ gas: 120000 })
-					.then(tx => {
-						assert.isTrue(
-							tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
-							'reset not completed'
-						);
-					})
-					.then(() =>
-						custodianContract.nextResetAddrIndex.call().then(nextIndex => {
-							assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
-						})
-					)
-					.then(() => assertABalanceForAddress(bob, newBalanceA))
-					.then(() => assertBBalanceForAddress(bob, newBalanceB));
+				let tx = await custodianContract.startReset({ gas: 120000 });
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
+					'reset not completed'
+				);
+				let nextIndex = await custodianContract.nextResetAddrIndex.call();
+				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+				await assertABalanceForAddress(bob, newBalanceA);
+				await assertBBalanceForAddress(bob, newBalanceB);
 			});
 
-			it('should update nav', () => {
-				return custodianContract.navAInWei
-					.call()
-					.then(navA =>
-						assert.equal(
-							web3.utils.fromWei(navA.valueOf()),
-							'1',
-							'nav A not reset to 1'
-						)
-					)
-					.then(() => custodianContract.navBInWei.call())
-					.then(navB =>
-						assert.isTrue(
-							isPeriodicReset
-								? isEqual(web3.utils.fromWei(navB.valueOf()), currentNavB)
-								: web3.utils.fromWei(navB.valueOf()) === '1',
-							'nav B not updated correctly'
-						)
-					);
+			it('should update nav', async () => {
+				let navA = await custodianContract.navAInWei.call();
+
+				assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
+
+				let navB = await custodianContract.navBInWei.call();
+				assert.isTrue(
+					isPeriodicReset
+						? isEqual(web3.utils.fromWei(navB.valueOf()), currentNavB)
+						: web3.utils.fromWei(navB.valueOf()) === '1',
+					'nav B not updated correctly'
+				);
 			});
 
-			it('should update reset price', () => {
+			it('should update reset price', async () => {
 				if (!isPeriodicReset) {
-					return custodianContract.resetPrice
-						.call()
-						.then(resetPrice =>
-							assert.equal(
-								resetPrice[0].valueOf() / WEI_DENOMINATOR,
-								price,
-								'resetprice not updated'
-							)
-						);
+					let resetPrice = await custodianContract.resetPrice.call();
+
+					assert.equal(
+						resetPrice[0].valueOf() / WEI_DENOMINATOR,
+						price,
+						'resetprice not updated'
+					);
 				}
 			});
 		}
@@ -1690,518 +1434,493 @@ contract('Custodian', accounts => {
 
 	describe('post reset', () => {
 		let timestamp;
-		beforeEach(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() =>
-					custodianContract.create({
-						from: alice,
-						value: web3.utils.toWei('1')
-					})
-				)
-				.then(() => custodianContract.skipCooldown(1))
-				.then(() => custodianContract.timestamp.call())
-				.then(ts => (timestamp = ts))
-				.then(() =>
-					custodianContract
-						.commitPrice(web3.utils.toWei('900'), timestamp.toNumber() - 200, {
-							from: pf1
-						})
-						.then(() =>
-							custodianContract.commitPrice(
-								web3.utils.toWei('901'),
-								timestamp.toNumber(),
-								{
-									from: pf2
-								}
-							)
-						)
-				)
-				.then(() => {
-					let promise = Promise.resolve();
-					for (let i = 0; i < 10; i++)
-						promise = promise.then(() => custodianContract.startPreReset());
-					return promise;
-				})
-				.then(() => custodianContract.startReset())
-		);
+		beforeEach(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await custodianContract.create({
+				from: alice,
+				value: web3.utils.toWei('1')
+			});
+			await custodianContract.skipCooldown(1);
+			timestamp = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(
+				web3.utils.toWei('900'),
+				timestamp.toNumber() - 200,
+				{
+					from: pf1
+				}
+			);
+			await custodianContract.commitPrice(web3.utils.toWei('901'), timestamp.toNumber(), {
+				from: pf2
+			});
+			for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
+			await custodianContract.startReset();
+		});
 
-		it('should in state post reset', () => {
-			return custodianContract.state
-				.call()
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_POST_RESET, 'not in state postReset')
-				);
+		it('should in state post reset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_POST_RESET, 'not in state postReset');
 		});
 
 		shouldNotAdminAndTrading();
 
-		it('should transit to trading state after a given number of blocks but not before that case 1', () => {
-			let promise = Promise.resolve();
-			for (let i = 0; i < 9; i++)
-				promise = promise.then(() => custodianContract.startPostReset());
-			return promise
-				.then(() => custodianContract.state.call())
-				.then(state => {
-					return assert.equal(
-						state.valueOf(),
-						STATE_POST_RESET,
-						'not in post reset state'
-					);
-				})
-				.then(() => custodianContract.startPostReset())
-				.then(tx => {
-					assert.equal(tx.logs.length, 1, 'not only one events emitted');
-					return assert.isTrue(
-						tx.logs[0].event === START_TRADING,
-						'not emititng startTrading event'
-					);
-				})
-				.then(() => custodianContract.state.call())
-				.then(state =>
-					assert.equal(state.valueOf(), STATE_TRADING, 'not transit to trading state')
-				);
+		it('should transit to trading state after a given number of blocks but not before that case 1', async () => {
+			for (let i = 0; i < 9; i++) await custodianContract.startPostReset();
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state');
+			let tx = await custodianContract.startPostReset();
+			assert.equal(tx.logs.length, 1, 'not only one events emitted');
+			assert.isTrue(tx.logs[0].event === START_TRADING, 'not emititng startTrading event');
+			let stateAfter = await custodianContract.state.call();
+			assert.equal(stateAfter.valueOf(), STATE_TRADING, 'not transit to trading state');
 		});
 	});
 
 	describe('A token test', () => {
-		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
-		);
-
-		it('should show balance', () => {
-			return custodianContract.balancesA
-				.call(alice)
-				.then(balance =>
-					assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown')
-				);
+		before(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
 		});
 
-		it('should be able to approve', () => {
-			return custodianContract.approveA
-				.call(alice, bob, web3.utils.toWei('100'), { from: alice })
-				.then(success => assert.isTrue(success, 'Not able to approve'))
-				.then(() =>
-					custodianContract.approveA(alice, bob, web3.utils.toWei('100'), { from: alice })
-				);
+		it('should show balance', async () => {
+			let balance = await custodianContract.balancesA.call(alice);
+			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
-		it('should show allowance', () => {
-			return custodianContract.allowanceA
-				.call(alice, bob)
-				.then(allowance =>
-					assert.equal(
-						allowance.toNumber() / WEI_DENOMINATOR,
-						100,
-						'allowance of bob not equal to 100'
-					)
-				);
+		it('should be able to approve', async () => {
+			let success = await custodianContract.approveA.call(
+				alice,
+				bob,
+				web3.utils.toWei('100'),
+				{ from: alice }
+			);
+
+			assert.isTrue(success, 'Not able to approve');
+
+			await custodianContract.approveA(alice, bob, web3.utils.toWei('100'), { from: alice });
 		});
 
-		it('should be able to transfer', () => {
-			return custodianContract.transferA
-				.call(alice, bob, web3.utils.toWei('10'), { from: alice })
-				.then(success => assert.isTrue(success, 'Not able to transfer'))
-				.then(() =>
-					custodianContract.transferA(alice, bob, web3.utils.toWei('10'), { from: alice })
-				);
+		it('should show allowance', async () => {
+			let allowance = await custodianContract.allowanceA.call(alice, bob);
+			assert.equal(
+				allowance.toNumber() / WEI_DENOMINATOR,
+				100,
+				'allowance of bob not equal to 100'
+			);
 		});
 
-		it('should show balance of bob equal to 10', () => {
-			return custodianContract.balancesA
-				.call(bob)
-				.then(balance =>
-					assert.isTrue(
-						balance.toNumber() === 10 * WEI_DENOMINATOR,
-						'balance of bob not shown'
-					)
-				);
+		it('should be able to transfer', async () => {
+			let success = await custodianContract.transferA.call(
+				alice,
+				bob,
+				web3.utils.toWei('10'),
+				{ from: alice }
+			);
+
+			assert.isTrue(success, 'Not able to transfer');
+			await custodianContract.transferA(alice, bob, web3.utils.toWei('10'), { from: alice });
 		});
 
-		it('should not transfer more than balance', () => {
-			return custodianContract.transferA
-				.call(alice, bob, web3.utils.toWei('10000000'), { from: alice })
-				.then(() => assert.isTrue(false, 'able to transfer more than balance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
+		it('should show balance of bob equal to 10', async () => {
+			let balance = await custodianContract.balancesA.call(bob);
+			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
 		});
 
-		it('should transferAFrom less than allowance', () => {
-			return custodianContract.transferAFrom
-				.call(bob, alice, charles, web3.utils.toWei('50'), { form: bob })
-				.then(success => assert.isTrue(success, 'Not able to transfer'))
-				.then(() =>
-					custodianContract.transferAFrom(bob, alice, charles, web3.utils.toWei('50'))
+		it('should not transfer more than balance', async () => {
+			try {
+				await custodianContract.transferA.call(alice, bob, web3.utils.toWei('10000000'), {
+					from: alice
+				});
+
+				assert.isTrue(false, 'able to transfer more than balance');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('should not transferFrom more than allowance', () => {
-			return custodianContract.transferAFrom
-				.call(bob, alice, bob, web3.utils.toWei('200'), { from: bob })
-				.then(() => assert.isTrue(false, 'can transferFrom of more than allowance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
+		it('should transferAFrom less than allowance', async () => {
+			let success = await custodianContract.transferAFrom.call(
+				bob,
+				alice,
+				charles,
+				web3.utils.toWei('50'),
+				{ form: bob }
+			);
+
+			assert.isTrue(success, 'Not able to transfer');
+			await custodianContract.transferAFrom(bob, alice, charles, web3.utils.toWei('50'));
 		});
 
-		it('allowance for bob should be 50', () => {
-			return custodianContract.allowanceA
-				.call(alice, bob)
-				.then(allowance =>
-					assert.equal(
-						allowance.toNumber() / WEI_DENOMINATOR,
-						50,
-						'allowance of bob not equal to 50'
-					)
+		it('should not transferFrom more than allowance', async () => {
+			try {
+				await custodianContract.transferAFrom.call(
+					bob,
+					alice,
+					bob,
+					web3.utils.toWei('200'),
+					{ from: bob }
 				);
+				assert.isTrue(false, 'can transferFrom of more than allowance');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
 		});
 
-		it('check balance of charles equal 50', () => {
-			return custodianContract.balancesA
-				.call(charles)
-				.then(balance =>
-					assert.equal(
-						balance.toNumber() / WEI_DENOMINATOR,
-						50,
-						'balance of charles not equal to 50'
-					)
-				);
+		it('allowance for bob should be 50', async () => {
+			let allowance = await custodianContract.allowanceA.call(alice, bob);
+			assert.equal(
+				allowance.toNumber() / WEI_DENOMINATOR,
+				50,
+				'allowance of bob not equal to 50'
+			);
+		});
+
+		it('check balance of charles equal 50', async () => {
+			let balance = await custodianContract.balancesA.call(charles);
+
+			assert.equal(
+				balance.toNumber() / WEI_DENOMINATOR,
+				50,
+				'balance of charles not equal to 50'
+			);
 		});
 	});
 
 	describe('B token test', () => {
-		before(() =>
-			initContracts()
-				.then(() => duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator }))
-				.then(() => custodianContract.create({ from: alice, value: web3.utils.toWei('1') }))
-		);
-
-		it('should show balance', () => {
-			return custodianContract.balancesB
-				.call(alice)
-				.then(balance =>
-					assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown')
-				);
+		before(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
 		});
 
-		it('should be able to approve', () => {
-			return custodianContract.approveB
-				.call(alice, bob, web3.utils.toWei('100'), { from: alice })
-				.then(success => assert.isTrue(success, 'Not able to approve'))
-				.then(() =>
-					custodianContract.approveB(alice, bob, web3.utils.toWei('100'), { from: alice })
-				);
+		it('should show balance', async () => {
+			let balance = await custodianContract.balancesB.call(alice);
+			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
-		it('should show allowance', () => {
-			return custodianContract.allowanceB.call(alice, bob).then(allowance => {
+		it('should be able to approve', async () => {
+			let success = await custodianContract.approveB.call(
+				alice,
+				bob,
+				web3.utils.toWei('100'),
+				{ from: alice }
+			);
+
+			assert.isTrue(success, 'Not able to approve');
+
+			await custodianContract.approveB(alice, bob, web3.utils.toWei('100'), { from: alice });
+		});
+
+		it('should show allowance', async () => {
+			let allowance = await custodianContract.allowanceB.call(alice, bob);
+			assert.equal(
+				allowance.toNumber() / WEI_DENOMINATOR,
+				100,
+				'allowance of bob not equal to 100'
+			);
+		});
+
+		it('should be able to transfer', async () => {
+			let success = await custodianContract.transferB.call(
+				alice,
+				bob,
+				web3.utils.toWei('10'),
+				{ from: alice }
+			);
+
+			assert.isTrue(success, 'Not able to transfer');
+			await custodianContract.transferB(alice, bob, web3.utils.toWei('10'), { from: alice });
+		});
+
+		it('should show balance of bob equal to 10', async () => {
+			let balance = await custodianContract.balancesB.call(bob);
+			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
+		});
+
+		it('should not transfer more than balance', async () => {
+			try {
+				await custodianContract.transferB.call(alice, bob, web3.utils.toWei('10000000'), {
+					from: alice
+				});
+
+				assert.isTrue(false, 'able to transfer more than balance');
+			} catch (err) {
 				assert.equal(
-					allowance.toNumber() / WEI_DENOMINATOR,
-					100,
-					'allowance of bob not equal to 100'
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
-			});
+			}
 		});
 
-		it('should be able to transfer', () => {
-			return custodianContract.transferB
-				.call(alice, bob, web3.utils.toWei('10'), { from: alice })
-				.then(success => assert.isTrue(success, 'Not able to transfer'))
-				.then(() =>
-					custodianContract.transferB(alice, bob, web3.utils.toWei('10'), { from: alice })
-				);
+		it('should transferAFrom less than allowance', async () => {
+			let success = await custodianContract.transferBFrom.call(
+				bob,
+				alice,
+				charles,
+				web3.utils.toWei('50'),
+				{ form: bob }
+			);
+
+			assert.isTrue(success, 'Not able to transfer');
+			await custodianContract.transferBFrom(bob, alice, charles, web3.utils.toWei('50'));
 		});
 
-		it('should balance of bob equal to 10', () => {
-			return custodianContract.balancesB.call(bob).then(balance => {
-				return assert.isTrue(
-					balance.toNumber() === 10 * WEI_DENOMINATOR,
-					'balance of bob not shown'
+		it('should not transferFrom more than allowance', async () => {
+			try {
+				await custodianContract.transferBFrom.call(
+					bob,
+					alice,
+					bob,
+					web3.utils.toWei('200'),
+					{ from: bob }
 				);
-			});
-		});
-
-		it('should not transfer more than balance', () => {
-			return custodianContract.transferB
-				.call(alice, bob, web3.utils.toWei('10000000'), { from: alice })
-				.then(() => assert.isTrue(false, 'able to transfer more than balance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
-		});
-
-		it('should transferAFrom less than allowance', () => {
-			return custodianContract.transferBFrom
-				.call(bob, alice, charles, web3.utils.toWei('50'), { form: bob })
-				.then(success => assert.isTrue(success, 'Not able to transfer'))
-				.then(() =>
-					custodianContract.transferBFrom(bob, alice, charles, web3.utils.toWei('50'))
-				);
-		});
-
-		it('should not transferFrom more than allowance', () => {
-			return custodianContract.transferBFrom
-				.call(bob, alice, bob, web3.utils.toWei('200'), { from: bob })
-				.then(() => assert.isTrue(false, 'can transferFrom of more than allowance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
-		});
-
-		it('allowance for bob should be 50', () => {
-			return custodianContract.allowanceB.call(alice, bob).then(allowance => {
+				assert.isTrue(false, 'can transferFrom of more than allowance');
+			} catch (err) {
 				assert.equal(
-					allowance.toNumber() / WEI_DENOMINATOR,
-					50,
-					'allowance of bob not equal to 50'
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
-			});
+			}
 		});
 
-		it('check balance of charles equal 50', () => {
-			return custodianContract.balancesB
-				.call(charles)
-				.then(balance =>
-					assert.equal(
-						balance.toNumber() / WEI_DENOMINATOR,
-						50,
-						'balance of charles not equal to 50'
-					)
-				);
+		it('allowance for bob should be 50', async () => {
+			let allowance = await custodianContract.allowanceB.call(alice, bob);
+			assert.equal(
+				allowance.toNumber() / WEI_DENOMINATOR,
+				50,
+				'allowance of bob not equal to 50'
+			);
+		});
+
+		it('check balance of charles equal 50', async () => {
+			let balance = await custodianContract.balancesB.call(charles);
+
+			assert.equal(
+				balance.toNumber() / WEI_DENOMINATOR,
+				50,
+				'balance of charles not equal to 50'
+			);
 		});
 	});
 
 	describe('only admin', () => {
 		before(initContracts);
 
-		it('admin should be able to set fee address', () => {
-			return custodianContract.setFeeAddress
-				.call(creator, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set fee address'));
+		it('admin should be able to set fee address', async () => {
+			let success = await custodianContract.setFeeAddress.call(creator, { from: creator });
+			assert.isTrue(success, 'not be able to set fee address');
 		});
 
-		it('non admin should not be able to set fee address', () => {
-			return custodianContract.setFeeAddress
-				.call(creator, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change fee address'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set fee address', async () => {
+			try {
+				await custodianContract.setFeeAddress.call(creator, { from: alice });
+
+				assert.isTrue(false, 'non admin can change fee address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set commission', () => {
-			return custodianContract.setCommission
-				.call(100, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set commissison'));
+		it('admin should be able to set commission', async () => {
+			let success = await custodianContract.setCommission.call(100, { from: creator });
+			assert.isTrue(success, 'not be able to set commissison');
 		});
 
-		it('should not be able to set commission higher than 10000', () => {
-			return custodianContract.setCommission
-				.call(10001, { from: creator })
-				.then(() => assert.isTrue(false, 'admin can set comission higher than 10000'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('should not be able to set commission higher than 10000', async () => {
+			try {
+				await custodianContract.setCommission.call(10001, { from: creator });
+
+				assert.isTrue(false, 'admin can set comission higher than 10000');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('non admin should not be able to set comm', () => {
-			return custodianContract.setCommission
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change comm'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set comm', async () => {
+			try {
+				await custodianContract.setCommission.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change comm');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set member threshold', () => {
-			return custodianContract.setMemberThresholdInWei
-				.call(100, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set member threshhold'));
+		it('admin should be able to set member threshold', async () => {
+			let success = await custodianContract.setMemberThresholdInWei.call(100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set member threshhold');
 		});
 
-		it('non admin should not be able to set member Threshold', () => {
-			return custodianContract.setMemberThresholdInWei
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change member threshhold'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set member Threshold', async () => {
+			try {
+				await custodianContract.setMemberThresholdInWei.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change member threshhold');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set iteration gas threshold', () => {
-			return custodianContract.setIterationGasThreshold
-				.call(100000, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set gas threshhold'));
+		it('admin should be able to set iteration gas threshold', async () => {
+			let success = await custodianContract.setIterationGasThreshold.call(100000, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set gas threshhold');
 		});
 
-		it('non admin should not be able to set gas threshhold', () => {
-			return custodianContract.setIterationGasThreshold
-				.call(100000, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change gas threshhold'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set gas threshhold', async () => {
+			try {
+				await custodianContract.setIterationGasThreshold.call(100000, { from: alice });
+				assert.isTrue(false, 'non admin can change gas threshhold');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set pre reset waiting blocks', () => {
-			return custodianContract.setPreResetWaitingBlocks
-				.call(100, { from: creator })
-				.then(success =>
-					assert.isTrue(success, 'not be able to set pre reset waiting block')
+		it('admin should be able to set pre reset waiting blocks', async () => {
+			let success = await custodianContract.setPreResetWaitingBlocks.call(100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set pre reset waiting block');
+		});
+
+		it('non admin should not be able to set pre reset waiting blocks', async () => {
+			try {
+				await custodianContract.setPreResetWaitingBlocks.call(100, { from: alice });
+
+				assert.isTrue(false, 'non admin can change pre reset waiting block');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('non admin should not be able to set pre reset waiting blocks', () => {
-			return custodianContract.setPreResetWaitingBlocks
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change pre reset waiting block'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('admin should be able to set post reset waiting blocks', async () => {
+			let success = await custodianContract.setPostResetWaitingBlocks.call(100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set post reset waiting block');
+		});
+
+		it('non admin should not be able to set post reset waiting blocks', async () => {
+			try {
+				await custodianContract.setPostResetWaitingBlocks.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change post reset waiting block');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set post reset waiting blocks', () => {
-			return custodianContract.setPostResetWaitingBlocks
-				.call(100, { from: creator })
-				.then(success =>
-					assert.isTrue(success, 'not be able to set post reset waiting block')
+		it('admin should be able to set price tolerance', async () => {
+			let success = await custodianContract.setPriceTolInBP.call(100, { from: creator });
+			assert.isTrue(success, 'not be able to set price tolerance');
+		});
+
+		it('non admin should not be able to set price tolerance', async () => {
+			try {
+				await custodianContract.setPriceTolInBP.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change price tolerance');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('non admin should not be able to set post reset waiting blocks', () => {
-			return custodianContract.setPostResetWaitingBlocks
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change post reset waiting block'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('admin should be able to set price feed tolerance', async () => {
+			let success = await custodianContract.setPriceFeedTolInBP.call(100, { from: creator });
+			assert.isTrue(success, 'not be able to set price feed tolerance');
+		});
+
+		it('non admin should not be able to set price tolerance', async () => {
+			try {
+				await custodianContract.setPriceFeedTolInBP.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change price feed tolerance');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set price tolerance', () => {
-			return custodianContract.setPriceTolInBP
-				.call(100, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set price tolerance'));
+		it('admin should be able to set price feed time tolerance', async () => {
+			let success = await custodianContract.setPriceFeedTimeTol.call(100, { from: creator });
+			assert.isTrue(success, 'not be able to set price feed time tolerance');
 		});
 
-		it('non admin should not be able to set price tolerance', () => {
-			return custodianContract.setPriceTolInBP
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change price tolerance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set price feed time tolerance', async () => {
+			try {
+				await custodianContract.setPriceFeedTimeTol.call(100, { from: alice });
+				assert.isTrue(false, 'non admin can change price feed time tolerance');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
+			}
 		});
 
-		it('admin should be able to set price feed tolerance', () => {
-			return custodianContract.setPriceFeedTolInBP
-				.call(100, { from: creator })
-				.then(success => assert.isTrue(success, 'not be able to set price feed tolerance'));
+		it('admin should be able to set price update coolupdate', async () => {
+			let success = await custodianContract.setPriceUpdateCoolDown.call(10000, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set price update coolupdate');
 		});
 
-		it('non admin should not be able to set price tolerance', () => {
-			return custodianContract.setPriceFeedTolInBP
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change price feed tolerance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
+		it('non admin should not be able to set price update coolupdate', async () => {
+			try {
+				await custodianContract.setPriceUpdateCoolDown.call(10000, { from: alice });
+				assert.isTrue(false, 'non admin can change price update coolupdate');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
 				);
-		});
-
-		it('admin should be able to set price feed time tolerance', () => {
-			return custodianContract.setPriceFeedTimeTol
-				.call(100, { from: creator })
-				.then(success =>
-					assert.isTrue(success, 'not be able to set price feed time tolerance')
-				);
-		});
-
-		it('non admin should not be able to set price feed time tolerance', () => {
-			return custodianContract.setPriceFeedTimeTol
-				.call(100, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change price feed time tolerance'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
-		});
-
-		it('admin should be able to set price update coolupdate', () => {
-			return custodianContract.setPriceUpdateCoolDown
-				.call(10000, { from: creator })
-				.then(success =>
-					assert.isTrue(success, 'not be able to set price update coolupdate')
-				);
-		});
-
-		it('non admin should not be able to set price update coolupdate', () => {
-			return custodianContract.setPriceUpdateCoolDown
-				.call(10000, { from: alice })
-				.then(() => assert.isTrue(false, 'non admin can change price update coolupdate'))
-				.catch(err =>
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					)
-				);
+			}
 		});
 	});
 });
