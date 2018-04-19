@@ -18,11 +18,13 @@ const STATE_UPWARD_RESET = '2';
 const STATE_DOWNWARD_RESET = '3';
 const STATE_PERIODIC_RESET = '4';
 const STATE_POST_RESET = '5';
+const STATE_INCEPT_RESET = '6';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 6e-14;
+const EPSILON = 6e-13;
+const ethInitPrice = 582;
 
 const isEqual = (a, b, log = false) => {
 	if (log) {
@@ -60,7 +62,6 @@ contract('Custodian', accounts => {
 		);
 
 		custodianContract = await Custodian.new(
-			web3.utils.toWei(CustodianInit.ethInitPrice),
 			fc,
 			duoContract.address,
 			pf1,
@@ -79,14 +80,16 @@ contract('Custodian', accounts => {
 				from: creator
 			}
 		);
+
+		// await custodianContract.startContract('507', 1524105709, {from: pf1});
 	};
 
 	describe('constructor', () => {
 		before(initContracts);
 
-		it('state should be trading', async () => {
+		it('state should be Inception', async () => {
 			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
+			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
 		it('feeCollector should equal specified value', async () => {
@@ -134,17 +137,63 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe('start contract', () => {
+		before(initContracts);
+
+		it('state should be Inception', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
+		});
+
+		it('should start contract', async () => {
+			let success = await custodianContract.startContract.call(
+				web3.utils.toWei('507'),
+				1524105709,
+				{ from: pf1 }
+			);
+			assert.isTrue(success, 'not able to start contract');
+			await custodianContract.startContract('507', 1524105709, { from: pf1 });
+		});
+
+		it('should update lastPrice and resetPrice', async () => {
+			let lastPrice = await custodianContract.lastPrice.call();
+			assert.equal(lastPrice[0].valueOf(), '507', 'lastPrice price not updated correctly');
+			assert.equal(
+				lastPrice[1].valueOf(),
+				'1524105709',
+				'lastPrice time not updated correctly'
+			);
+
+			let resetPrice = await custodianContract.resetPrice.call();
+			assert.equal(resetPrice[0].valueOf(), '507', 'resetPrice price not updated correctly');
+			assert.equal(
+				resetPrice[1].valueOf(),
+				'1524105709',
+				'resetPrice time not updated correctly'
+			);
+		});
+
+		it('state should be trading', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
+		});
+	});
+
 	describe('creation and fee withdrawal', () => {
+		let initEthPrice = 582;
 		let amtEth = 1;
 		let tokenValueB =
 			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			CustodianInit.ethInitPrice /
+			initEthPrice /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 		let prevFeeAccumulated;
 
 		before(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(initEthPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 		});
@@ -261,11 +310,14 @@ contract('Custodian', accounts => {
 		let adjAmtA = amtA * BP_DENOMINATOR / CustodianInit.alphaInBP;
 		let deductAmtB = Math.min(adjAmtA, amtB);
 		let deductAmtA = deductAmtB * CustodianInit.alphaInBP / BP_DENOMINATOR;
-		let amtEth = (deductAmtA + deductAmtA) / CustodianInit.ethInitPrice;
+		let amtEth = (deductAmtA + deductAmtA) / ethInitPrice;
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
 		before(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
@@ -395,7 +447,12 @@ contract('Custodian', accounts => {
 	});
 
 	describe('nav calculation', () => {
-		before(initContracts);
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
 			let numOfPeriods = Math.floor((time - resetTime) / CustodianInit.period);
@@ -466,7 +523,12 @@ contract('Custodian', accounts => {
 	});
 
 	describe('calculate median', () => {
-		before(initContracts);
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
 
 		it('should calculate median', () => {
 			return custodianContract.getMedian
@@ -509,7 +571,12 @@ contract('Custodian', accounts => {
 		let firstPeriod;
 		let secondPeriod;
 
-		before(initContracts);
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
 
 		it('non pf address cannot call commitPrice method', async () => {
 			try {
@@ -1079,6 +1146,9 @@ contract('Custodian', accounts => {
 	describe('pre reset', () => {
 		beforeEach(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await custodianContract.skipCooldown(1);
 
 			let ts = await custodianContract.timestamp.call();
@@ -1190,6 +1260,13 @@ contract('Custodian', accounts => {
 
 			before(async () => {
 				await initContracts();
+				await custodianContract.startContract(
+					web3.utils.toWei(ethInitPrice + ''),
+					1524105709,
+					{
+						from: pf1
+					}
+				);
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 				await custodianContract.create({
@@ -1272,12 +1349,7 @@ contract('Custodian', accounts => {
 
 			it('should update beta correctly', () => {
 				if (isPeriodicReset) {
-					let newBeta = updateBeta(
-						prevBeta,
-						price,
-						Number(CustodianInit.ethInitPrice),
-						currentNavA
-					);
+					let newBeta = updateBeta(prevBeta, price, Number(ethInitPrice), currentNavA);
 					return assert.isTrue(isEqual(beta, newBeta), 'beta is not updated correctly');
 				} else {
 					return assert.equal(beta, 1, 'beta is not reset to 1');
@@ -1333,6 +1405,7 @@ contract('Custodian', accounts => {
 					currentNavB,
 					beta
 				);
+
 				assert.isTrue(
 					isEqual(currentBalanceAalice.toNumber() / WEI_DENOMINATOR, newBalanceA),
 					'BalanceA not updated correctly'
@@ -1411,24 +1484,12 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 1', () => {
-			resetTest(
-				Number(CustodianInit.ethInitPrice),
-				periodicReset,
-				STATE_PERIODIC_RESET,
-				true,
-				false
-			);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
-			resetTest(
-				Number(CustodianInit.ethInitPrice),
-				periodicReset,
-				STATE_PERIODIC_RESET,
-				true,
-				true
-			);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, true);
 		});
 	});
 
@@ -1436,6 +1497,9 @@ contract('Custodian', accounts => {
 		let timestamp;
 		beforeEach(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create({
 				from: alice,
@@ -1479,6 +1543,9 @@ contract('Custodian', accounts => {
 	describe('A token test', () => {
 		before(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
 		});
@@ -1598,6 +1665,9 @@ contract('Custodian', accounts => {
 	describe('B token test', () => {
 		before(async () => {
 			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
 		});
@@ -1715,7 +1785,12 @@ contract('Custodian', accounts => {
 	});
 
 	describe('only admin', () => {
-		before(initContracts);
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
 
 		it('admin should be able to set fee address', async () => {
 			let success = await custodianContract.setFeeAddress.call(creator, { from: creator });

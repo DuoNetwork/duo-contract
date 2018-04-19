@@ -7,6 +7,7 @@ const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
+const ethInitPrice = 582;
 
 contract('TokenA', accounts => {
 	let tokenAContract;
@@ -33,7 +34,6 @@ contract('TokenA', accounts => {
 			}
 		);
 		custodianContract = await Custodian.new(
-			web3.utils.toWei(CustodianInit.ethInitPrice),
 			feeCollector,
 			duoContract.address,
 			pf1,
@@ -52,6 +52,9 @@ contract('TokenA', accounts => {
 				from: creator
 			}
 		);
+		await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+			from: pf1
+		});
 
 		await custodianContract.create({ from: creator, value: web3.utils.toWei('1') });
 		tokenAContract = await TokenA.new(

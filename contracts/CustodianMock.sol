@@ -7,7 +7,6 @@ contract CustodianMock is Custodian {
 	uint public timestamp = now;
 
 	function CustodianMock (
-		uint ethPriceInWei, 
 		address feeAddress, 
 		address duoAddress,
 		address pf1,
@@ -23,7 +22,6 @@ contract CustodianMock is Custodian {
 		uint memberThreshold,
 		uint gasThreshold
 	) Custodian (
-		ethPriceInWei, 
 		feeAddress, 
 		duoAddress,
 		pf1,

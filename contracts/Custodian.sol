@@ -44,7 +44,8 @@ contract Custodian {
 		UpwardReset,
 		DownwardReset,
 		PeriodicReset,
-		PostReset
+		PostReset,
+		Inception
 	}
 
 	struct Price {
@@ -141,7 +142,6 @@ contract Custodian {
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 	
 	function Custodian (
-		uint ethPriceInWei, 
 		address feeAddress, 
 		address duoAddress,
 		address pf1,
@@ -158,15 +158,11 @@ contract Custodian {
 		uint gasThreshold) 
 		public 
 	{
-		state = State.Trading;
+		state = State.Inception;
 		admin = msg.sender;
 		decimals = 18;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
-		resetPrice.priceInWei = ethPriceInWei;
-		resetPrice.timeInSecond = getNowTimestamp();
-		lastPrice.priceInWei = ethPriceInWei;
-		lastPrice.timeInSecond = getNowTimestamp();
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
@@ -183,6 +179,19 @@ contract Custodian {
 		navAInWei = 1;
 		navBInWei = 1;
 		priceUpdateCoolDown = p - 10 minutes;
+	}
+
+	function startContract(uint priceInWei, uint timeInSecond) public inState(State.Inception) 
+		among(priceFeed1, priceFeed2, priceFeed3) 
+		returns (bool success) 
+	{
+		require(timeInSecond <= getNowTimestamp());
+		lastPrice.timeInSecond = timeInSecond;
+		lastPrice.priceInWei = priceInWei;
+		resetPrice.timeInSecond = timeInSecond;
+		resetPrice.priceInWei = priceInWei;
+		state = State.Trading;
+		return true;
 	}
 	
 	function getNowTimestamp() internal view returns (uint) {

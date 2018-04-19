@@ -14,19 +14,37 @@ const TokenBInit = InitParas["TokenB"];
 
 
 module.exports = (deployer, network, accounts) => {
+
 	let CustodianToDeploy = network !== 'development' ? Custodian : CustodianMock;
+	let creator, feeAdd, pf1, pf2, pf3;
+
+	if (network == "kovan") {
+		creator = accounts[3];
+		feeAdd = accounts[3];
+		pf1 = accounts[0];
+		pf2 = accounts[1];
+		pf3 = accounts[2];
+	}
+	if (network == "development") {
+		creator = accounts[0];
+		feeAdd = accounts[0];
+		pf1 = accounts[0];
+		pf2 = accounts[1];
+		pf3 = accounts[2];
+	}
+
+
 	return deployer
-		.deploy(DUO, web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol)
+		.deploy(DUO, web3.utils.toWei(DuoInit.initSupply), DuoInit.tokenName, DuoInit.tokenSymbol, {from: creator})
 		.then(() =>
 			deployer
 				.deploy(
 					CustodianToDeploy,
-					web3.utils.toWei(CustodianInit.ethInitPrice),
-					accounts[0],
+					feeAdd,
 					DUO.address,
-					accounts[0],
-					accounts[1],
-					accounts[2],
+					pf1,
+					pf2,
+					pf3,
 					CustodianInit.alphaInBP,
 					web3.utils.toWei(CustodianInit.couponRate),
 					web3.utils.toWei(CustodianInit.hp),
@@ -35,13 +53,14 @@ module.exports = (deployer, network, accounts) => {
 					CustodianInit.commissionRateInBP,
 					CustodianInit.period,
 					web3.utils.toWei(CustodianInit.memberThreshold),
-					CustodianInit.gasThreshhold
+					CustodianInit.gasThreshhold,
+					{ from : creator}
 				)
 				.then(() =>
 					deployer
-						.deploy(TokenA, TokenAInit.tokenName, TokenAInit.tokenSymbol, CustodianToDeploy.address)
+						.deploy(TokenA, TokenAInit.tokenName, TokenAInit.tokenSymbol, CustodianToDeploy.address, {from: creator})
 						.then(() =>
-							deployer.deploy(TokenB, TokenBInit.tokenName, TokenBInit.tokenSymbol, CustodianToDeploy.address)
+							deployer.deploy(TokenB, TokenBInit.tokenName, TokenBInit.tokenSymbol, CustodianToDeploy.address, {from: creator})
 						)
 						.catch(error => console.log(error))
 				)
