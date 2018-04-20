@@ -39,13 +39,13 @@ library SafeMath {
 contract Custodian {
 	using SafeMath for uint;
 	enum State {
+		Inception,
 		Trading,
 		PreReset,
 		UpwardReset,
 		DownwardReset,
 		PeriodicReset,
-		PostReset,
-		Inception
+		PostReset
 	}
 
 	struct Price {
@@ -182,7 +182,11 @@ contract Custodian {
 		priceUpdateCoolDown = coolDown;
 	}
 
-	function startContract(uint priceInWei, uint timeInSecond) public inState(State.Inception) 
+	function startContract(
+		uint priceInWei, 
+		uint timeInSecond) 
+		public 
+		inState(State.Inception) 
 		among(priceFeed1, priceFeed2, priceFeed3) 
 		returns (bool success) 
 	{

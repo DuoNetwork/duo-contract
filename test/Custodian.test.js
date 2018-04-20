@@ -12,13 +12,13 @@ const START_RESET = 'StartReset';
 const START_POST_RESET = 'StartPostReset';
 const START_TRADING = 'StartTrading';
 
-const STATE_TRADING = '0';
-const STATE_PRE_RESET = '1';
-const STATE_UPWARD_RESET = '2';
-const STATE_DOWNWARD_RESET = '3';
-const STATE_PERIODIC_RESET = '4';
-const STATE_POST_RESET = '5';
-const STATE_INCEPT_RESET = '6';
+const STATE_INCEPT_RESET = '0';
+const STATE_TRADING = '1';
+const STATE_PRE_RESET = '2';
+const STATE_UPWARD_RESET = '3';
+const STATE_DOWNWARD_RESET = '4';
+const STATE_PERIODIC_RESET = '5';
+const STATE_POST_RESET = '6';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
