@@ -76,6 +76,7 @@ contract('Custodian', accounts => {
 			CustodianInit.period,
 			web3.utils.toWei(CustodianInit.memberThreshold),
 			CustodianInit.gasThreshhold,
+			CustodianInit.coolDown,
 			{
 				from: creator
 			}
@@ -127,13 +128,9 @@ contract('Custodian', accounts => {
 			assert.equal(period.valueOf(), CustodianInit.period, 'period specified incorrect');
 		});
 
-		it('priceUpdateCoolDown should equal period minus 600', async () => {
-			let priceUpdateCoolDown = await custodianContract.getPriceUpdateCoolDown.call();
-			assert.equal(
-				priceUpdateCoolDown.valueOf(),
-				CustodianInit.period - 600,
-				'priceUpdateCoolDown specified incorrect'
-			);
+		it('priceUpdateCoolDown should equal specified value', async () => {
+			let priceCoolDown = await custodianContract.getPriceUpdateCoolDown.call();
+			assert.equal(priceCoolDown.valueOf(), CustodianInit.coolDown, 'priceUpdateCoolDown specified incorrect');
 		});
 	});
 

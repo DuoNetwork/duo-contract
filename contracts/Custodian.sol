@@ -155,7 +155,8 @@ contract Custodian {
 		uint c,
 		uint p,
 		uint memberThreshold,
-		uint gasThreshold) 
+		uint gasThreshold,
+		uint coolDown) 
 		public 
 	{
 		state = State.Inception;
@@ -178,7 +179,7 @@ contract Custodian {
 		iterationGasThreshold = gasThreshold;
 		navAInWei = 1;
 		navBInWei = 1;
-		priceUpdateCoolDown = p - 10 minutes;
+		priceUpdateCoolDown = coolDown;
 	}
 
 	function startContract(uint priceInWei, uint timeInSecond) public inState(State.Inception) 

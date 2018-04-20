@@ -20,7 +20,8 @@ contract CustodianMock is Custodian {
 		uint c,
 		uint p,
 		uint memberThreshold,
-		uint gasThreshold
+		uint gasThreshold,
+		uint coolDown
 	) Custodian (
 		feeAddress, 
 		duoAddress,
@@ -35,7 +36,8 @@ contract CustodianMock is Custodian {
 		c,
 		p,
 		memberThreshold,
-		gasThreshold
+		gasThreshold,
+		coolDown
 	) public {
 	}
 

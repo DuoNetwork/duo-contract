@@ -48,6 +48,7 @@ contract('TokenA', accounts => {
 			CustodianInit.period,
 			web3.utils.toWei(CustodianInit.memberThreshold),
 			CustodianInit.gasThreshhold,
+			CustodianInit.coolDown,
 			{
 				from: creator
 			}
