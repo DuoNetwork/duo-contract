@@ -1259,7 +1259,14 @@ contract('Custodian', accounts => {
 			);
 		}
 
-		function resetTest(price, resetFunc, resetState, isPeriodicReset, transferABRequired) {
+		function resetTest(
+			price,
+			resetFunc,
+			resetState,
+			resetGas,
+			isPeriodicReset,
+			transferABRequired
+		) {
 			let prevBalanceAalice, prevBalanceBalice;
 			let prevBalanceAbob, prevBalanceBbob;
 			let currentNavA;
@@ -1403,7 +1410,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should process reset for only one user', async () => {
-				let tx = await custodianContract.startReset({ gas: 115000 });
+				let tx = await custodianContract.startReset({ gas: resetGas });
 
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
@@ -1443,7 +1450,7 @@ contract('Custodian', accounts => {
 				);
 				newBalanceAbob = newBalanceA;
 				newBalanceBbob = newBalanceB;
-				let tx = await custodianContract.startReset({ gas: 115000 });
+				let tx = await custodianContract.startReset({ gas: resetGas });
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
 					'reset not completed'
@@ -1456,8 +1463,8 @@ contract('Custodian', accounts => {
 
 			it('totalA should equal totalB', async () => {
 				assert.isTrue(
-					isEqual( newBalanceAbob + newBalanceAalice, newBalanceBbob + newBalanceBalice),
-					"total A is not equal to total B"
+					isEqual(newBalanceAbob + newBalanceAalice, newBalanceBbob + newBalanceBalice),
+					'total A is not equal to total B'
 				);
 			});
 
@@ -1490,32 +1497,32 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, false);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 100000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, true);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 100000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, false);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 120000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, true);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 120000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 1', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, false);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 100000, true, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, true);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 100000, true, true);
 		});
 	});
 

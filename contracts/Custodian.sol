@@ -320,13 +320,15 @@ contract Custodian {
 
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset || state == State.PeriodicReset);
+		uint currentBalanceA;
+		uint currentBalanceB;
+		uint newBalanceA;
+		uint newBalanceB;
+		uint newAFromA;
+		uint newBFromA;
 		while (nextResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
-			uint currentBalanceA = balancesA[users[nextResetAddrIndex]];
-			uint currentBalanceB = balancesB[users[nextResetAddrIndex]];
-			uint newBalanceA;
-			uint newBalanceB;
-			uint newAFromA;
-			uint newBFromA;
+			currentBalanceA = balancesA[users[nextResetAddrIndex]];
+			currentBalanceB = balancesB[users[nextResetAddrIndex]];
 			if (state == State.DownwardReset) {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
@@ -348,8 +350,7 @@ contract Custodian {
 							.mul(newBFromBPerB))
 						.div(WEI_DENOMINATOR)
 				);
-			}
-			else {
+			} else {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
 				newBalanceA = currentBalanceA.add(newAFromA);
