@@ -7,7 +7,7 @@
   "scripts": {
     "test": "truffle.cmd test",
     "clean": "rimraf build",
-    "start": "ganache-cli --defaultBalanceEther 1000",
+    "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000",
     "deploy": "truffle.cmd migrate --reset --compile-all",
     "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
     "deployLive": "npm run clean && truffle.cmd migrate --reset --compile-all --network live"
@@ -18,9 +18,9 @@
     "ganache-cli": "^6.1.0",
     "rimraf": "^2.6.2",
     "solium": "^1.1.6",
-    "truffle": "^4.1.5"
+    "truffle": "^4.1.7"
   },
   "dependencies": {
-    "web3": "^1.0.0-beta.33"
+    "web3": "^1.0.0-beta.34"
   }
 }

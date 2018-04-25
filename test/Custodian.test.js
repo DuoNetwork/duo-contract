@@ -130,7 +130,11 @@ contract('Custodian', accounts => {
 
 		it('priceUpdateCoolDown should equal specified value', async () => {
 			let priceCoolDown = await custodianContract.getPriceUpdateCoolDown.call();
-			assert.equal(priceCoolDown.valueOf(), CustodianInit.coolDown, 'priceUpdateCoolDown specified incorrect');
+			assert.equal(
+				priceCoolDown.valueOf(),
+				CustodianInit.coolDown,
+				'priceUpdateCoolDown specified incorrect'
+			);
 		});
 	});
 
@@ -1181,13 +1185,24 @@ contract('Custodian', accounts => {
 
 	describe('resets', () => {
 		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, beta) {
-			let newBFromA =
-				prevBalanceA * (navA - 1) * beta / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-			let newAFromA = newBFromA * CustodianInit.alphaInBP / BP_DENOMINATOR;
-			let newBFromB =
-				prevBalanceB * (navB - 1) * beta / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-			let newAFromB = newBFromB * CustodianInit.alphaInBP / BP_DENOMINATOR;
-			return [prevBalanceA + newAFromA + newAFromB, prevBalanceB + newBFromA + newBFromB];
+			let alpha = CustodianInit.alphaInBP / BP_DENOMINATOR;
+			let excessA = navA - 1;
+			let excessB = navB - 1;
+			let excessBForA = excessA / alpha;
+			//if (excessB >= excessBForA) {
+			let newAFromA = prevBalanceA * excessA;
+			let excessBAfterA = excessB - excessBForA;
+			let newBFromB = prevBalanceB * (excessBForA + excessBAfterA * beta / (1 + alpha));
+			let newAFromB = newBFromB * newBFromB * alpha;
+			return [prevBalanceA + newAFromA + newAFromB, prevBalanceB + newBFromB];
+			/*} else {
+				let newBFromB = prevBalanceB * excessB;
+				let excessAForB = excessB * alpha;
+				let excessAAfterB = excessA - excessAForB;
+				let newBFromA = prevBalanceA * excessAAfterB * beta / (1 + alpha);
+				let newAFromA = prevBalanceA * excessAForB + newBFromA * alpha;
+				return [prevBalanceA + newAFromA, prevBalanceB + newBFromA + newBFromB];
+			}*/
 		}
 
 		function downwardReset(prevBalanceA, prevBalanceB, currentNavA, currentNavB, beta) {
