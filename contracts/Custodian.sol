@@ -112,7 +112,7 @@ contract Custodian {
 	Price secondPrice;
 
 	// reset intermediate values
-	uint bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
+	uint bAdj;
 	uint newAFromAPerA;
 	uint newAFromBPerB;
 	uint newBFromAPerA;
@@ -187,6 +187,7 @@ contract Custodian {
 		navAInWei = 1;
 		navBInWei = 1;
 		priceUpdateCoolDown = coolDown;
+		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
 	function startContract(

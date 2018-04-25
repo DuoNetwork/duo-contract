@@ -1192,8 +1192,9 @@ contract('Custodian', accounts => {
 			//if (excessB >= excessBForA) {
 			let newAFromA = prevBalanceA * excessA;
 			let excessBAfterA = excessB - excessBForA;
-			let newBFromB = prevBalanceB * (excessBForA + excessBAfterA * beta / (1 + alpha));
-			let newAFromB = newBFromB * newBFromB * alpha;
+			let excessNewBFromB = prevBalanceB * excessBAfterA * beta / (1 + alpha);
+			let newBFromB = prevBalanceB * excessBForA + excessNewBFromB;
+			let newAFromB = excessNewBFromB * alpha;
 			return [prevBalanceA + newAFromA + newAFromB, prevBalanceB + newBFromB];
 			/*} else {
 				let newBFromB = prevBalanceB * excessB;
@@ -1400,13 +1401,15 @@ contract('Custodian', accounts => {
 			});
 
 			it('should process reset for only one user', async () => {
-				let tx = await custodianContract.startReset({ gas: 120000 });
+				let tx = await custodianContract.startReset({ gas: 115000 });
+				console.log(tx);
 
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'not only one user processed'
 				);
 				let nextIndex = await custodianContract.nextResetAddrIndex.call();
+				console.log(nextIndex);
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
 				let currentBalanceAalice = await custodianContract.balancesA.call(alice);
 				let currentBalanceBalice = await custodianContract.balancesB.call(alice);
@@ -1419,7 +1422,7 @@ contract('Custodian', accounts => {
 				);
 
 				assert.isTrue(
-					isEqual(currentBalanceAalice.toNumber() / WEI_DENOMINATOR, newBalanceA),
+					isEqual(currentBalanceAalice.toNumber() / WEI_DENOMINATOR, newBalanceA, true),
 					'BalanceA not updated correctly'
 				);
 				assert.isTrue(
@@ -1436,7 +1439,7 @@ contract('Custodian', accounts => {
 					currentNavB,
 					beta
 				);
-				let tx = await custodianContract.startReset({ gas: 120000 });
+				let tx = await custodianContract.startReset({ gas: 115000 });
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
 					'reset not completed'
@@ -1475,32 +1478,32 @@ contract('Custodian', accounts => {
 		}
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
-		describe('upward reset case 1', () => {
+		describe.only('upward reset case 1', () => {
 			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
-		describe('upward reset case 2', () => {
+		describe.only('upward reset case 2', () => {
 			resetTest(900, upwardReset, STATE_UPWARD_RESET, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
-		describe('downward reset case 1', () => {
+		describe.only('downward reset case 1', () => {
 			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
-		describe('downward reset case 2', () => {
+		describe.only('downward reset case 2', () => {
 			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
-		describe('periodic reset case 1', () => {
+		describe.only('periodic reset case 1', () => {
 			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
-		describe('periodic reset case 2', () => {
+		describe.only('periodic reset case 2', () => {
 			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, true, true);
 		});
 	});
