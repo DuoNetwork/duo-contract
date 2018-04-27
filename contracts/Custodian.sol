@@ -44,8 +44,7 @@ contract Custodian {
 		PreReset,
 		UpwardReset,
 		DownwardReset,
-		PeriodicReset,
-		PostReset
+		PeriodicReset
 	}
 
 	struct Price {
@@ -95,7 +94,6 @@ contract Custodian {
 
 	// private parameters, can change after deployment
 	uint preResetWaitingBlocks = 10;
-	uint postResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
@@ -104,7 +102,6 @@ contract Custodian {
 	// cycle state variables
 	uint numOfPrices = 0;
 	uint lastPreResetBlockNo = 0;
-	uint lastPostResetBlockNo = 0;
 	uint public nextResetAddrIndex = 0;
 	address firstAddr;
 	address secondAddr;
@@ -142,7 +139,6 @@ contract Custodian {
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
-	event StartPostReset();
 
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
@@ -307,17 +303,6 @@ contract Custodian {
 		return true;
 	}
 
-	function startPostReset() public inState(State.PostReset) returns (bool success) {
-		if (block.number - lastPostResetBlockNo >= postResetWaitingBlocks) {
-			state = State.Trading;
-			emit StartTrading();
-		} else {
-			emit StartPostReset();
-		}
-
-		return true;
-	}
-
 	function startReset() public returns (bool success) {
 		require(state == State.UpwardReset || state == State.DownwardReset || state == State.PeriodicReset);
 		uint currentBalanceA;
@@ -326,9 +311,12 @@ contract Custodian {
 		uint newBalanceB;
 		uint newAFromA;
 		uint newBFromA;
-		while (nextResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
-			currentBalanceA = balancesA[users[nextResetAddrIndex]];
-			currentBalanceB = balancesB[users[nextResetAddrIndex]];
+		address currentAddress;
+		uint localResetAddrIndex = nextResetAddrIndex;
+		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
+			currentAddress = users[nextResetAddrIndex];
+			currentBalanceA = balancesA[currentAddress];
+			currentBalanceB = balancesB[currentAddress];
 			if (state == State.DownwardReset) {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
@@ -357,12 +345,12 @@ contract Custodian {
 				newBalanceB = currentBalanceB.add(newBFromA);
 			}
 
-			balancesA[users[nextResetAddrIndex]] = newBalanceA;
-			balancesB[users[nextResetAddrIndex]] = newBalanceB;
-			nextResetAddrIndex++;
+			balancesA[currentAddress] = newBalanceA;
+			balancesB[currentAddress] = newBalanceB;
+			localResetAddrIndex++;
 		}
 
-		if (nextResetAddrIndex >= users.length) {
+		if (localResetAddrIndex >= users.length) {
 			if (state != State.PeriodicReset) {
 				resetPrice.priceInWei = lastPrice.priceInWei;
 				resetPrice.timeInSecond = lastPrice.timeInSecond;
@@ -372,11 +360,11 @@ contract Custodian {
 			navAInWei = WEI_DENOMINATOR;
 			nextResetAddrIndex = 0;
 
-			state = State.PostReset;
-			lastPostResetBlockNo = block.number;
-			emit StartPostReset();
+			state = State.Trading;
+			emit StartTrading();
 			return true;
 		} else{
+			nextResetAddrIndex = localResetAddrIndex;
 			emit StartReset();
 			return false;
 		}
@@ -699,11 +687,6 @@ contract Custodian {
 
 	function setPreResetWaitingBlocks(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
 		preResetWaitingBlocks = newValue;
-		return true;
-	}
-
-	function setPostResetWaitingBlocks(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		postResetWaitingBlocks = newValue;
 		return true;
 	}
 

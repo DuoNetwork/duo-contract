@@ -91,10 +91,6 @@ contract CustodianMock is Custodian {
 		return preResetWaitingBlocks;
 	}
 
-	function getPostResetWaitingBlocks() public view returns (uint256 _postResetWaitingBlocks) {
-		return postResetWaitingBlocks;
-	}
-
 	function getPriceTolInBP() public view returns (uint256 _priceTolInBP) {
 		return priceTolInBP;
 	}
@@ -111,10 +107,6 @@ contract CustodianMock is Custodian {
 	}
 	function getLastPreResetBlockNo() public view returns (uint256 _lastPreResetBlockNo) {
 		return lastPreResetBlockNo;
-	}
-
-	function getLastPostResetBlockNo() public view returns (uint256 _lastPostResetBlockNo) {
-		return lastPostResetBlockNo;
 	}
 
 	function getNextResetAddrIndex() public view returns (uint256 _nextResetAddrIndex) {

@@ -9,7 +9,6 @@ const DuoInit = InitParas['DUO'];
 const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
 const START_RESET = 'StartReset';
-const START_POST_RESET = 'StartPostReset';
 const START_TRADING = 'StartTrading';
 
 const STATE_INCEPT_RESET = '0';
@@ -18,7 +17,6 @@ const STATE_PRE_RESET = '2';
 const STATE_UPWARD_RESET = '3';
 const STATE_DOWNWARD_RESET = '4';
 const STATE_PERIODIC_RESET = '5';
-const STATE_POST_RESET = '6';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -1011,7 +1009,28 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	function shouldNotAdminAndTrading() {
+	describe('pre reset', () => {
+		beforeEach(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+			await custodianContract.skipCooldown(1);
+
+			let ts = await custodianContract.timestamp.call();
+			await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+				from: pf1
+			});
+			await custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
+				from: pf2
+			});
+		});
+
+		it('should be in state preReset', async () => {
+			let state = await custodianContract.state.call();
+			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset');
+		});
+
 		it('should not allow price commit', async () => {
 			try {
 				await custodianContract.skipCooldown(1);
@@ -1097,15 +1116,6 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should not allow admin setPostResetWaitingBlocks', async () => {
-			try {
-				await custodianContract.setPostResetWaitingBlocks(1000);
-				assert.isTrue(false, 'still can setPostResetWaitingBlocks');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPostResetWaitingBlocks');
-			}
-		});
-
 		it('should not allow admin setPriceTolInBP', async () => {
 			try {
 				await custodianContract.setPriceTolInBP(1000);
@@ -1142,31 +1152,6 @@ contract('Custodian', accounts => {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown');
 			}
 		});
-	}
-
-	describe('pre reset', () => {
-		beforeEach(async () => {
-			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
-			await custodianContract.skipCooldown(1);
-
-			let ts = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
-				from: pf1
-			});
-			await custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
-				from: pf2
-			});
-		});
-
-		it('should be in state preReset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset');
-		});
-
-		shouldNotAdminAndTrading();
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
 			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
@@ -1411,7 +1396,7 @@ contract('Custodian', accounts => {
 
 			it('should process reset for only one user', async () => {
 				let tx = await custodianContract.startReset({ gas: resetGas });
-
+				console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'not only one user processed'
@@ -1440,7 +1425,7 @@ contract('Custodian', accounts => {
 				);
 			});
 
-			it('should complete reset for second user and transit to postReset', async () => {
+			it('should complete reset for second user and transit to trading', async () => {
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAbob,
 					prevBalanceBbob,
@@ -1451,8 +1436,9 @@ contract('Custodian', accounts => {
 				newBalanceAbob = newBalanceA;
 				newBalanceBbob = newBalanceB;
 				let tx = await custodianContract.startReset({ gas: resetGas });
+				console.log(tx);
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === START_POST_RESET,
+					tx.logs.length === 1 && tx.logs[0].event === START_TRADING,
 					'reset not completed'
 				);
 				let nextIndex = await custodianContract.nextResetAddrIndex.call();
@@ -1497,79 +1483,32 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 100000, false, false);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 100000, false, true);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 120000, false, false);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 120000, false, true);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 1', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 100000, true, false);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 100000, true, true);
-		});
-	});
-
-	describe('post reset', () => {
-		let timestamp;
-		beforeEach(async () => {
-			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
-			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await custodianContract.create({
-				from: alice,
-				value: web3.utils.toWei('1')
-			});
-			await custodianContract.skipCooldown(1);
-			timestamp = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(
-				web3.utils.toWei('900'),
-				timestamp.toNumber() - 200,
-				{
-					from: pf1
-				}
-			);
-			await custodianContract.commitPrice(web3.utils.toWei('901'), timestamp.toNumber(), {
-				from: pf2
-			});
-			for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
-			await custodianContract.startReset();
-		});
-
-		it('should in state post reset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_POST_RESET, 'not in state postReset');
-		});
-
-		shouldNotAdminAndTrading();
-
-		it('should transit to trading state after a given number of blocks but not before that case 1', async () => {
-			for (let i = 0; i < 9; i++) await custodianContract.startPostReset();
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_POST_RESET, 'not in post reset state');
-			let tx = await custodianContract.startPostReset();
-			assert.equal(tx.logs.length, 1, 'not only one events emitted');
-			assert.isTrue(tx.logs[0].event === START_TRADING, 'not emititng startTrading event');
-			let stateAfter = await custodianContract.state.call();
-			assert.equal(stateAfter.valueOf(), STATE_TRADING, 'not transit to trading state');
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true);
 		});
 	});
 
@@ -1928,26 +1867,6 @@ contract('Custodian', accounts => {
 				await custodianContract.setPreResetWaitingBlocks.call(100, { from: alice });
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				);
-			}
-		});
-
-		it('admin should be able to set post reset waiting blocks', async () => {
-			let success = await custodianContract.setPostResetWaitingBlocks.call(100, {
-				from: creator
-			});
-			assert.isTrue(success, 'not be able to set post reset waiting block');
-		});
-
-		it('non admin should not be able to set post reset waiting blocks', async () => {
-			try {
-				await custodianContract.setPostResetWaitingBlocks.call(100, { from: alice });
-				assert.isTrue(false, 'non admin can change post reset waiting block');
 			} catch (err) {
 				assert.equal(
 					err.message,
