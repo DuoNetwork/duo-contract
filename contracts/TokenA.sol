@@ -28,17 +28,18 @@ contract TokenA {
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 	
 	function totalSupply() public constant returns(uint) {
-		return 0;
+		Custodian custodianContract = Custodian(custodianAddress);
+		return custodianContract.totalSupplyA();
 	}
 	
 	function balanceOf(address add) public constant returns(uint balance) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.checkBalanceA(add);
+		return custodianContract.balanceAOf(add);
 	}
 
 	function allowance(address _user, address _spender) public constant returns(uint value) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.checkAllowanceA(_user,_spender);
+		return custodianContract.allowanceA(_user,_spender);
 	}
 
 	function transfer(address _to, uint256 _value) public returns (bool success) {

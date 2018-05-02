@@ -6,7 +6,7 @@ contract CustodianMock is Custodian {
 
 	uint public timestamp = now;
 
-	function CustodianMock (
+	function CustodianMock(
 		address feeAddress, 
 		address duoAddress,
 		address pf1,

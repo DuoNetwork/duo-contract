@@ -58,10 +58,26 @@ contract Custodian {
 	address priceFeed2; 
 	address priceFeed3;
 	address public duoTokenAddress;
+	address addrAdder;
+
+	address[] public addrPool =[
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7331,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7332,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7333,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7334,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7335,
+		0xca35b7d915458ef540ade6068dfe2f44e8fa7336,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7337,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7338,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7339,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa733a,
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa733b
+	];
+	mapping(address => bool) public existingAddPool;
 
 	uint decimals;
-	mapping(address => uint256) public balancesA;
-	mapping(address => uint256) public balancesB;
+	mapping(address => uint256) public balanceAOf;
+	mapping(address => uint256) public balanceBOf;
 	mapping (address => mapping (address => uint256)) public allowanceA;
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] public users;
@@ -87,6 +103,8 @@ contract Custodian {
 	uint public betaInWei = WEI_DENOMINATOR;
 	uint public navAInWei;
 	uint public navBInWei; 
+	uint public totalSupplyA;
+	uint public totalSupplyB;
 	
 	// public parameters, can change after deployment
 	uint public memberThresholdInWei;
@@ -136,15 +154,22 @@ contract Custodian {
 		_;
 	}
 
+	modifier inAddrPool() {
+		require(existingAddPool[msg.sender] == true);
+		_;
+	}
+
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
 
 	event TransferA(address indexed from, address indexed to, uint256 value);
 	event TransferB(address indexed from, address indexed to, uint256 value);
+	event ApprovalA(address indexed tokenOwner, address indexed spender, uint tokens);
+	event ApprovalB(address indexed tokenOwner, address indexed spender, uint tokens);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 	
-	function Custodian (
+	function Custodian(
 		address feeAddress, 
 		address duoAddress,
 		address pf1,
@@ -162,6 +187,10 @@ contract Custodian {
 		uint coolDown) 
 		public 
 	{
+		for (uint i = 0; i < addrPool.length; i++) {
+			existingAddPool[addrPool[i]] = true;
+		}
+		addrAdder = msg.sender;
 		state = State.Inception;
 		admin = msg.sender;
 		decimals = 18;
@@ -211,8 +240,8 @@ contract Custodian {
 		if (!existingUsers[user]) {
 			users.push(user);
 			existingUsers[user] = true;
-			balancesA[user] = 0;
-			balancesB[user] = 0;
+			balanceAOf[user] = 0;
+			balanceBOf[user] = 0;
 		}
 	}
 
@@ -315,8 +344,8 @@ contract Custodian {
 		uint localResetAddrIndex = nextResetAddrIndex;
 		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
 			currentAddress = users[nextResetAddrIndex];
-			currentBalanceA = balancesA[currentAddress];
-			currentBalanceB = balancesB[currentAddress];
+			currentBalanceA = balanceAOf[currentAddress];
+			currentBalanceB = balanceBOf[currentAddress];
 			if (state == State.DownwardReset) {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
@@ -345,8 +374,8 @@ contract Custodian {
 				newBalanceB = currentBalanceB.add(newBFromA);
 			}
 
-			balancesA[currentAddress] = newBalanceA;
-			balancesB[currentAddress] = newBalanceB;
+			balanceAOf[currentAddress] = newBalanceA;
+			balanceBOf[currentAddress] = newBalanceB;
 			localResetAddrIndex++;
 		}
 
@@ -498,7 +527,7 @@ contract Custodian {
 		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
-		require(balancesA[msg.sender] >= deductAmtInWeiA && balancesB[msg.sender] >= deductAmtInWeiB);
+		require(balanceAOf[msg.sender] >= deductAmtInWeiA && balanceBOf[msg.sender] >= deductAmtInWeiB);
 		uint amtEthInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
@@ -506,8 +535,8 @@ contract Custodian {
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
 		uint feeInWei = getFee(amtEthInWei);
-		balancesA[msg.sender] = balancesA[msg.sender].sub(deductAmtInWeiA);
-		balancesB[msg.sender] = balancesB[msg.sender].sub(deductAmtInWeiB);
+		balanceAOf[msg.sender] = balanceAOf[msg.sender].sub(deductAmtInWeiA);
+		balanceBOf[msg.sender] = balanceBOf[msg.sender].sub(deductAmtInWeiB);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
 		return true;
@@ -550,25 +579,61 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		checkNewUser(msg.sender);
-		balancesA[msg.sender] = balancesA[msg.sender].add(tokenValueA);
-		balancesB[msg.sender] = balancesB[msg.sender].add(tokenValueB);
+		balanceAOf[msg.sender] = balanceAOf[msg.sender].add(tokenValueA);
+		balanceBOf[msg.sender] = balanceBOf[msg.sender].add(tokenValueB);
 		return true;
 	}
 
-	function checkBalanceA(address add) public constant returns(uint) {
-		return balancesA[add];
+	function addAddress(address addr) public only(addrAdder) returns (bool success) {
+		require(existingAddPool[addr]==false);
+		addrPool.push(addr);
+		existingAddPool[addr] = true;
+		return true;
+	}
+
+	function removeFromPoolByIndex(uint idx) internal  {
+		existingAddPool[addrPool[idx]] = false;
+		if (idx < addrPool.length - 1)
+			addrPool[idx] = addrPool[addrPool.length-1];
+		delete addrPool[idx];
+		addrPool.length -= 1;
+	}
+
+	function assignAddr() internal returns (address addr) {
+		for (uint i = 0; i < addrPool.length; i++) {
+			if (addrPool[i] == msg.sender) {
+				removeFromPoolByIndex(i);
+				break;
+            }
+		}
+		uint index = getNowTimestamp() % addrPool.length;
+		addr = addrPool[index];
+		removeFromPoolByIndex(index);
 	}
 	
-	function checkBalanceB(address add) public constant returns(uint) {
-		return balancesB[add];
+	function assignPF1() public inAddrPool() returns (address addr) {
+		addr = assignAddr();
+		priceFeed1 = addr;
 	}
 
-	function checkAllowanceA(address _user, address _spender) public constant returns(uint) {
-		return allowanceA[_user][_spender];
+	function assignPF2() public inAddrPool() returns (address addr) {
+		addr = assignAddr();
+		priceFeed2 = addr;
 	}
 
-	function checkAllowanceB(address _user, address _spender) public constant returns(uint) {
-		return allowanceB[_user][_spender];
+	function assignPF3() public inAddrPool() returns (address addr) {
+		addr = assignAddr();
+		priceFeed3 = addr;
+	}
+
+	function assignFeeCollector() public inAddrPool() returns (address addr) {
+		addr = assignAddr();
+		feeCollector = addr;
+	}
+
+	function assignAdmin() public inAddrPool() returns (address addr) {
+		addr = assignAddr();
+		admin = addr;
 	}
 	
 	function transferA(address _from, address _to, uint _tokens) 
@@ -579,22 +644,22 @@ contract Custodian {
 		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
-		require(balancesA[_from] >= _tokens);
+		require(balanceAOf[_from] >= _tokens);
 		// Check for overflows
-		require(balancesA[_to].add(_tokens) > balancesA[_to]);
+		require(balanceAOf[_to].add(_tokens) > balanceAOf[_to]);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balancesA[_from].add(balancesA[_to]);
+		uint previousBalances = balanceAOf[_from].add(balanceAOf[_to]);
 		//check whether _to is new. if new then add
 		checkNewUser(_to);
 		// Subtract from the sender
-		balancesA[_from] = balancesA[_from].sub(_tokens);
+		balanceAOf[_from] = balanceAOf[_from].sub(_tokens);
 		// Add the same to the recipient
-		balancesA[_to] = balancesA[_to].add(_tokens);
+		balanceAOf[_to] = balanceAOf[_to].add(_tokens);
 		
 		emit TransferA(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balancesA[_from].add(balancesA[_to]) == previousBalances);
+		assert(balanceAOf[_from].add(balanceAOf[_to]) == previousBalances);
 		return true;
 	}
 
@@ -606,21 +671,21 @@ contract Custodian {
 		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
-		require(balancesB[_from] >= _tokens);
+		require(balanceBOf[_from] >= _tokens);
 		// Check for overflows
-		require(balancesB[_to].add(_tokens) > balancesB[_to]);
+		require(balanceBOf[_to].add(_tokens) > balanceBOf[_to]);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balancesB[_from].add(balancesB[_to]);
+		uint previousBalances = balanceBOf[_from].add(balanceBOf[_to]);
 		//check whether _to is new. if new then add
 		checkNewUser(_to);
 		// Subtract from the sender
-		balancesB[_from] = balancesB[_from].sub(_tokens);
+		balanceBOf[_from] = balanceBOf[_from].sub(_tokens);
 		// Add the same to the recipient
-		balancesB[_to] = balancesB[_to].add(_tokens);
+		balanceBOf[_to] = balanceBOf[_to].add(_tokens);
 		emit TransferB(_from, _to, _tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balancesB[_from].add(balancesB[_to]) == previousBalances);
+		assert(balanceBOf[_from].add(balanceBOf[_to]) == previousBalances);
 		return true;
 	}
 
@@ -629,6 +694,7 @@ contract Custodian {
 		returns (bool success) 
 	{
 		allowanceA[_sender][_spender] = _tokens;
+		emit ApprovalA(_sender, _spender, _tokens);
 		return true;
 	}
 	
@@ -637,6 +703,7 @@ contract Custodian {
 		returns (bool success) 
 	{
 		allowanceB[_sender][_spender] = _tokens;
+		emit ApprovalB(_sender, _spender, _tokens);
 		return true;
 	}
 

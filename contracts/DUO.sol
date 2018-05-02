@@ -21,7 +21,7 @@ contract DUO {
 	 *
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
-	function DUO (
+	function DUO(
 		uint256 initialSupply,
 		string tokenName,
 		string tokenSymbol

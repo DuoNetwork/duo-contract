@@ -242,7 +242,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A correctly', async () => {
-			let balanceA = await custodianContract.balancesA.call(alice);
+			let balanceA = await custodianContract.balanceAOf.call(alice);
 			assert.isTrue(
 				isEqual(balanceA.toString(), web3.utils.toWei(tokenValueA + '')),
 				'balance A not updated correctly'
@@ -250,7 +250,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let balanceB = await custodianContract.balancesB.call(alice);
+			let balanceB = await custodianContract.balanceBOf.call(alice);
 			assert.isTrue(
 				isEqual(balanceB.toString(), web3.utils.toWei(tokenValueB + '')),
 				'balance B not updated correctly'
@@ -321,8 +321,8 @@ contract('Custodian', accounts => {
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
-			prevBalanceA = await custodianContract.balancesA.call(alice);
-			prevBalanceB = await custodianContract.balancesB.call(alice);
+			prevBalanceA = await custodianContract.balanceAOf.call(alice);
+			prevBalanceB = await custodianContract.balanceBOf.call(alice);
 			prevFeeAccumulated = await custodianContract.feeAccumulatedInWei.call();
 		});
 
@@ -381,7 +381,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A correctly', async () => {
-			let currentBalanceA = await custodianContract.balancesA.call(alice);
+			let currentBalanceA = await custodianContract.balanceAOf.call(alice);
 			assert.isTrue(
 				isEqual(
 					currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
@@ -392,7 +392,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let currentBalanceB = await custodianContract.balancesB.call(alice);
+			let currentBalanceB = await custodianContract.balanceBOf.call(alice);
 			assert.isTrue(
 				isEqual(
 					currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
@@ -1212,7 +1212,7 @@ contract('Custodian', accounts => {
 		}
 
 		function assertABalanceForAddress(addr, expected) {
-			return custodianContract.balancesA.call(addr).then(currentBalanceA => {
+			return custodianContract.balanceAOf.call(addr).then(currentBalanceA => {
 				assert.isTrue(
 					isEqual(currentBalanceA.valueOf() / WEI_DENOMINATOR, expected),
 					'BalanceA not updated correctly'
@@ -1221,7 +1221,7 @@ contract('Custodian', accounts => {
 		}
 
 		function assertBBalanceForAddress(addr, expected) {
-			return custodianContract.balancesB
+			return custodianContract.balanceBOf
 				.call(addr)
 				.then(currentBalanceB =>
 					assert.isTrue(
@@ -1286,29 +1286,29 @@ contract('Custodian', accounts => {
 				});
 
 				if (transferABRequired) {
-					let aliceA = await custodianContract.balancesA.call(alice);
+					let aliceA = await custodianContract.balanceAOf.call(alice);
 
 					custodianContract.transferA(alice, bob, aliceA.valueOf(), {
 						from: alice
 					});
-					await custodianContract.balancesB.call(bob).then(bobB => {
+					await custodianContract.balanceBOf.call(bob).then(bobB => {
 						custodianContract.transferB(bob, alice, bobB.valueOf(), {
 							from: bob
 						});
 					});
 				}
 
-				await custodianContract.balancesA
+				await custodianContract.balanceAOf
 					.call(alice)
 					.then(aliceA => (prevBalanceAalice = aliceA.toNumber() / WEI_DENOMINATOR));
-				let aliceB = await custodianContract.balancesB.call(alice);
+				let aliceB = await custodianContract.balanceBOf.call(alice);
 
 				prevBalanceBalice = aliceB.toNumber() / WEI_DENOMINATOR;
 
-				await custodianContract.balancesA
+				await custodianContract.balanceAOf
 					.call(bob)
 					.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR));
-				let bobB = await custodianContract.balancesB.call(bob);
+				let bobB = await custodianContract.balanceBOf.call(bob);
 				prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR;
 
 				await custodianContract.skipCooldown(skipNum);
@@ -1403,8 +1403,8 @@ contract('Custodian', accounts => {
 				);
 				let nextIndex = await custodianContract.nextResetAddrIndex.call();
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
-				let currentBalanceAalice = await custodianContract.balancesA.call(alice);
-				let currentBalanceBalice = await custodianContract.balancesB.call(alice);
+				let currentBalanceAalice = await custodianContract.balanceAOf.call(alice);
+				let currentBalanceBalice = await custodianContract.balanceBOf.call(alice);
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAalice,
 					prevBalanceBalice,
@@ -1523,7 +1523,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance', async () => {
-			let balance = await custodianContract.balancesA.call(alice);
+			let balance = await custodianContract.balanceAOf.call(alice);
 			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
@@ -1562,7 +1562,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance of bob equal to 10', async () => {
-			let balance = await custodianContract.balancesA.call(bob);
+			let balance = await custodianContract.balanceAOf.call(bob);
 			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
 		});
 
@@ -1624,7 +1624,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('check balance of charles equal 50', async () => {
-			let balance = await custodianContract.balancesA.call(charles);
+			let balance = await custodianContract.balanceAOf.call(charles);
 
 			assert.equal(
 				balance.toNumber() / WEI_DENOMINATOR,
@@ -1645,7 +1645,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance', async () => {
-			let balance = await custodianContract.balancesB.call(alice);
+			let balance = await custodianContract.balanceBOf.call(alice);
 			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
@@ -1684,7 +1684,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance of bob equal to 10', async () => {
-			let balance = await custodianContract.balancesB.call(bob);
+			let balance = await custodianContract.balanceBOf.call(bob);
 			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
 		});
 
@@ -1746,7 +1746,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('check balance of charles equal 50', async () => {
-			let balance = await custodianContract.balancesB.call(charles);
+			let balance = await custodianContract.balanceBOf.call(charles);
 
 			assert.equal(
 				balance.toNumber() / WEI_DENOMINATOR,
