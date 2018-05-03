@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 import { Custodian } from "./Custodian.sol";
 
 contract TokenB {
@@ -13,7 +13,7 @@ contract TokenB {
 	 *
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
-	function TokenB(
+	constructor(
 		string tokenName,
 		string tokenSymbol,
 		address custodianAddr

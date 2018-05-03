@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 import { DUO } from "./DUO.sol";
 
 library SafeMath {
@@ -53,11 +53,13 @@ contract Custodian {
 	}
 
 	State public state;
+	address duoTokenAddress;
+	// below 6 address are returned by getSystemAddresses
+	address admin;
 	address feeCollector;
 	address priceFeed1; 
 	address priceFeed2; 
 	address priceFeed3;
-	address public duoTokenAddress;
 	address addrAdder;
 
 	address[] public addrPool =[
@@ -73,59 +75,55 @@ contract Custodian {
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa733a,
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa733b
 	];
-	mapping(address => bool) public existingAddPool;
+	mapping(address => bool) existingAddPool;
 
-	uint decimals;
+	uint constant decimals = 18;
 	mapping(address => uint256) public balanceAOf;
 	mapping(address => uint256) public balanceBOf;
 	mapping (address => mapping (address => uint256)) public allowanceA;
 	mapping (address => mapping (address => uint256)) public allowanceB;
 	address[] public users;
-	mapping (address => bool) public existingUsers;
+	mapping (address => bool) existingUsers;
 	mapping(address => uint256) public ethPendingWithdrawal;
-	uint public feeAccumulatedInWei;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
 
-	address admin;
-	// public parameters, do not change after deployment
 	Price public resetPrice; 
 	Price public lastPrice; 
-	uint public alphaInBP;
-	uint public periodCouponInWei; 
-	uint public limitPeriodicInWei; 
-	uint public limitUpperInWei; 
-	uint public limitLowerInWei;
-	uint public commissionRateInBP;
-	uint public period;
-	// public info
-	uint public betaInWei = WEI_DENOMINATOR;
-	uint public navAInWei;
-	uint public navBInWei; 
-	uint public totalSupplyA;
-	uint public totalSupplyB;
-	
-	// public parameters, can change after deployment
-	uint public memberThresholdInWei;
-	uint public iterationGasThreshold;
-
-	// private parameters, can change after deployment
+	// below 18 states are returned in getSystemStates
+	uint alphaInBP;
+	uint betaInWei = WEI_DENOMINATOR;
+	uint feeAccumulatedInWei;
+	uint periodCouponInWei; 
+	uint limitPeriodicInWei; 
+	uint limitUpperInWei; 
+	uint limitLowerInWei;
+	uint commissionRateInBP;
+	uint period;
+	uint iterationGasThreshold;
+	uint memberThresholdInWei;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown;
+	uint numOfPrices = 0;
+	uint nextResetAddrIndex = 0;
+	// nav and current total supply
+	uint public navAInWei;
+	uint public navBInWei; 
+	uint public totalSupplyA;
+	uint public totalSupplyB;
 
 	// cycle state variables
-	uint numOfPrices = 0;
 	uint lastPreResetBlockNo = 0;
-	uint public nextResetAddrIndex = 0;
+	// below 4 data are returned in getStagingPrices
 	address firstAddr;
 	address secondAddr;
 	Price firstPrice;
 	Price secondPrice;
-
+	
 	// reset intermediate values
 	uint bAdj;
 	uint newAFromAPerA;
@@ -169,7 +167,7 @@ contract Custodian {
 	event ApprovalB(address indexed tokenOwner, address indexed spender, uint tokens);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 	
-	function Custodian(
+	constructor(
 		address feeAddress, 
 		address duoAddress,
 		address pf1,
@@ -193,7 +191,6 @@ contract Custodian {
 		addrAdder = msg.sender;
 		state = State.Inception;
 		admin = msg.sender;
-		decimals = 18;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		priceFeed1 = pf1;
@@ -584,11 +581,11 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddress(address addr1, address addr2) public only(addrAdder) returns (bool success) {
+	function addAddr(address addr1, address addr2) public only(addrAdder) returns (bool success) {
 		require(existingAddPool[addr1]==false && existingAddPool[addr2]==false);
 		uint index = getNowTimestamp() % addrPool.length;
 		addrAdder = addrPool[index];
-		removeFromPoolByIndex(index);
+		removeFromPool(index);
 		addrPool.push(addr1);
 		existingAddPool[addr1] = true;
 		addrPool.push(addr2);
@@ -596,7 +593,7 @@ contract Custodian {
 		return true;
 	}
 
-	function removeFromPoolByIndex(uint idx) internal  {
+	function removeFromPool(uint idx) internal  {
 		existingAddPool[addrPool[idx]] = false;
 		if (idx < addrPool.length - 1)
 			addrPool[idx] = addrPool[addrPool.length-1];
@@ -604,41 +601,28 @@ contract Custodian {
 		addrPool.length -= 1;
 	}
 
-	function assignAddr() internal returns (address addr) {
+	function updateAddr(address current) internal returns (address addr) {
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
-				removeFromPoolByIndex(i);
+				removeFromPool(i);
 				break;
             }
 		}
 		uint index = getNowTimestamp() % addrPool.length;
 		addr = addrPool[index];
-		removeFromPoolByIndex(index);
-	}
-	
-	function assignPF1() public inAddrPool() returns (address addr) {
-		addr = assignAddr();
-		priceFeed1 = addr;
-	}
+		removeFromPool(index);
 
-	function assignPF2() public inAddrPool() returns (address addr) {
-		addr = assignAddr();
-		priceFeed2 = addr;
-	}
-
-	function assignPF3() public inAddrPool() returns (address addr) {
-		addr = assignAddr();
-		priceFeed3 = addr;
-	}
-
-	function assignFeeCollector() public inAddrPool() returns (address addr) {
-		addr = assignAddr();
-		feeCollector = addr;
-	}
-
-	function assignAdmin() public inAddrPool() returns (address addr) {
-		addr = assignAddr();
-		admin = addr;
+		if (current == priceFeed1) {
+			priceFeed1 = addr;
+		} else if (current == priceFeed2) {
+			priceFeed2 = addr;
+		} else if (current == priceFeed3) {
+			priceFeed3 = addr;
+		} else if (current == feeCollector) {
+			feeCollector = addr;
+		} else if (current == admin) {
+			admin = addr;
+		}
 	}
 	
 	function transferA(address _from, address _to, uint _tokens) 
@@ -785,8 +769,52 @@ contract Custodian {
 	function getNumOfUsers() public view returns (uint256) {
 		return users.length;
 	}
+
+	function getSystemAddresses() public view returns (address[6] sysAddr) {
+		sysAddr[0] = admin;
+		sysAddr[1] = feeCollector;
+		sysAddr[2] = priceFeed1; 
+		sysAddr[3] = priceFeed2; 
+		sysAddr[4] = priceFeed3;
+		sysAddr[5] = addrAdder;
+	}
+
+	function getSystemStates() public view returns (uint[18] sysState) {
+		sysState[0] = alphaInBP;
+		sysState[1] = betaInWei;
+		sysState[2] = feeAccumulatedInWei;
+		sysState[3] = periodCouponInWei; 
+		sysState[4] = limitPeriodicInWei; 
+		sysState[5] = limitUpperInWei; 
+		sysState[6] = limitLowerInWei;
+		sysState[7] = commissionRateInBP;
+		sysState[8] = period;
+		sysState[9] = iterationGasThreshold;
+		sysState[10] = memberThresholdInWei;
+		sysState[11] = preResetWaitingBlocks;
+		sysState[12] = priceTolInBP; 
+		sysState[13] = priceFeedTolInBP;
+		sysState[14] = priceFeedTimeTol;
+		sysState[15] = priceUpdateCoolDown;
+		sysState[16] =  numOfPrices;
+		sysState[17] = nextResetAddrIndex;
+	}
+
+	function getStagingPrices() 
+		public 
+		view 
+		returns (
+			address addr1, 
+			uint px1, 
+			uint ts1, 
+			address addr2, 
+			uint px2, 
+			uint ts2) {
+		addr1 = firstAddr;
+		addr2 = secondAddr;
+		px1 = firstPrice.priceInWei;
+		ts1 = firstPrice.timeInSecond;
+		px2 = secondPrice.priceInWei;
+		ts2 = secondPrice.timeInSecond;
+	}
 }
-
-
-
-	

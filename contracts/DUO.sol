@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 contract DUO {
 	// Public variables of the token
@@ -21,7 +21,7 @@ contract DUO {
 	 *
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
-	function DUO(
+	constructor(
 		uint256 initialSupply,
 		string tokenName,
 		string tokenSymbol
