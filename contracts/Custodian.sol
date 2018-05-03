@@ -584,10 +584,15 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddress(address addr) public only(addrAdder) returns (bool success) {
-		require(existingAddPool[addr]==false);
-		addrPool.push(addr);
-		existingAddPool[addr] = true;
+	function addAddress(address addr1, address addr2) public only(addrAdder) returns (bool success) {
+		require(existingAddPool[addr1]==false && existingAddPool[addr2]==false);
+		uint index = getNowTimestamp() % addrPool.length;
+		addrAdder = addrPool[index];
+		removeFromPoolByIndex(index);
+		addrPool.push(addr1);
+		existingAddPool[addr1] = true;
+		addrPool.push(addr2);
+		existingAddPool[addr2] = true;
 		return true;
 	}
 
