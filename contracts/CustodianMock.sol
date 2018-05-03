@@ -52,4 +52,12 @@ contract CustodianMock is Custodian {
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
 	}
+
+	function getExistingUser(address addr) public view returns (bool) {
+		return existingUsers[addr];
+	}
+
+	function getAddrStatus(address addr) public view returns (uint) {
+		return addrStatus[addr];
+	}
 }

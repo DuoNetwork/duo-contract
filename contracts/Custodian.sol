@@ -66,14 +66,7 @@ contract Custodian {
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa7331,
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa7332,
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa7333,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7334,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7335,
-		0xca35b7d915458ef540ade6068dfe2f44e8fa7336,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7337,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7338,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7339,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa733a,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa733b
+	    0xca35b7d915458ef540ade6068dfe2f44e8fa7334
 	];
 	mapping(address => uint) addrStatus;
 
@@ -166,6 +159,9 @@ contract Custodian {
 	event ApprovalA(address indexed tokenOwner, address indexed spender, uint tokens);
 	event ApprovalB(address indexed tokenOwner, address indexed spender, uint tokens);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
+	event AddAddress(address added1, address added2, address newAdder);
+	event UpdateAddress(address current, address newAddr);
+	event RemoveAddress(address addr, address newAddr);
 	
 	constructor(
 		address feeAddress, 
@@ -627,6 +623,22 @@ contract Custodian {
 		addrStatus[addr1] = 1;
 		addrPool.push(addr2);
 		addrStatus[addr2] = 1;
+		emit AddAddress(addr1, addr2, addrAdder);
+		return true;
+	}
+
+	function removeAddr(address addr) public only(addrAdder) returns (bool success) {
+		require(addrPool.length > 3 && addrStatus[addr] == 1);
+		uint index = getNowTimestamp() % addrPool.length;
+		addrAdder = addrPool[index];
+		removeFromPool(index);
+		for (uint i = 0; i < addrPool.length; i++) {
+			if (addrPool[i] == addr) {
+				removeFromPool(i);
+				break;
+            }
+		}
+		emit RemoveAddress(addr, addrAdder);
 		return true;
 	}
 
@@ -634,12 +646,12 @@ contract Custodian {
 		addrStatus[addrPool[idx]] = 2;
 		if (idx < addrPool.length - 1)
 			addrPool[idx] = addrPool[addrPool.length-1];
-		delete addrPool[idx];
-		addrPool.length -= 1;
+		delete addrPool[addrPool.length - 1];
+		addrPool.length--;
 	}
 
 	function updateAddr(address current) public inAddrPool() returns (address addr) {
-		require(addrPool.length > 1);
+		require(addrPool.length > 3);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
 				removeFromPool(i);
@@ -660,7 +672,11 @@ contract Custodian {
 			feeCollector = addr;
 		} else if (current == admin) {
 			admin = addr;
+		} else {
+			revert();
 		}
+
+		emit UpdateAddress(current, addr);
 	}
 	
 	function transferA(address _from, address _to, uint _tokens) 
@@ -757,55 +773,35 @@ contract Custodian {
 	}
 
 	//admin function
-	function setFeeAddress(address newAddress) public only(admin) inState(State.Trading) returns (bool success) {
-		feeCollector = newAddress;
+	function setValue(uint idx, uint newValue) 
+		public 
+		only(admin) 
+		inState(State.Trading) 
+		returns (
+			bool success
+			) 
+	{
+		if (idx == 0) {
+			commissionRateInBP = newValue;
+		} else if (idx == 1) {
+			memberThresholdInWei = newValue;
+		} else if (idx == 2) {
+			iterationGasThreshold = newValue;
+		} else if (idx == 3) {
+			preResetWaitingBlocks = newValue;
+		} else if (idx == 4) {
+			priceTolInBP = newValue;
+		} else if (idx == 5) {
+			priceFeedTolInBP = newValue;
+		} else if (idx == 6) {
+			priceFeedTimeTol = newValue;
+		} else if (idx == 7) {
+			priceUpdateCoolDown = newValue;
+		} else {
+			revert();
+		}
+		
 		return true;
-	}
-
-	function setCommission(uint newComm) public only(admin) inState(State.Trading) returns (bool success) {
-		require(newComm > 0);
-		require(newComm < BP_DENOMINATOR);
-		commissionRateInBP = newComm;
-		return true;
-	}
-
-	function setMemberThresholdInWei(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		memberThresholdInWei = newValue;
-		return true;
-	}
-
-	function setIterationGasThreshold(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		iterationGasThreshold = newValue;
-		return true;
-	}
-
-	function setPreResetWaitingBlocks(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		preResetWaitingBlocks = newValue;
-		return true;
-	}
-
-	function setPriceTolInBP(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		priceTolInBP = newValue;
-		return true;
-	}
-
-	function setPriceFeedTolInBP(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		priceFeedTolInBP = newValue;
-		return true;
-	}
-
-	function setPriceFeedTimeTol(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		priceFeedTimeTol = newValue;
-		return true;
-	}
-
-	function setPriceUpdateCoolDown(uint newValue) public only(admin) inState(State.Trading) returns (bool success) {
-		priceUpdateCoolDown = newValue;
-		return true;
-	}
-
-	function getNumOfUsers() public view returns (uint256) {
-		return users.length;
 	}
 
 	function getSystemAddresses() public view returns (address[6] sysAddr) {
@@ -817,7 +813,7 @@ contract Custodian {
 		sysAddr[5] = addrAdder;
 	}
 
-	function getSystemStates() public view returns (uint[18] sysState) {
+	function getSystemStates() public view returns (uint[20] sysState) {
 		sysState[0] = alphaInBP;
 		sysState[1] = betaInWei;
 		sysState[2] = feeAccumulatedInWei;
@@ -834,8 +830,10 @@ contract Custodian {
 		sysState[13] = priceFeedTolInBP;
 		sysState[14] = priceFeedTimeTol;
 		sysState[15] = priceUpdateCoolDown;
-		sysState[16] =  numOfPrices;
+		sysState[16] = numOfPrices;
 		sysState[17] = nextResetAddrIndex;
+		sysState[18] = users.length;
+		sysState[19] = addrPool.length;
 	}
 
 	function getStagingPrices() 

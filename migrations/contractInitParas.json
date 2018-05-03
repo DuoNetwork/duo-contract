@@ -27,5 +27,18 @@
 	"TokenB": {
 		"tokenName": "TokenB",
 		"tokenSymbol": "TKB"
-	}
+	},
+	"Pool": [
+		"0xca35b7d915458ef540ade6068dfe2f44e8fa7331",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7332",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7333",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7334",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7335",
+		"0xca35b7d915458ef540ade6068dfe2f44e8fa7336",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7337",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7338",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa7339",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa733a",
+	    "0xca35b7d915458ef540ade6068dfe2f44e8fa733b"
+	]
 }

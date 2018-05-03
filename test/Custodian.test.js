@@ -5,6 +5,7 @@ const web3 = require('web3');
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
+//const PoolInit = InitParas['Pool'];
 
 const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
@@ -17,6 +18,41 @@ const STATE_PRE_RESET = '2';
 const STATE_UPWARD_RESET = '3';
 const STATE_DOWNWARD_RESET = '4';
 const STATE_PERIODIC_RESET = '5';
+
+const IDX_ADMIN = 0;
+const IDX_FEE_COLLECTOR = 1;
+const IDX_PRICEFEED_1 = 2;
+const IDX_PRICEFEED_2 = 3;
+const IDX_PRICEFEED_3 = 4;
+const IDX_ADDR_ADDER = 5;
+
+// const alphaInBP = 0;
+const IDX_BETA_IN_WEI = 1;
+const IDX_FEE_IN_WEI = 2;
+// const periodCouponInWei = 3;
+// const limitPeriodicInWei = 4;
+// const limitUpperInWei = 5;
+// const limitLowerInWei = 6;
+// const commissionRateInBP = 7;
+const IDX_PERIOD = 8;
+// const iterationGasThreshold = 9;
+// const memberThresholdInWei = 10;
+// const preResetWaitingBlocks = 11;
+const IDX_PRICE_TOL = 12;
+// const priceFeedTolInBP = 13;
+// const priceFeedTimeTol = 14;
+const IDX_PRICE_UPDATE_COOLDOWN = 15;
+// const numOfPrices = 16;
+const IDX_NEXT_RESET_ADDR_IDX = 17;
+const IDX_USER_SIZE = 18;
+const IDX_POOL_SIZE = 19;
+
+// const firstAddr = 0;
+const IDX_FIRST_PX = 1;
+const IDX_FIRST_TS = 2;
+// const secondAddr = 3;
+const IDX_SECOND_PX = 4;
+const IDX_SECOND_TS = 5;
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -92,44 +128,78 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeCollector should equal specified value', async () => {
-			let feeCollector = await custodianContract.getFeeCollector.call();
-			assert.equal(feeCollector.valueOf(), fc, 'feeCollector specified incorrect');
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(
+				sysAddress[IDX_FEE_COLLECTOR].valueOf(),
+				fc,
+				'feeCollector specified incorrect'
+			);
+			let addrStatus = await custodianContract.getAddrStatus.call(fc);
+			assert.isTrue(addrStatus.toNumber() === 2, 'fc not marked as used');
 		});
 
 		it('priceFeed1 should equal specified value', async () => {
-			let priceFeed1 = await custodianContract.getPriceFeed1.call();
-			assert.equal(priceFeed1.valueOf(), pf1, 'priceFeed1 specified incorrect');
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(
+				sysAddress[IDX_PRICEFEED_1].valueOf(),
+				pf1,
+				'priceFeed1 specified incorrect'
+			);
+			let addrStatus = await custodianContract.getAddrStatus.call(pf1);
+			assert.isTrue(addrStatus.toNumber() === 2, 'pf1 not marked as used');
 		});
 
 		it('priceFeed2 should equal specified value', async () => {
-			let priceFeed2 = await custodianContract.getPriceFeed2.call();
-			assert.equal(priceFeed2.valueOf(), pf2, 'priceFeed2 specified incorrect');
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(
+				sysAddress[IDX_PRICEFEED_2].valueOf(),
+				pf2,
+				'priceFeed2 specified incorrect'
+			);
+			let addrStatus = await custodianContract.getAddrStatus.call(pf2);
+			assert.isTrue(addrStatus.toNumber() === 2, 'pf2 not marked as used');
 		});
 
 		it('priceFeed3 should equal specified value', async () => {
-			let priceFeed3 = await custodianContract.getPriceFeed3.call();
-			assert.equal(priceFeed3.valueOf(), pf3, 'priceFeed3 specified incorrect');
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(
+				sysAddress[IDX_PRICEFEED_3].valueOf(),
+				pf3,
+				'priceFeed3 specified incorrect'
+			);
+			let addrStatus = await custodianContract.getAddrStatus.call(pf3);
+			assert.isTrue(addrStatus.toNumber() === 2, 'pf3 not marked as used');
 		});
 
 		it('admin should equal specified value', async () => {
-			let admin = await custodianContract.getAdmin.call();
-			assert.equal(admin.valueOf(), creator, 'admin specified incorrect');
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(sysAddress[IDX_ADMIN].valueOf(), creator, 'admin specified incorrect');
+			let addrStatus = await custodianContract.getAddrStatus.call(creator);
+			assert.isTrue(addrStatus.toNumber() === 2, 'admin not marked as used');
 		});
 
 		it('priceTolInBP should equal 500', async () => {
-			let getPriceTolInBP = await custodianContract.getPriceTolInBP.call();
-			assert.equal(getPriceTolInBP.valueOf(), 500, 'priceTolInBP specified incorrect');
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(
+				sysStates[IDX_PRICE_TOL].valueOf(),
+				500,
+				'priceTolInBP specified incorrect'
+			);
 		});
 
 		it('period should equal specified value', async () => {
-			let period = await custodianContract.period.call();
-			assert.equal(period.valueOf(), CustodianInit.period, 'period specified incorrect');
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(
+				sysStates[IDX_PERIOD].valueOf(),
+				CustodianInit.period,
+				'period specified incorrect'
+			);
 		});
 
 		it('priceUpdateCoolDown should equal specified value', async () => {
-			let priceCoolDown = await custodianContract.getPriceUpdateCoolDown.call();
+			let sysStates = await custodianContract.getSystemStates.call();
 			assert.equal(
-				priceCoolDown.valueOf(),
+				sysStates[IDX_PRICE_UPDATE_COOLDOWN].valueOf(),
 				CustodianInit.coolDown,
 				'priceUpdateCoolDown specified incorrect'
 			);
@@ -228,16 +298,16 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeAccumulated should be updated', async () => {
-			let feeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let sysStates = await custodianContract.getSystemStates.call();
 			let fee = web3.utils.toWei(1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR + '');
 			assert.isTrue(
-				isEqual(feeAccumulated.valueOf(), fee),
+				isEqual(sysStates[IDX_FEE_IN_WEI].valueOf(), fee),
 				'feeAccumulated not updated correctly'
 			);
 		});
 
 		it('should update user list if required', async () => {
-			let isUser = await custodianContract.existingUsers.call(alice);
+			let isUser = await custodianContract.getExistingUser.call(alice);
 			assert.isTrue(isUser, 'new user is not updated');
 		});
 
@@ -285,7 +355,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should collect fee', async () => {
-			prevFeeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let sysStates = await custodianContract.getSystemStates.call();
+			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
 			let success = await custodianContract.collectFee.call(web3.utils.toWei('0.0001'), {
 				from: fc
 			});
@@ -294,7 +365,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should fee pending withdrawal amount should be updated correctly', async () => {
-			let currentFee = await custodianContract.feeAccumulatedInWei.call();
+			let sysStates = await custodianContract.getSystemStates.call();
+			let currentFee = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
 				isEqual(currentFee.toNumber(), prevFeeAccumulated.toNumber()),
 				'fee not updated correctly'
@@ -323,7 +395,8 @@ contract('Custodian', accounts => {
 			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
 			prevBalanceA = await custodianContract.balanceAOf.call(alice);
 			prevBalanceB = await custodianContract.balanceBOf.call(alice);
-			prevFeeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let sysStates = await custodianContract.getSystemStates.call();
+			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
 		});
 
 		it('should only redeem token value less than balance', async () => {
@@ -373,7 +446,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeAccumulated should be updated', async () => {
-			let feeAccumulated = await custodianContract.feeAccumulatedInWei.call();
+			let sysStates = await custodianContract.getSystemStates.call();
+			let feeAccumulated = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
 				isEqual(feeAccumulated.minus(prevFeeAccumulated).toNumber() / WEI_DENOMINATOR, fee),
 				'feeAccumulated not updated correctly'
@@ -631,10 +705,12 @@ contract('Custodian', accounts => {
 			await custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
 				from: pf1
 			});
-			let res = await custodianContract.getFirstPrice.call();
+			let stagPrice = await custodianContract.getStagingPrices.call();
+			let px = stagPrice[IDX_FIRST_PX];
+			let ts = stagPrice[IDX_FIRST_TS];
 			assert.isTrue(
-				isEqual(res[0].toNumber(), web3.utils.toWei('500')) &&
-					isEqual(res[1].toNumber(), firstPeriod.toNumber()),
+				isEqual(px.toNumber(), web3.utils.toWei('500')) &&
+					isEqual(ts.toNumber(), firstPeriod.toNumber()),
 				'first price is not recorded'
 			);
 		});
@@ -765,10 +841,12 @@ contract('Custodian', accounts => {
 					from: pf2
 				}
 			);
-			let res = await custodianContract.getSecondPrice.call();
+			let stagPrice = await custodianContract.getStagingPrices.call();
+			let px = stagPrice[IDX_SECOND_PX];
+			let ts = stagPrice[IDX_SECOND_TS];
 			assert.isTrue(
-				isEqual(res[0].toNumber(), web3.utils.toWei('700')) &&
-					isEqual(res[1].toNumber(), firstPeriod.toNumber() - 280),
+				isEqual(px.toNumber(), web3.utils.toWei('700')) &&
+					isEqual(ts.toNumber(), firstPeriod.toNumber() - 280),
 				'second price is not recorded'
 			);
 		});
@@ -1339,18 +1417,19 @@ contract('Custodian', accounts => {
 						}
 					);
 				}
+
 				let navAinWei = await custodianContract.navAInWei.call();
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 
 				let navBinWei = await custodianContract.navBInWei.call();
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
-
-				let betaInWei = await custodianContract.betaInWei.call();
+				let sysStates = await custodianContract.getSystemStates.call();
+				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
-
 				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
-
-				let betaInWeiAfter = await custodianContract.betaInWei.call();
+				let sysStatesAfter = await custodianContract.getSystemStates.call();
+				let betaInWeiAfter = sysStatesAfter[IDX_BETA_IN_WEI];
+				// let betaInWeiAfter = await custodianContract.betaInWei.call();
 				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
 			});
 
@@ -1370,9 +1449,10 @@ contract('Custodian', accounts => {
 			});
 
 			it('should have two users', async () => {
-				let numOfUsers = await custodianContract.getNumOfUsers.call();
+				let sysStates = await custodianContract.getSystemStates.call();
+				let numOfUsers = sysStates[IDX_USER_SIZE];
 
-				assert.equal(numOfUsers.valueOf(), 2, 'num of users incorrect');
+				assert.equal(numOfUsers.toNumber(), 2, 'num of users incorrect');
 			});
 
 			it('should have correct setup', () => {
@@ -1401,7 +1481,9 @@ contract('Custodian', accounts => {
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'not only one user processed'
 				);
-				let nextIndex = await custodianContract.nextResetAddrIndex.call();
+
+				let sysStates = await custodianContract.getSystemStates.call();
+				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
 				let currentBalanceAalice = await custodianContract.balanceAOf.call(alice);
 				let currentBalanceBalice = await custodianContract.balanceBOf.call(alice);
@@ -1441,7 +1523,8 @@ contract('Custodian', accounts => {
 					tx.logs.length === 1 && tx.logs[0].event === START_TRADING,
 					'reset not completed'
 				);
-				let nextIndex = await custodianContract.nextResetAddrIndex.call();
+				let sysStates = await custodianContract.getSystemStates.call();
+				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(bob, newBalanceA);
 				await assertBBalanceForAddress(bob, newBalanceB);
@@ -1947,6 +2030,133 @@ contract('Custodian', accounts => {
 					'VM Exception while processing transaction: revert',
 					'transaction not reverted'
 				);
+			}
+		});
+	});
+
+	describe.only('add and assign', () => {
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
+
+		it('non adder cannot add address', async () => {
+			try {
+				await custodianContract.addAddr.call(alice, bob, { from: charles });
+				assert.isTrue(false, 'non adder can add address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('should not add two same address', async () => {
+			try {
+				await custodianContract.addAddr.call(alice, alice, { from: creator });
+				assert.isTrue(false, 'can add two same address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('should not add adder itself', async () => {
+			try {
+				await custodianContract.addAddr.call(creator, alice, { from: creator });
+				assert.isTrue(false, 'can add adder itself address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('should add two different address and not itself', async () => {
+			let addStatus = await custodianContract.addAddr.call(alice, bob, { from: creator });
+			assert.isTrue(addStatus, 'cannot add address');
+			let tx = await custodianContract.addAddr(alice, bob, { from: creator });
+			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
+			let args = tx.logs[0].args;
+			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
+			let newAdder = sysAddress[IDX_ADDR_ADDER];
+			assert.isTrue(
+				args['added1'] === alice && args['added2'] === bob && args['newAdder'] === newAdder,
+				'event args is wrong'
+			);
+		});
+
+		it('new adder should be marked as used', async () => {
+			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
+			let newAdder = sysAddress[IDX_ADDR_ADDER];
+			let addStatus = await custodianContract.getAddrStatus.call(newAdder);
+			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
+		});
+
+		it('new adder should be removed from the pool', async () => {
+			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
+			let newAdder = sysAddress[IDX_ADDR_ADDER];
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(web3.utils.checkAddressChecksum(addr), 'invalid address');
+				assert.isTrue(addr !== newAdder, 'new adder is still in the pool');
+			}
+		});
+
+		it('address not in the pool cannot assign', async () => {
+			try {
+				await custodianContract.updateAddr(pf1, { from: charles });
+				assert.isTrue(false, 'member not in the pool can assign role');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		// used account cannot be added again
+		// check pool length
+		// check random next
+
+		it('pool account can assign another pool account as role', async () => {
+			let tx = await custodianContract.updateAddr(pf1, { from: alice });
+			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
+			let args = tx.logs[0].args;
+			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
+			let newPF1 = sysAddress[IDX_PRICEFEED_1];
+
+			assert.isTrue(
+				args['current'] === pf1 && args['newAddr'] === newPF1,
+				'event args is wrong'
+			);
+			assert.isTrue(newPF1 !== pf1, 'pf1 not updated');
+
+			let addrStatusNewPF = await custodianContract.getAddrStatus.call(newPF1);
+			let addrStatusAssigner = await custodianContract.getAddrStatus.call(alice);
+			assert.isTrue(
+				addrStatusNewPF.toNumber() === 2 && addrStatusAssigner.toNumber() === 2,
+				'assigner and newPFaddr not marked as used'
+			);
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(web3.utils.checkAddressChecksum(addr), 'invalid address');
+				assert.isTrue(addr !== newPF1, 'newPF address is still in the pool');
+				assert.isTrue(addr !== alice, 'assigner is still in the pool');
 			}
 		});
 	});
