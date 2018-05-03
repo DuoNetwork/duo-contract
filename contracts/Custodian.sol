@@ -273,6 +273,8 @@ contract Custodian {
 
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
+			uint newBFromA;
+			uint newAFromA;
 			if (navBInWei >= limitUpperInWei) {
 				state = State.UpwardReset;
 				betaInWei = WEI_DENOMINATOR;
@@ -286,7 +288,7 @@ contract Custodian {
 				newBFromAPerA = 0;
 				uint newBFromExcessBPerB = excessBAfterAInWei.mul(betaInWei).div(bAdj);
 				newAFromBPerB = newBFromExcessBPerB.mul(alphaInBP).div(BP_DENOMINATOR);
-				newBFromBPerB = excessBForAInWei.add(newBFromExcessBPerB);
+				newBFromBPerB = excessBForAInWei.add(newBFromExcessBPerB);			
 				// ignore this case for now as it requires a very small alpha 
 				// and very low upper limit for upward reset
 				/*} else {
@@ -297,6 +299,21 @@ contract Custodian {
 					newBFromAPerA = excessAAfterBInWei.mul(betaInWei).div(bAdj);
 					newAFromAPerA = excessAForBInWei.add(newBFromAPerA.mul(alphaInBP).div(BP_DENOMINATOR));
 				}*/
+				// adjust total supply
+				totalSupplyA = totalSupplyA
+					.add(totalSupplyA
+						.mul(newAFromAPerA)
+						.add(totalSupplyB
+							.mul(newAFromBPerB))
+						.div(WEI_DENOMINATOR)
+				);
+				totalSupplyB = totalSupplyB
+					.add(totalSupplyA
+						.mul(newBFromAPerA)
+						.add(totalSupplyB
+							.mul(newBFromBPerB))
+						.div(WEI_DENOMINATOR)
+				);
 			} else if(navBInWei <= limitLowerInWei) {
 				state = State.DownwardReset;
 				betaInWei = WEI_DENOMINATOR;
@@ -305,6 +322,11 @@ contract Custodian {
 				newAFromAPerA = 0;
 				newBFromBPerB = 0;
 				newAFromBPerB = 0;
+				// adjust total supply
+				newBFromA = totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
+				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
+				totalSupplyA = totalSupplyA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
+				totalSupplyB = totalSupplyB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
 			} else { // navAInWei >= limitPeriodicInWei
 				state = State.PeriodicReset;
 				uint num = alphaInBP
@@ -326,6 +348,11 @@ contract Custodian {
 				newBFromBPerB = 0;
 				newAFromAPerA = 0;
 				newAFromBPerB = 0;
+				// adjust total supply
+				newBFromA = totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
+				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
+				totalSupplyA = totalSupplyA.add(newAFromA);
+				totalSupplyB = totalSupplyB.add(newBFromA);
 			}
 
 			emit StartReset();
@@ -540,6 +567,8 @@ contract Custodian {
 		uint feeInWei = getFee(amtEthInWei);
 		balanceAOf[msg.sender] = balanceAOf[msg.sender].sub(deductAmtInWeiA);
 		balanceBOf[msg.sender] = balanceBOf[msg.sender].sub(deductAmtInWeiB);
+		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
+		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
 		return true;
@@ -584,6 +613,8 @@ contract Custodian {
 		checkNewUser(msg.sender);
 		balanceAOf[msg.sender] = balanceAOf[msg.sender].add(tokenValueA);
 		balanceBOf[msg.sender] = balanceBOf[msg.sender].add(tokenValueB);
+		totalSupplyA = totalSupplyA.add(tokenValueA);
+		totalSupplyB = totalSupplyB.add(tokenValueB);
 		return true;
 	}
 
