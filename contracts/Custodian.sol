@@ -441,7 +441,7 @@ contract Custodian {
 		emit AcceptPrice(priceInWei, timeInSecond);
 	}
 
-	function getMedian(uint a, uint b, uint c) public pure returns (uint){
+	function getMedian(uint a, uint b, uint c) internal pure returns (uint){
 		if (a.gt(b) ^ c.gt(a) == 0x0) {
 			return a;
 		} else if(b.gt(a) ^ c.gt(b) == 0x0) {

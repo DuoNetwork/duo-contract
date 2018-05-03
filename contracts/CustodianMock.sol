@@ -60,4 +60,8 @@ contract CustodianMock is Custodian {
 	function getAddrStatus(address addr) public view returns (uint) {
 		return addrStatus[addr];
 	}
+
+	function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
+		return getMedian(a, b, c);
+	}
 }
