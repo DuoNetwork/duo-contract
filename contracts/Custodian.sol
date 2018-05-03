@@ -71,10 +71,10 @@ contract Custodian {
 	mapping(address => uint) addrStatus;
 
 	uint constant decimals = 18;
-	mapping(address => uint) public balanceAOf;
-	mapping(address => uint) public balanceBOf;
-	mapping (address => mapping (address => uint)) public allowanceA;
-	mapping (address => mapping (address => uint)) public allowanceB;
+	mapping(address => uint)[2] public balanceOf;
+	//mapping(address => uint)[] public balanceBOf;
+	mapping (address => mapping (address => uint))[2] public allowance;
+	//mapping (address => mapping (address => uint)) public allowanceB;
 	address[] public users;
 	mapping (address => bool) existingUsers;
 	mapping(address => uint) public ethPendingWithdrawal;
@@ -154,10 +154,8 @@ contract Custodian {
 	event StartPreReset();
 	event StartReset();
 
-	event TransferA(address indexed from, address indexed to, uint256 value);
-	event TransferB(address indexed from, address indexed to, uint256 value);
-	event ApprovalA(address indexed tokenOwner, address indexed spender, uint tokens);
-	event ApprovalB(address indexed tokenOwner, address indexed spender, uint tokens);
+	event Transfer(address indexed from, address indexed to, uint256 value, uint index);
+	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 	event AddAddress(address added1, address added2, address newAdder);
 	event UpdateAddress(address current, address newAddr);
@@ -239,8 +237,8 @@ contract Custodian {
 		if (!existingUsers[user]) {
 			users.push(user);
 			existingUsers[user] = true;
-			balanceAOf[user] = 0;
-			balanceBOf[user] = 0;
+			balanceOf[0][user] = 0;
+			balanceOf[1][user] = 0;
 		}
 	}
 
@@ -370,8 +368,8 @@ contract Custodian {
 		uint localResetAddrIndex = nextResetAddrIndex;
 		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
 			currentAddress = users[nextResetAddrIndex];
-			currentBalanceA = balanceAOf[currentAddress];
-			currentBalanceB = balanceBOf[currentAddress];
+			currentBalanceA = balanceOf[0][currentAddress];
+			currentBalanceB = balanceOf[1][currentAddress];
 			if (state == State.DownwardReset) {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
@@ -400,8 +398,8 @@ contract Custodian {
 				newBalanceB = currentBalanceB.add(newBFromA);
 			}
 
-			balanceAOf[currentAddress] = newBalanceA;
-			balanceBOf[currentAddress] = newBalanceB;
+			balanceOf[0][currentAddress] = newBalanceA;
+			balanceOf[1][currentAddress] = newBalanceB;
 			localResetAddrIndex++;
 		}
 
@@ -553,7 +551,7 @@ contract Custodian {
 		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
-		require(balanceAOf[msg.sender] >= deductAmtInWeiA && balanceBOf[msg.sender] >= deductAmtInWeiB);
+		require(balanceOf[0][msg.sender] >= deductAmtInWeiA && balanceOf[1][msg.sender] >= deductAmtInWeiB);
 		uint amtEthInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
@@ -561,8 +559,8 @@ contract Custodian {
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
 		uint feeInWei = getFee(amtEthInWei);
-		balanceAOf[msg.sender] = balanceAOf[msg.sender].sub(deductAmtInWeiA);
-		balanceBOf[msg.sender] = balanceBOf[msg.sender].sub(deductAmtInWeiB);
+		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].sub(deductAmtInWeiA);
+		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].sub(deductAmtInWeiB);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
@@ -607,8 +605,8 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		checkNewUser(msg.sender);
-		balanceAOf[msg.sender] = balanceAOf[msg.sender].add(tokenValueA);
-		balanceBOf[msg.sender] = balanceBOf[msg.sender].add(tokenValueB);
+		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].add(tokenValueA);
+		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
 		return true;
@@ -679,96 +677,53 @@ contract Custodian {
 		emit UpdateAddress(current, addr);
 	}
 	
-	function transferA(address _from, address _to, uint _tokens) 
+	function transfer(uint index, address _from, address _to, uint _tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
 	{
+		require(index == 0 || index == 1);
 		// Prevent transfer to 0x0 address. Use burn() instead
 		require(_to != 0x0);
 		// Check if the sender has enough
-		require(balanceAOf[_from] >= _tokens);
+		require(balanceOf[index][_from] >= _tokens);
 		// Check for overflows
-		require(balanceAOf[_to].add(_tokens) > balanceAOf[_to]);
+		require(balanceOf[index][_to].add(_tokens) > balanceOf[index][_to]);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balanceAOf[_from].add(balanceAOf[_to]);
+		uint previousBalances = balanceOf[index][_from].add(balanceOf[index][_to]);
 		//check whether _to is new. if new then add
 		checkNewUser(_to);
 		// Subtract from the sender
-		balanceAOf[_from] = balanceAOf[_from].sub(_tokens);
+		balanceOf[index][_from] = balanceOf[index][_from].sub(_tokens);
 		// Add the same to the recipient
-		balanceAOf[_to] = balanceAOf[_to].add(_tokens);
+		balanceOf[index][_to] = balanceOf[index][_to].add(_tokens);
 		
-		emit TransferA(_from, _to, _tokens);
+		emit Transfer(_from, _to, _tokens, index);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balanceAOf[_from].add(balanceAOf[_to]) == previousBalances);
+		assert(balanceOf[index][_from].add(balanceOf[index][_to]) == previousBalances);
 		return true;
 	}
 
-	function transferB(address _from, address _to, uint _tokens) 
-		public 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		// Prevent transfer to 0x0 address. Use burn() instead
-		require(_to != 0x0);
-		// Check if the sender has enough
-		require(balanceBOf[_from] >= _tokens);
-		// Check for overflows
-		require(balanceBOf[_to].add(_tokens) > balanceBOf[_to]);
-
-		// Save this for an assertion in the future
-		uint previousBalances = balanceBOf[_from].add(balanceBOf[_to]);
-		//check whether _to is new. if new then add
-		checkNewUser(_to);
-		// Subtract from the sender
-		balanceBOf[_from] = balanceBOf[_from].sub(_tokens);
-		// Add the same to the recipient
-		balanceBOf[_to] = balanceBOf[_to].add(_tokens);
-		emit TransferB(_from, _to, _tokens);
-		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balanceBOf[_from].add(balanceBOf[_to]) == previousBalances);
-		return true;
-	}
-
-	function approveA(address _sender, address _spender, uint _tokens) 
+	function approve(uint index, address _sender, address _spender, uint _tokens) 
 		public 
 		returns (bool success) 
 	{
-		allowanceA[_sender][_spender] = _tokens;
-		emit ApprovalA(_sender, _spender, _tokens);
+		require(index == 0 || index == 1);
+		allowance[index][_sender][_spender] = _tokens;
+		emit Approval(_sender, _spender, _tokens, index);
 		return true;
 	}
 	
-	function approveB(address _sender, address _spender, uint _tokens) 
-		public 
-		returns (bool success) 
-	{
-		allowanceB[_sender][_spender] = _tokens;
-		emit ApprovalB(_sender, _spender, _tokens);
-		return true;
-	}
-
-	function transferAFrom(address _spender, address _from, address _to, uint _tokens) 
+	function transferFrom(uint index, address _spender, address _from, address _to, uint _tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
 	{
-		require(_tokens <= allowanceA[_from][_spender]);	 // Check allowance
-		allowanceA[_from][_spender] = allowanceA[_from][_spender].sub(_tokens);
-		transferA(_from, _to, _tokens);
-		return true;
-	}
-	
-	function transferBFrom(address _spender, address _from, address _to, uint _tokens) 
-		public 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		require(_tokens <= allowanceB[_from][_spender]);	 // Check allowance
-		allowanceB[_from][_spender] = allowanceB[_from][_spender].sub(_tokens);
-		transferB(_from, _to, _tokens);
+		require(index == 0 || index == 1);
+		require(_tokens <= allowance[index][_from][_spender]);	 // Check allowance
+		allowance[index][_from][_spender] = allowance[index][_from][_spender].sub(_tokens);
+		transfer(index, _from, _to, _tokens);
 		return true;
 	}
 

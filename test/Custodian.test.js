@@ -2130,6 +2130,7 @@ contract('Custodian', accounts => {
 		// used account cannot be added again
 		// check pool length
 		// check random next
+		// total supply
 
 		it('pool account can assign another pool account as role', async () => {
 			let tx = await custodianContract.updateAddr(pf1, { from: alice });

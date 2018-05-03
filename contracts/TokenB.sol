@@ -34,31 +34,31 @@ contract TokenB {
 	
 	function balanceOf(address add) public constant returns(uint balance) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.balanceBOf(add);
+		return custodianContract.balanceOf(1, add);
 	}
 
 	function allowance(address _user, address _spender) public constant returns(uint value) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.allowanceB(_user,_spender);
+		return custodianContract.allowance(1, _user,_spender);
 	}
 
 	function transfer(address _to, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.transferB(msg.sender,_to, _value);
+		custodianContract.transfer(1, msg.sender,_to, _value);
 		emit Transfer(msg.sender, _to, _value);
 		return true;
 	}
 
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.transferBFrom(msg.sender, _from, _to, _value);
+		custodianContract.transferFrom(1, msg.sender, _from, _to, _value);
 		emit Transfer(_from, _to, _value);
 		return true;
 	}
 
 	function approve(address _spender, uint256 _value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.approveB(msg.sender, _spender,  _value);
+		custodianContract.approve(1, msg.sender, _spender,  _value);
 		emit Approval(msg.sender, _spender, _value);
 		return true;
 	}
