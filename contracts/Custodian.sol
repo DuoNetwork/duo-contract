@@ -75,16 +75,16 @@ contract Custodian {
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa733a,
 	    0xca35b7d915458ef540ade6068dfe2f44e8fa733b
 	];
-	mapping(address => bool) existingAddPool;
+	mapping(address => uint) addrStatus;
 
 	uint constant decimals = 18;
-	mapping(address => uint256) public balanceAOf;
-	mapping(address => uint256) public balanceBOf;
-	mapping (address => mapping (address => uint256)) public allowanceA;
-	mapping (address => mapping (address => uint256)) public allowanceB;
+	mapping(address => uint) public balanceAOf;
+	mapping(address => uint) public balanceBOf;
+	mapping (address => mapping (address => uint)) public allowanceA;
+	mapping (address => mapping (address => uint)) public allowanceB;
 	address[] public users;
 	mapping (address => bool) existingUsers;
-	mapping(address => uint256) public ethPendingWithdrawal;
+	mapping(address => uint) public ethPendingWithdrawal;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
@@ -153,7 +153,7 @@ contract Custodian {
 	}
 
 	modifier inAddrPool() {
-		require(existingAddPool[msg.sender] == true);
+		require(addrStatus[msg.sender] == 1);
 		_;
 	}
 
@@ -186,17 +186,23 @@ contract Custodian {
 		public 
 	{
 		for (uint i = 0; i < addrPool.length; i++) {
-			existingAddPool[addrPool[i]] = true;
+			addrStatus[addrPool[i]] = 1;
 		}
-		addrAdder = msg.sender;
 		state = State.Inception;
+		addrAdder = msg.sender;
 		admin = msg.sender;
+		addrStatus[addrAdder] = 2;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
+		addrStatus[feeCollector] = 2;
 		priceFeed1 = pf1;
+		addrStatus[priceFeed1] = 2;
 		priceFeed2 = pf2;
+		addrStatus[priceFeed2] = 2;
 		priceFeed3 = pf3;
+		addrStatus[priceFeed3] = 2;
 		duoTokenAddress = duoAddress;
+		addrStatus[duoTokenAddress] = 2;
 		alphaInBP = alpha;
 		periodCouponInWei = r; 
 		limitPeriodicInWei = hp; 
@@ -582,26 +588,27 @@ contract Custodian {
 	}
 
 	function addAddr(address addr1, address addr2) public only(addrAdder) returns (bool success) {
-		require(existingAddPool[addr1]==false && existingAddPool[addr2]==false);
+		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
 		uint index = getNowTimestamp() % addrPool.length;
 		addrAdder = addrPool[index];
 		removeFromPool(index);
 		addrPool.push(addr1);
-		existingAddPool[addr1] = true;
+		addrStatus[addr1] = 1;
 		addrPool.push(addr2);
-		existingAddPool[addr2] = true;
+		addrStatus[addr2] = 1;
 		return true;
 	}
 
 	function removeFromPool(uint idx) internal  {
-		existingAddPool[addrPool[idx]] = false;
+		addrStatus[addrPool[idx]] = 2;
 		if (idx < addrPool.length - 1)
 			addrPool[idx] = addrPool[addrPool.length-1];
 		delete addrPool[idx];
 		addrPool.length -= 1;
 	}
 
-	function updateAddr(address current) internal returns (address addr) {
+	function updateAddr(address current) public inAddrPool() returns (address addr) {
+		require(addrPool.length > 1);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
 				removeFromPool(i);
