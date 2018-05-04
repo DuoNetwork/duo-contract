@@ -310,9 +310,9 @@ contract('Custodian', accounts => {
 
 		it('feeAccumulated should be updated', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
-			let fee = web3.utils.toWei(1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR + '');
+			let fee = 1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 			assert.isTrue(
-				isEqual(sysStates[IDX_FEE_IN_WEI].valueOf(), fee),
+				isEqual(sysStates[IDX_FEE_IN_WEI].valueOf() / WEI_DENOMINATOR, fee),
 				'feeAccumulated not updated correctly'
 			);
 		});
@@ -325,7 +325,7 @@ contract('Custodian', accounts => {
 		it('should update balance of A correctly', async () => {
 			let balanceA = await custodianContract.balanceOf.call(0, alice);
 			assert.isTrue(
-				isEqual(balanceA.toString(), web3.utils.toWei(tokenValueA + '')),
+				isEqual(balanceA.toNumber() / WEI_DENOMINATOR, tokenValueA),
 				'balance A not updated correctly'
 			);
 		});
@@ -333,7 +333,7 @@ contract('Custodian', accounts => {
 		it('should update balance of B correctly', async () => {
 			let balanceB = await custodianContract.balanceOf.call(1, alice);
 			assert.isTrue(
-				isEqual(balanceB.toString(), web3.utils.toWei(tokenValueB + '')),
+				isEqual(balanceB.toNumber() / WEI_DENOMINATOR, tokenValueB),
 				'balance B not updated correctly'
 			);
 		});
@@ -379,7 +379,10 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let currentFee = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
-				isEqual(currentFee.toNumber(), prevFeeAccumulated.toNumber()),
+				isEqual(
+					currentFee.toNumber() / WEI_DENOMINATOR,
+					prevFeeAccumulated.toNumber() / WEI_DENOMINATOR
+				),
 				'fee not updated correctly'
 			);
 		});
@@ -392,7 +395,7 @@ contract('Custodian', accounts => {
 		let adjAmtA = amtA * BP_DENOMINATOR / CustodianInit.alphaInBP;
 		let deductAmtB = Math.min(adjAmtA, amtB);
 		let deductAmtA = deductAmtB * CustodianInit.alphaInBP / BP_DENOMINATOR;
-		let amtEth = (deductAmtA + deductAmtA) / ethInitPrice;
+		let amtEth = (deductAmtA + deductAmtB) / ethInitPrice;
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 
 		before(async () => {
@@ -1272,12 +1275,11 @@ contract('Custodian', accounts => {
 			let alpha = CustodianInit.alphaInBP / BP_DENOMINATOR;
 			let excessA = navA - 1;
 			let excessB = navB - 1;
-			let excessBForA = excessA / alpha;
 			//if (excessB >= excessBForA) {
 			let newAFromA = prevBalanceA * excessA;
-			let excessBAfterA = excessB - excessBForA;
+			let excessBAfterA = excessB - excessA;
 			let excessNewBFromB = prevBalanceB * excessBAfterA * beta / (1 + alpha);
-			let newBFromB = prevBalanceB * excessBForA + excessNewBFromB;
+			let newBFromB = prevBalanceB * excessA + excessNewBFromB;
 			let newAFromB = excessNewBFromB * alpha;
 			return [prevBalanceA + newAFromA + newAFromB, prevBalanceB + newBFromB];
 			/*} else {
@@ -1551,10 +1553,25 @@ contract('Custodian', accounts => {
 				await assertBBalanceForAddress(bob, newBalanceB);
 			});
 
-			it('totalA should equal totalB', async () => {
+			it('totalA should equal totalB times alpha', async () => {
+				let totalA = await custodianContract.totalSupplyA.call();
+				let totalB = await custodianContract.totalSupplyB.call();
 				assert.isTrue(
-					isEqual(newBalanceAbob + newBalanceAalice, newBalanceBbob + newBalanceBalice),
-					'total A is not equal to total B'
+					isEqual(totalA.toNumber() / WEI_DENOMINATOR, newBalanceAbob + newBalanceAalice),
+					'totalSupplyA is wrong'
+				);
+				assert.isTrue(
+					isEqual(totalB.toNumber() / WEI_DENOMINATOR, newBalanceBbob + newBalanceBalice),
+					'totalSupplyB is wrong'
+				);
+				assert.isTrue(
+					isEqual(
+						newBalanceAbob + newBalanceAalice,
+						(newBalanceBbob + newBalanceBalice) *
+							CustodianInit.alphaInBP /
+							BP_DENOMINATOR
+					),
+					'total A is not equal to total B times alpha'
 				);
 			});
 
@@ -1597,12 +1614,12 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0

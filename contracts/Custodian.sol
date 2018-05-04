@@ -258,17 +258,16 @@ contract Custodian {
 				betaInWei = WEI_DENOMINATOR;
 				uint excessAInWei = navAInWei.sub(WEI_DENOMINATOR);
 				uint excessBInWei = navBInWei.sub(WEI_DENOMINATOR);
-				uint excessBForAInWei = excessAInWei.mul(BP_DENOMINATOR).div(alphaInBP);
 				// excessive B is enough to cover excessive A
-				//if (excessBInWei >= excessBForAInWei) {
-				uint excessBAfterAInWei = excessBInWei.sub(excessBForAInWei);
+				//if (excessBInWei >= excessAInWei) {
+				uint excessBAfterAInWei = excessBInWei.sub(excessAInWei);
 				newAFromAPerA = excessAInWei;
 				newBFromAPerA = 0;
 				uint newBFromExcessBPerB = excessBAfterAInWei.mul(betaInWei).div(bAdj);
 				newAFromBPerB = newBFromExcessBPerB.mul(alphaInBP).div(BP_DENOMINATOR);
-				newBFromBPerB = excessBForAInWei.add(newBFromExcessBPerB);			
-				// ignore this case for now as it requires a very small alpha 
-				// and very low upper limit for upward reset
+				newBFromBPerB = excessAInWei.add(newBFromExcessBPerB);			
+				// ignore this case for now as it requires a very high coupon rate 
+				// and very low upper limit for upward reset and a very high periodic limit
 				/*} else {
 					uint excessAForBInWei = excessBInWei.mul(alphaInBP).div(BP_DENOMINATOR);
 					uint excessAAfterBInWei = excessAInWei.sub(excessAForBInWei);
