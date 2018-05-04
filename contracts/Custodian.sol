@@ -64,7 +64,7 @@ contract Custodian {
 	address priceFeed1; 
 	address priceFeed2; 
 	address priceFeed3;
-	address addrAdder;
+	address poolManager;
 
 	// address pool for allocation
 	address[] public addrPool =[
@@ -165,9 +165,9 @@ contract Custodian {
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
 	
 	// admin events
-	event AddAddress(address added1, address added2, address newAdder);
+	event AddAddress(address added1, address added2, address newPoolManager);
 	event UpdateAddress(address current, address newAddr);
-	event RemoveAddress(address addr, address newAddr);
+	event RemoveAddress(address addr, address newPoolManager);
 	
 	constructor(
 		address feeAddress, 
@@ -191,9 +191,9 @@ contract Custodian {
 			addrStatus[addrPool[i]] = 1;
 		}
 		state = State.Inception;
-		addrAdder = msg.sender;
+		poolManager = msg.sender;
 		admin = msg.sender;
-		addrStatus[addrAdder] = 2;
+		addrStatus[poolManager] = 2;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		addrStatus[feeCollector] = 2;
@@ -411,7 +411,7 @@ contract Custodian {
 		sysAddr[2] = priceFeed1; 
 		sysAddr[3] = priceFeed2; 
 		sysAddr[4] = priceFeed3;
-		sysAddr[5] = addrAdder;
+		sysAddr[5] = poolManager;
 	}
 
 	function getSystemStates() public view returns (uint[20] sysState) {
@@ -747,23 +747,23 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddr(address addr1, address addr2) public only(addrAdder) returns (bool success) {
+	function addAddr(address addr1, address addr2) public only(poolManager) returns (bool success) {
 		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
 		uint index = getNowTimestamp() % addrPool.length;
-		addrAdder = addrPool[index];
+		poolManager = addrPool[index];
 		removeFromPool(index);
 		addrPool.push(addr1);
 		addrStatus[addr1] = 1;
 		addrPool.push(addr2);
 		addrStatus[addr2] = 1;
-		emit AddAddress(addr1, addr2, addrAdder);
+		emit AddAddress(addr1, addr2, poolManager);
 		return true;
 	}
 
-	function removeAddr(address addr) public only(addrAdder) returns (bool success) {
+	function removeAddr(address addr) public only(poolManager) returns (bool success) {
 		require(addrPool.length > 3 && addrStatus[addr] == 1);
 		uint index = getNowTimestamp() % addrPool.length;
-		addrAdder = addrPool[index];
+		poolManager = addrPool[index];
 		removeFromPool(index);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == addr) {
@@ -771,7 +771,7 @@ contract Custodian {
 				break;
             }
 		}
-		emit RemoveAddress(addr, addrAdder);
+		emit RemoveAddress(addr, poolManager);
 		return true;
 	}
 
