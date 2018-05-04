@@ -82,7 +82,6 @@ contract('Custodian', accounts => {
 	const bob = accounts[7];
 	const charles = accounts[8];
 	const nonDuoMember = accounts[9];
-	
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -96,7 +95,7 @@ contract('Custodian', accounts => {
 				from: creator
 			}
 		);
-		
+
 		custodianContract = await Custodian.new(
 			fc,
 			duoContract.address,
@@ -1180,7 +1179,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setCommissionRate', async () => {
 			try {
-				await custodianContract.setValue(0, 1000, {from: creator});
+				await custodianContract.setValue(0, 1000, { from: creator });
 
 				assert.isTrue(false, 'still can setMemberThresholdInWei');
 			} catch (err) {
@@ -1190,7 +1189,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setMemberThresholdInWei', async () => {
 			try {
-				await custodianContract.setValue(1, 1000, {from: creator});
+				await custodianContract.setValue(1, 1000, { from: creator });
 
 				assert.isTrue(false, 'still can setMemberThresholdInWei');
 			} catch (err) {
@@ -1200,7 +1199,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setIterationGasThreshold', async () => {
 			try {
-				await custodianContract.setValue(2, 1000, {from: creator});
+				await custodianContract.setValue(2, 1000, { from: creator });
 				assert.isTrue(false, 'still can setIterationGasThreshold');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold');
@@ -1209,7 +1208,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPreResetWaitingBlocks', async () => {
 			try {
-				await custodianContract.setValue(3, 1000, {from: creator});
+				await custodianContract.setValue(3, 1000, { from: creator });
 				assert.isTrue(false, 'still can setPreResetWaitingBlocks');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks');
@@ -1218,7 +1217,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceTolInBP', async () => {
 			try {
-				await custodianContract.setValue(4, 1000, {from: creator});
+				await custodianContract.setValue(4, 1000, { from: creator });
 
 				assert.isTrue(false, 'still can setPriceTolInBP');
 			} catch (err) {
@@ -1228,7 +1227,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceFeedTolInBP', async () => {
 			try {
-				await custodianContract.setValue(5, 1000, {from: creator});
+				await custodianContract.setValue(5, 1000, { from: creator });
 				assert.isTrue(false, 'still can setPriceFeedTolInBP');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP');
@@ -1237,7 +1236,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceFeedTimeTol', async () => {
 			try {
-				await custodianContract.setValue(6, 1000, {from: creator});
+				await custodianContract.setValue(6, 1000, { from: creator });
 				assert.isTrue(false, 'still can setPriceFeedTimeTol');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol');
@@ -1246,7 +1245,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceUpdateCoolDown', async () => {
 			try {
-				await custodianContract.setValue(7, 1000, {from: creator});
+				await custodianContract.setValue(7, 1000, { from: creator });
 				assert.isTrue(false, 'still can setPriceUpdateCoolDown');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown');
@@ -1643,7 +1642,9 @@ contract('Custodian', accounts => {
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approve(0, alice, bob, web3.utils.toWei('100'), { from: alice });
+			await custodianContract.approve(0, alice, bob, web3.utils.toWei('100'), {
+				from: alice
+			});
 		});
 
 		it('should show allowance', async () => {
@@ -1665,7 +1666,9 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transfer(0, alice, bob, web3.utils.toWei('10'), { from: alice });
+			await custodianContract.transfer(0, alice, bob, web3.utils.toWei('10'), {
+				from: alice
+			});
 		});
 
 		it('should show balance of bob equal to 10', async () => {
@@ -1769,7 +1772,9 @@ contract('Custodian', accounts => {
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approve(1, alice, bob, web3.utils.toWei('100'), { from: alice });
+			await custodianContract.approve(1, alice, bob, web3.utils.toWei('100'), {
+				from: alice
+			});
 		});
 
 		it('should show allowance', async () => {
@@ -1791,7 +1796,9 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transfer(1, alice, bob, web3.utils.toWei('10'), { from: alice });
+			await custodianContract.transfer(1, alice, bob, web3.utils.toWei('10'), {
+				from: alice
+			});
 		});
 
 		it('should show balance of bob equal to 10', async () => {
@@ -1817,7 +1824,7 @@ contract('Custodian', accounts => {
 
 		it('should transferAFrom less than allowance', async () => {
 			let success = await custodianContract.transferFrom.call(
-				1, 
+				1,
 				bob,
 				alice,
 				charles,
@@ -1832,7 +1839,7 @@ contract('Custodian', accounts => {
 		it('should not transferFrom more than allowance', async () => {
 			try {
 				await custodianContract.transferFrom.call(
-					1, 
+					1,
 					bob,
 					alice,
 					bob,
@@ -1876,7 +1883,6 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 		});
-
 
 		it('admin should be able to set commission', async () => {
 			let success = await custodianContract.setValue.call(0, 100, { from: creator });
@@ -2069,23 +2075,10 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should not add two same address', async () => {
+		it('should not add same address', async () => {
 			try {
 				await custodianContract.addAddress.call(alice, alice, { from: poolManager });
-				assert.isTrue(false, 'can add two same address');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				);
-			}
-		});
-
-		it('should not add poolManager itself', async () => {
-			try {
-				await custodianContract.addAddress.call(creator, alice, { from: poolManager });
-				assert.isTrue(false, 'can add adder itself address');
+				assert.isTrue(false, 'can add same address');
 			} catch (err) {
 				assert.equal(
 					err.message,
@@ -2108,7 +2101,7 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should add two different address and not itself', async () => {
+		it('should add two different address', async () => {
 			let addStatus = await custodianContract.addAddress.call(
 				web3.utils.toChecksumAddress(alice),
 				web3.utils.toChecksumAddress(bob),
@@ -2306,18 +2299,20 @@ contract('Custodian', accounts => {
 	});
 
 	describe('update role', () => {
-		function updateRole(
-			currentRole, roelIndex
-		) {
-			let preAddr, newAddr;
+		function updateRole(currentRole, roelIndex) {
+			let newAddr;
 			let poolSize;
-			
+
 			before(async () => {
 				// poolManager = creator;
 				await initContracts();
-				await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-					from: pf1
-				});
+				await custodianContract.startContract(
+					web3.utils.toWei(ethInitPrice + ''),
+					1524105709,
+					{
+						from: pf1
+					}
+				);
 				await custodianContract.addAddress(
 					web3.utils.toChecksumAddress(alice),
 					web3.utils.toChecksumAddress(bob),
@@ -2339,7 +2334,6 @@ contract('Custodian', accounts => {
 			});
 
 			it('pool account can assign another pool account as role', async () => {
-				preAddr = currentRole;
 				let tx = await custodianContract.updateAddress(currentRole, { from: alice });
 				assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
 				let args = tx.logs[0].args;
@@ -2347,10 +2341,10 @@ contract('Custodian', accounts => {
 				newAddr = sysAddress[roelIndex];
 
 				assert.isTrue(
-					args['current'] === preAddr && args['newAddr'] === newAddr,
+					args['current'] === currentRole && args['newAddr'] === newAddr,
 					'event args is wrong'
 				);
-				assert.isTrue(newAddr !== preAddr, 'currentRole not updated');
+				assert.isTrue(newAddr !== currentRole, 'currentRole not updated');
 			});
 
 			it('pool size should be 5 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
@@ -2375,23 +2369,23 @@ contract('Custodian', accounts => {
 				);
 			});
 
-			it('newAddr and preAddr should be marked as used', async () => {
+			it('newAddr should be marked as used', async () => {
 				let addrStatusNewPF = await custodianContract.getAddrStatus.call(newAddr);
-				let addrStatusAssigner = await custodianContract.getAddrStatus.call(preAddr);
 				assert.isTrue(
-					addrStatusNewPF.toNumber() === 2 && addrStatusAssigner.toNumber() === 2,
+					addrStatusNewPF.toNumber() === 2,
 					'assigner and newPFaddr not marked as used'
 				);
 			});
 
-			it('newAddr and preAddr should be removed from poolList', async () => {
-
+			it('newAddr should be removed from poolList', async () => {
 				for (let i = 0; i < poolSize; i++) {
 					let addr = await custodianContract.addrPool.call(i);
-					assert.isTrue(web3.utils.toChecksumAddress(addr) !== web3.utils.toChecksumAddress(preAddr), 'newPF address is still in the pool');
-					assert.isTrue(web3.utils.toChecksumAddress(addr) !== web3.utils.toChecksumAddress(newAddr), 'assigner is still in the pool');
+					assert.isTrue(
+						web3.utils.toChecksumAddress(addr) !==
+							web3.utils.toChecksumAddress(newAddr),
+						'assigner is still in the pool'
+					);
 				}
-				
 			});
 		}
 
@@ -2416,4 +2410,3 @@ contract('Custodian', accounts => {
 		});
 	});
 });
-
