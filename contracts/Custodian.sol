@@ -160,6 +160,7 @@ contract Custodian {
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
+	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 
 	// token events
@@ -170,6 +171,7 @@ contract Custodian {
 	event AddAddress(address added1, address added2, address newPoolManager);
 	event UpdateAddress(address current, address newAddr);
 	event RemoveAddress(address addr, address newPoolManager);
+	event SetValue(uint index, uint oldValue, uint newValue);
 	
 	constructor(
 		address feeAddress, 
@@ -185,8 +187,6 @@ contract Custodian {
 		uint hd,
 		uint c,
 		uint p,
-		// uint memberThreshold,
-		// uint gasThreshold,
 		uint coolDown) 
 		public 
 	{
@@ -216,8 +216,6 @@ contract Custodian {
 		limitLowerInWei = hd;
 		commissionRateInBP = c;
 		period = p;
-		// memberThresholdInWei = memberThreshold;
-		// iterationGasThreshold = gasThreshold;
 		navAInWei = 1;
 		navBInWei = 1;
 		priceUpdateCoolDown = coolDown;
@@ -497,6 +495,7 @@ contract Custodian {
 				// wait for the second price
 				firstPrice = Price(priceInWei, timeInSecond);
 				firstAddr = msg.sender;
+				emit CommitPrice(priceInWei, timeInSecond, msg.sender, 0);
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
@@ -519,6 +518,7 @@ contract Custodian {
 						// wait for the third price
 						secondPrice = Price(priceInWei, timeInSecond);
 						secondAddr = msg.sender;
+						emit CommitPrice(priceInWei, timeInSecond, msg.sender, 1);
 						numOfPrices++;
 					} 
 				}
@@ -722,32 +722,38 @@ contract Custodian {
 		return true;
 	}
 
-	function setValue(uint idx, uint newValue) 
-		public 
-		only(admin) 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
+	function setValue(uint idx, uint newValue) public only(admin) returns (bool success) {
+		require(state == State.Inception || state == State.Trading);
+		uint oldValue;
 		if (idx == 0) {
+			oldValue = commissionRateInBP;
 			commissionRateInBP = newValue;
 		} else if (idx == 1) {
+			oldValue = memberThresholdInWei;
 			memberThresholdInWei = newValue;
 		} else if (idx == 2) {
+			oldValue = iterationGasThreshold;
 			iterationGasThreshold = newValue;
 		} else if (idx == 3) {
+			oldValue = preResetWaitingBlocks;
 			preResetWaitingBlocks = newValue;
 		} else if (idx == 4) {
+			oldValue = priceTolInBP;
 			priceTolInBP = newValue;
 		} else if (idx == 5) {
+			oldValue = priceFeedTolInBP;
 			priceFeedTolInBP = newValue;
 		} else if (idx == 6) {
+			oldValue = priceFeedTimeTol;
 			priceFeedTimeTol = newValue;
 		} else if (idx == 7) {
+			oldValue = priceUpdateCoolDown;
 			priceUpdateCoolDown = newValue;
 		} else {
 			revert();
 		}
-		
+
+		emit SetValue(idx, oldValue, newValue);
 		return true;
 	}
 
