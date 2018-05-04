@@ -86,7 +86,7 @@ contract('Custodian', accounts => {
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
 
-	const initContracts = async () => {
+	const initContracts = async (alphaInBP = 0) => {
 		duoContract = await DUO.new(
 			web3.utils.toWei(DuoInit.initSupply),
 			DuoInit.tokenName,
@@ -103,7 +103,7 @@ contract('Custodian', accounts => {
 			pf2,
 			pf3,
 			pm,
-			CustodianInit.alphaInBP,
+			alphaInBP ? alphaInBP : CustodianInit.alphaInBP,
 			web3.utils.toWei(CustodianInit.couponRate),
 			web3.utils.toWei(CustodianInit.hp),
 			web3.utils.toWei(CustodianInit.hu),
@@ -1271,8 +1271,8 @@ contract('Custodian', accounts => {
 	});
 
 	describe('resets', () => {
-		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, beta) {
-			let alpha = CustodianInit.alphaInBP / BP_DENOMINATOR;
+		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, beta, alphaInBP = 0) {
+			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
 			let excessA = navA - 1;
 			let excessB = navB - 1;
 			//if (excessB >= excessBForA) {
@@ -1292,20 +1292,34 @@ contract('Custodian', accounts => {
 			}*/
 		}
 
-		function downwardReset(prevBalanceA, prevBalanceB, currentNavA, currentNavB, beta) {
-			let newBFromA =
-				(currentNavA - currentNavB) / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * beta;
-			let newAFromA = newBFromA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+		function downwardReset(
+			prevBalanceA,
+			prevBalanceB,
+			currentNavA,
+			currentNavB,
+			beta,
+			alphaInBP = 0
+		) {
+			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let newBFromA = (currentNavA - currentNavB) / (1 + alpha) * beta;
+			let newAFromA = newBFromA * alpha;
 
 			let newBalanceA = prevBalanceA * (currentNavB + newAFromA);
 			let newBalanceB = prevBalanceB * currentNavB + prevBalanceA * newBFromA;
 			return [newBalanceA, newBalanceB];
 		}
 
-		function periodicReset(prevBalanceA, prevBalanceB, currentNavA, currentNavB, beta) {
-			let newBFromA =
-				(currentNavA - 1) / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * beta;
-			let newAFromA = newBFromA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+		function periodicReset(
+			prevBalanceA,
+			prevBalanceB,
+			currentNavA,
+			currentNavB,
+			beta,
+			alphaInBP = 0
+		) {
+			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let newBFromA = (currentNavA - 1) / (1 + alpha) * beta;
+			let newAFromA = newBFromA * alpha;
 
 			let newBalanceA = prevBalanceA * (1 + newAFromA);
 			let newBalanceB = prevBalanceB * 1 + prevBalanceA * newBFromA;
@@ -1332,16 +1346,12 @@ contract('Custodian', accounts => {
 				);
 		}
 
-		function updateBeta(prevBeta, lastPrice, lastResetPrice, currentNavA) {
+		function updateBeta(prevBeta, lastPrice, lastResetPrice, currentNavA, alphaInBP = 0) {
+			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
 			return (
-				(1 + CustodianInit.alphaInBP / BP_DENOMINATOR) *
+				(1 + alpha) *
 				lastPrice /
-				((1 + CustodianInit.alphaInBP / BP_DENOMINATOR) * lastPrice -
-					lastResetPrice *
-						CustodianInit.alphaInBP /
-						BP_DENOMINATOR *
-						prevBeta *
-						(currentNavA - 1))
+				((1 + alpha) * lastPrice - lastResetPrice * alpha * prevBeta * (currentNavA - 1))
 			);
 		}
 
@@ -1351,7 +1361,8 @@ contract('Custodian', accounts => {
 			resetState,
 			resetGas,
 			isPeriodicReset,
-			transferABRequired
+			transferABRequired,
+			alphaInBP = 0
 		) {
 			let prevBalanceAalice, prevBalanceBalice;
 			let prevBalanceAbob, prevBalanceBbob;
@@ -1367,7 +1378,7 @@ contract('Custodian', accounts => {
 				: 1;
 
 			before(async () => {
-				await initContracts();
+				await initContracts(alphaInBP);
 				await custodianContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
 					1524105709,
@@ -1458,7 +1469,7 @@ contract('Custodian', accounts => {
 
 			it('should update beta correctly', () => {
 				if (isPeriodicReset) {
-					let newBeta = updateBeta(prevBeta, price, Number(ethInitPrice), currentNavA);
+					let newBeta = updateBeta(prevBeta, price, Number(ethInitPrice), currentNavA, alphaInBP);
 					return assert.isTrue(isEqual(beta, newBeta), 'beta is not updated correctly');
 				} else {
 					return assert.equal(beta, 1, 'beta is not reset to 1');
@@ -1499,7 +1510,7 @@ contract('Custodian', accounts => {
 
 			it('should process reset for only one user', async () => {
 				let tx = await custodianContract.startReset({ gas: resetGas });
-				console.log(tx);
+				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'not only one user processed'
@@ -1515,7 +1526,8 @@ contract('Custodian', accounts => {
 					prevBalanceBalice,
 					currentNavA,
 					currentNavB,
-					beta
+					beta,
+					alphaInBP
 				);
 				newBalanceAalice = newBalanceA;
 				newBalanceBalice = newBalanceB;
@@ -1536,12 +1548,13 @@ contract('Custodian', accounts => {
 					prevBalanceBbob,
 					currentNavA,
 					currentNavB,
-					beta
+					beta,
+					alphaInBP
 				);
 				newBalanceAbob = newBalanceA;
 				newBalanceBbob = newBalanceB;
 				let tx = await custodianContract.startReset({ gas: resetGas });
-				console.log(tx);
+				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_TRADING,
 					'reset not completed'
@@ -1568,7 +1581,7 @@ contract('Custodian', accounts => {
 					isEqual(
 						newBalanceAbob + newBalanceAalice,
 						(newBalanceBbob + newBalanceBalice) *
-							CustodianInit.alphaInBP /
+							(alphaInBP || CustodianInit.alphaInBP) /
 							BP_DENOMINATOR
 					),
 					'total A is not equal to total B times alpha'
@@ -1613,13 +1626,53 @@ contract('Custodian', accounts => {
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('upward reset case 3', () => {
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false, 20000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('upward reset case 4', () => {
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true, 20000);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('upward reset case 5', () => {
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false, 5000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('upward reset case 6', () => {
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true, 5000);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('downward reset case 3', () => {
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false, 20000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('downward reset case 4', () => {
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true, 20000);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('downward reset case 5', () => {
+			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false, 5000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('downward reset case 6', () => {
+			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true, 5000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
@@ -1630,6 +1683,26 @@ contract('Custodian', accounts => {
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
 			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('periodic reset case 3', () => {
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false, 20000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('periodic reset case 4', () => {
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true, 20000);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('periodic reset case 5', () => {
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false, 5000);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('periodic reset case 6', () => {
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true, 5000);
 		});
 	});
 
