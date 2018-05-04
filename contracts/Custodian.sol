@@ -138,8 +138,8 @@ contract Custodian {
 		_;
 	}
 
-	modifier among(address addr1, address addr2, address addr3) {
-		require(msg.sender == addr1 || msg.sender == addr2 || msg.sender == addr3);
+	modifier isPriceFeed() {
+		require(msg.sender == priceFeed1 || msg.sender == priceFeed2 || msg.sender == priceFeed3);
 		_;
 	}
 
@@ -464,7 +464,7 @@ contract Custodian {
 		uint timeInSecond) 
 		public 
 		inState(State.Inception) 
-		among(priceFeed1, priceFeed2, priceFeed3) 
+		isPriceFeed() 
 		returns (bool success) 
 	{
 		require(timeInSecond <= getNowTimestamp());
@@ -479,7 +479,7 @@ contract Custodian {
 	function commitPrice(uint priceInWei, uint timeInSecond) 
 		public 
 		inState(State.Trading) 
-		among(priceFeed1, priceFeed2, priceFeed3) 
+		isPriceFeed()
 		returns (bool success)
 	{	
 		require(timeInSecond <= getNowTimestamp());
