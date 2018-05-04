@@ -63,10 +63,10 @@ contract Custodian {
 	address addrAdder;
 
 	address[] public addrPool =[
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7331,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7332,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7333,
-	    0xca35b7d915458ef540ade6068dfe2f44e8fa7334
+	    0x1952E39f7Bc9E00FAffcEa0305E09c065DBd8eFd,
+	    0x51a123239894F0C7175F9c0e9e9519d9D74194f6,
+	    0x15421ef85E1f4ED8e20Cdf35894caa3d2fb43344,
+		0x11B73358799D057D195fCeC8B93C70E54E39da27
 	];
 	mapping(address => uint) addrStatus;
 
