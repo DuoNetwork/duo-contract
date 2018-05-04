@@ -2,37 +2,41 @@ pragma solidity ^0.4.23;
 import { DUO } from "./DUO.sol";
 
 library SafeMath {
-	function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-		uint256 c = a * b;
+	function mul(uint a, uint b) internal pure returns (uint) {
+		uint c = a * b;
 		assert(a == 0 || c / a == b);
 		return c;
 	}
 
-	function div(uint256 a, uint256 b) internal pure returns (uint256) {
+	function div(uint a, uint b) internal pure returns (uint) {
 		// assert(b > 0); // Solidity automatically throws when dividing by 0
-		uint256 c = a / b;
+		uint c = a / b;
 		// assert(a == b * c + a % b); // There is no case in which this doesn't hold
 		return c;
 	}
 
-	function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+	function sub(uint a, uint b) internal pure returns (uint) {
 		assert(b <= a);
 		return a - b;
 	}
 
-	function add(uint256 a, uint256 b) internal pure returns (uint256) {
-		uint256 c = a + b;
+	function add(uint a, uint b) internal pure returns (uint) {
+		uint c = a + b;
 		assert(c >= a);
 		return c;
 	}
 
-	function gt(uint x, uint y) internal pure returns(bytes1) {
-		bytes1 b;
-		b = 0x0;
-		if (x > y) {
-			b = 0x1;
+	function diff(uint a, uint b) internal pure returns (uint) {
+		return a > b ? sub(a, b) : sub(b, a);
+	}
+
+	function gt(uint a, uint b) internal pure returns(bytes1) {
+		bytes1 c;
+		c = 0x0;
+		if (a > b) {
+			c = 0x1;
 		}
-		return b;
+		return c;
 	}
 }
 
@@ -62,6 +66,7 @@ contract Custodian {
 	address priceFeed3;
 	address addrAdder;
 
+	// address pool for allocation
 	address[] public addrPool =[
 	    0x1952E39f7Bc9E00FAffcEa0305E09c065DBd8eFd,
 	    0x51a123239894F0C7175F9c0e9e9519d9D74194f6,
@@ -71,10 +76,9 @@ contract Custodian {
 	mapping(address => uint) addrStatus;
 
 	uint constant decimals = 18;
+	// balance and allowance for A and B
 	mapping(address => uint)[2] public balanceOf;
-	//mapping(address => uint)[] public balanceBOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
-	//mapping (address => mapping (address => uint)) public allowanceB;
 	address[] public users;
 	mapping (address => bool) existingUsers;
 	mapping(address => uint) public ethPendingWithdrawal;
@@ -150,13 +154,17 @@ contract Custodian {
 		_;
 	}
 
+	// state events
 	event StartTrading();
 	event StartPreReset();
 	event StartReset();
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 
+	// token events
 	event Transfer(address indexed from, address indexed to, uint256 value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
-	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
+	
+	// admin events
 	event AddAddress(address added1, address added2, address newAdder);
 	event UpdateAddress(address current, address newAddr);
 	event RemoveAddress(address addr, address newAddr);
@@ -212,43 +220,17 @@ contract Custodian {
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
-	function startContract(
-		uint priceInWei, 
-		uint timeInSecond) 
-		public 
-		inState(State.Inception) 
-		among(priceFeed1, priceFeed2, priceFeed3) 
-		returns (bool success) 
-	{
-		require(timeInSecond <= getNowTimestamp());
-		lastPrice.timeInSecond = timeInSecond;
-		lastPrice.priceInWei = priceInWei;
-		resetPrice.timeInSecond = timeInSecond;
-		resetPrice.priceInWei = priceInWei;
-		state = State.Trading;
-		return true;
-	}
-	
-	function getNowTimestamp() internal view returns (uint) {
-		return now;
-	}
-	
-	function checkNewUser(address user) internal {
-		if (!existingUsers[user]) {
-			users.push(user);
-			existingUsers[user] = true;
-			balanceOf[0][user] = 0;
-			balanceOf[1][user] = 0;
-		}
-	}
-
+	// start of public functions
 	function calculateNav(
 		uint priceInWei, 
 		uint timeInSecond, 
 		uint resetPriceInWei, 
 		uint resetTimeInSecond,
 		uint bInWei) 
-	public view returns (uint, uint) {
+		public 
+		view 
+		returns (uint, uint) 
+	{
 		uint numOfPeriods = timeInSecond.sub(resetTimeInSecond).div(period);
 		uint navParent = priceInWei.mul(WEI_DENOMINATOR).div(resetPriceInWei);
 		navParent = navParent
@@ -423,35 +405,77 @@ contract Custodian {
 		}
 	}
 
-	function acceptPrice(uint priceInWei, uint timeInSecond) internal {
-		lastPrice.priceInWei = priceInWei;
+	function getSystemAddresses() public view returns (address[6] sysAddr) {
+		sysAddr[0] = admin;
+		sysAddr[1] = feeCollector;
+		sysAddr[2] = priceFeed1; 
+		sysAddr[3] = priceFeed2; 
+		sysAddr[4] = priceFeed3;
+		sysAddr[5] = addrAdder;
+	}
+
+	function getSystemStates() public view returns (uint[20] sysState) {
+		sysState[0] = alphaInBP;
+		sysState[1] = betaInWei;
+		sysState[2] = feeAccumulatedInWei;
+		sysState[3] = periodCouponInWei; 
+		sysState[4] = limitPeriodicInWei; 
+		sysState[5] = limitUpperInWei; 
+		sysState[6] = limitLowerInWei;
+		sysState[7] = commissionRateInBP;
+		sysState[8] = period;
+		sysState[9] = iterationGasThreshold;
+		sysState[10] = memberThresholdInWei;
+		sysState[11] = preResetWaitingBlocks;
+		sysState[12] = priceTolInBP; 
+		sysState[13] = priceFeedTolInBP;
+		sysState[14] = priceFeedTimeTol;
+		sysState[15] = priceUpdateCoolDown;
+		sysState[16] = numOfPrices;
+		sysState[17] = nextResetAddrIndex;
+		sysState[18] = users.length;
+		sysState[19] = addrPool.length;
+	}
+
+	function getStagingPrices() 
+		public 
+		view 
+		returns (
+			address addr1, 
+			uint px1, 
+			uint ts1, 
+			address addr2, 
+			uint px2, 
+			uint ts2) 
+	{
+		addr1 = firstAddr;
+		addr2 = secondAddr;
+		px1 = firstPrice.priceInWei;
+		ts1 = firstPrice.timeInSecond;
+		px2 = secondPrice.priceInWei;
+		ts2 = secondPrice.timeInSecond;
+	}
+
+	// end of public functions
+	// start of price feed functions
+
+	function startContract(
+		uint priceInWei, 
+		uint timeInSecond) 
+		public 
+		inState(State.Inception) 
+		among(priceFeed1, priceFeed2, priceFeed3) 
+		returns (bool success) 
+	{
+		require(timeInSecond <= getNowTimestamp());
 		lastPrice.timeInSecond = timeInSecond;
-		numOfPrices = 0;
-		(navAInWei, navBInWei) = calculateNav(
-			lastPrice.priceInWei, 
-			lastPrice.timeInSecond, 
-			resetPrice.priceInWei, 
-			resetPrice.timeInSecond, 
-			betaInWei);
-		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
-			state = State.PreReset;
-			lastPreResetBlockNo = block.number;
-			emit StartPreReset();
-		} 
-		emit AcceptPrice(priceInWei, timeInSecond);
+		lastPrice.priceInWei = priceInWei;
+		resetPrice.timeInSecond = timeInSecond;
+		resetPrice.priceInWei = priceInWei;
+		state = State.Trading;
+		return true;
 	}
 
-	function getMedian(uint a, uint b, uint c) internal pure returns (uint){
-		if (a.gt(b) ^ c.gt(a) == 0x0) {
-			return a;
-		} else if(b.gt(a) ^ c.gt(b) == 0x0) {
-			return b;
-		} else {
-			return c;
-		}
-	}
-
-	//PriceFeed
 	function commitPrice(uint priceInWei, uint timeInSecond) 
 		public 
 		inState(State.Trading) 
@@ -462,7 +486,7 @@ contract Custodian {
 		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
-			priceDiff = getPriceDiff(priceInWei, lastPrice.priceInWei);
+			priceDiff = priceInWei.diff(lastPrice.priceInWei);
 			if (priceDiff.mul(BP_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
 				acceptPrice(priceInWei, timeInSecond);
 			} else {
@@ -484,7 +508,7 @@ contract Custodian {
 					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
 					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
 				} else {
-					priceDiff = getPriceDiff(priceInWei, firstPrice.priceInWei);
+					priceDiff = priceInWei.diff(firstPrice.priceInWei);
 					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
 						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
 					} else {
@@ -527,18 +551,65 @@ contract Custodian {
 		return true;
 	}
 
-	function getPriceDiff(uint price1InWei, uint price2InWei) 
-		internal 
-		pure 
-		returns(uint) 
-	{
-		return price1InWei > price2InWei 
-			? price1InWei.sub(price2InWei) 
-			: price2InWei.sub(price1InWei);
+	function acceptPrice(uint priceInWei, uint timeInSecond) internal {
+		lastPrice.priceInWei = priceInWei;
+		lastPrice.timeInSecond = timeInSecond;
+		numOfPrices = 0;
+		(navAInWei, navBInWei) = calculateNav(
+			lastPrice.priceInWei, 
+			lastPrice.timeInSecond, 
+			resetPrice.priceInWei, 
+			resetPrice.timeInSecond, 
+			betaInWei);
+		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
+			state = State.PreReset;
+			lastPreResetBlockNo = block.number;
+			emit StartPreReset();
+		} 
+		emit AcceptPrice(priceInWei, timeInSecond);
 	}
 
-	function getFee(uint ethInWei) internal constant returns(uint) {
-		return ethInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+	function getMedian(uint a, uint b, uint c) internal pure returns (uint) {
+		if (a.gt(b) ^ c.gt(a) == 0x0) {
+			return a;
+		} else if(b.gt(a) ^ c.gt(b) == 0x0) {
+			return b;
+		} else {
+			return c;
+		}
+	}
+
+	// end of price feed functions	
+	// start of DUO member functions
+
+	function create() 
+		public 
+		payable 
+		inState(State.Trading) 
+		isDuoMember() 
+		returns (bool success) 
+	{
+		uint feeInWei = getFee(msg.value);
+		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+		uint numeritor = msg.value
+						.sub(feeInWei)
+						.mul(resetPrice.priceInWei)
+						.mul(betaInWei)
+						.mul(BP_DENOMINATOR
+		);
+		uint denominator = WEI_DENOMINATOR
+						.mul(WEI_DENOMINATOR)
+						.mul(alphaInBP
+							.add(BP_DENOMINATOR)
+		);
+		uint tokenValueB = numeritor.div(denominator);
+		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
+		checkNewUser(msg.sender);
+		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].add(tokenValueA);
+		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].add(tokenValueB);
+		totalSupplyA = totalSupplyA.add(tokenValueA);
+		totalSupplyB = totalSupplyB.add(tokenValueB);
+		return true;
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB) 
@@ -574,41 +645,105 @@ contract Custodian {
 		msg.sender.transfer(amtEthInWei);
 		return true;
 	}
+	
+	function getFee(uint ethInWei) internal constant returns(uint) {
+		return ethInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+	}
 
-	function collectFee(uint amountInWei) public only(feeCollector) inState(State.Trading) returns (bool success) {
+	// end of DUO member functions
+	// start of token functions
+	
+	function transfer(uint index, address _from, address _to, uint _tokens) 
+		public 
+		inState(State.Trading)
+		returns (bool success) 
+	{
+		require(index == 0 || index == 1);
+		// Prevent transfer to 0x0 address. Use burn() instead
+		require(_to != 0x0);
+		// Check if the sender has enough
+		require(balanceOf[index][_from] >= _tokens);
+		// Check for overflows
+		require(balanceOf[index][_to].add(_tokens) > balanceOf[index][_to]);
+
+		// Save this for an assertion in the future
+		uint previousBalances = balanceOf[index][_from].add(balanceOf[index][_to]);
+		//check whether _to is new. if new then add
+		checkNewUser(_to);
+		// Subtract from the sender
+		balanceOf[index][_from] = balanceOf[index][_from].sub(_tokens);
+		// Add the same to the recipient
+		balanceOf[index][_to] = balanceOf[index][_to].add(_tokens);
+		
+		emit Transfer(_from, _to, _tokens, index);
+		// Asserts are used to use static analysis to find bugs in your code. They should never fail
+		assert(balanceOf[index][_from].add(balanceOf[index][_to]) == previousBalances);
+		return true;
+	}
+
+	function approve(uint index, address _sender, address _spender, uint _tokens) 
+		public 
+		returns (bool success) 
+	{
+		require(index == 0 || index == 1);
+		allowance[index][_sender][_spender] = _tokens;
+		emit Approval(_sender, _spender, _tokens, index);
+		return true;
+	}
+	
+	function transferFrom(uint index, address _spender, address _from, address _to, uint _tokens) 
+		public 
+		inState(State.Trading)
+		returns (bool success) 
+	{
+		require(index == 0 || index == 1);
+		require(_tokens <= allowance[index][_from][_spender]);	 // Check allowance
+		allowance[index][_from][_spender] = allowance[index][_from][_spender].sub(_tokens);
+		transfer(index, _from, _to, _tokens);
+		return true;
+	}
+
+	// end of token functions
+	// start of admin functions
+
+	function collectFee(uint amountInWei) 
+		public 
+		only(feeCollector) 
+		inState(State.Trading) 
+		returns (bool success) 
+	{
 		require(amountInWei > 0);
 		require(amountInWei <= feeAccumulatedInWei);
 		feeCollector.transfer(amountInWei);
 		return true;
 	}
 
-	function create() 
+	function setValue(uint idx, uint newValue) 
 		public 
-		payable 
+		only(admin) 
 		inState(State.Trading) 
-		isDuoMember() 
 		returns (bool success) 
 	{
-		uint feeInWei = getFee(msg.value);
-		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		uint numeritor = msg.value
-						.sub(feeInWei)
-						.mul(resetPrice.priceInWei)
-						.mul(betaInWei)
-						.mul(BP_DENOMINATOR
-		);
-		uint denominator = WEI_DENOMINATOR
-						.mul(WEI_DENOMINATOR)
-						.mul(alphaInBP
-							.add(BP_DENOMINATOR)
-		);
-		uint tokenValueB = numeritor.div(denominator);
-		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
-		checkNewUser(msg.sender);
-		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].add(tokenValueA);
-		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].add(tokenValueB);
-		totalSupplyA = totalSupplyA.add(tokenValueA);
-		totalSupplyB = totalSupplyB.add(tokenValueB);
+		if (idx == 0) {
+			commissionRateInBP = newValue;
+		} else if (idx == 1) {
+			memberThresholdInWei = newValue;
+		} else if (idx == 2) {
+			iterationGasThreshold = newValue;
+		} else if (idx == 3) {
+			preResetWaitingBlocks = newValue;
+		} else if (idx == 4) {
+			priceTolInBP = newValue;
+		} else if (idx == 5) {
+			priceFeedTolInBP = newValue;
+		} else if (idx == 6) {
+			priceFeedTimeTol = newValue;
+		} else if (idx == 7) {
+			priceUpdateCoolDown = newValue;
+		} else {
+			revert();
+		}
+		
 		return true;
 	}
 
@@ -676,136 +811,21 @@ contract Custodian {
 
 		emit UpdateAddress(current, addr);
 	}
-	
-	function transfer(uint index, address _from, address _to, uint _tokens) 
-		public 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		// Prevent transfer to 0x0 address. Use burn() instead
-		require(_to != 0x0);
-		// Check if the sender has enough
-		require(balanceOf[index][_from] >= _tokens);
-		// Check for overflows
-		require(balanceOf[index][_to].add(_tokens) > balanceOf[index][_to]);
 
-		// Save this for an assertion in the future
-		uint previousBalances = balanceOf[index][_from].add(balanceOf[index][_to]);
-		//check whether _to is new. if new then add
-		checkNewUser(_to);
-		// Subtract from the sender
-		balanceOf[index][_from] = balanceOf[index][_from].sub(_tokens);
-		// Add the same to the recipient
-		balanceOf[index][_to] = balanceOf[index][_to].add(_tokens);
-		
-		emit Transfer(_from, _to, _tokens, index);
-		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balanceOf[index][_from].add(balanceOf[index][_to]) == previousBalances);
-		return true;
-	}
+	// end of admin functions
+	// start of internal utility functions
 
-	function approve(uint index, address _sender, address _spender, uint _tokens) 
-		public 
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		allowance[index][_sender][_spender] = _tokens;
-		emit Approval(_sender, _spender, _tokens, index);
-		return true;
+	function getNowTimestamp() internal view returns (uint) {
+		return now;
 	}
 	
-	function transferFrom(uint index, address _spender, address _from, address _to, uint _tokens) 
-		public 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		require(_tokens <= allowance[index][_from][_spender]);	 // Check allowance
-		allowance[index][_from][_spender] = allowance[index][_from][_spender].sub(_tokens);
-		transfer(index, _from, _to, _tokens);
-		return true;
-	}
-
-	//admin function
-	function setValue(uint idx, uint newValue) 
-		public 
-		only(admin) 
-		inState(State.Trading) 
-		returns (
-			bool success
-			) 
-	{
-		if (idx == 0) {
-			commissionRateInBP = newValue;
-		} else if (idx == 1) {
-			memberThresholdInWei = newValue;
-		} else if (idx == 2) {
-			iterationGasThreshold = newValue;
-		} else if (idx == 3) {
-			preResetWaitingBlocks = newValue;
-		} else if (idx == 4) {
-			priceTolInBP = newValue;
-		} else if (idx == 5) {
-			priceFeedTolInBP = newValue;
-		} else if (idx == 6) {
-			priceFeedTimeTol = newValue;
-		} else if (idx == 7) {
-			priceUpdateCoolDown = newValue;
-		} else {
-			revert();
+	function checkNewUser(address user) internal {
+		if (!existingUsers[user]) {
+			users.push(user);
+			existingUsers[user] = true;
+			balanceOf[0][user] = 0;
+			balanceOf[1][user] = 0;
 		}
-		
-		return true;
 	}
-
-	function getSystemAddresses() public view returns (address[6] sysAddr) {
-		sysAddr[0] = admin;
-		sysAddr[1] = feeCollector;
-		sysAddr[2] = priceFeed1; 
-		sysAddr[3] = priceFeed2; 
-		sysAddr[4] = priceFeed3;
-		sysAddr[5] = addrAdder;
-	}
-
-	function getSystemStates() public view returns (uint[20] sysState) {
-		sysState[0] = alphaInBP;
-		sysState[1] = betaInWei;
-		sysState[2] = feeAccumulatedInWei;
-		sysState[3] = periodCouponInWei; 
-		sysState[4] = limitPeriodicInWei; 
-		sysState[5] = limitUpperInWei; 
-		sysState[6] = limitLowerInWei;
-		sysState[7] = commissionRateInBP;
-		sysState[8] = period;
-		sysState[9] = iterationGasThreshold;
-		sysState[10] = memberThresholdInWei;
-		sysState[11] = preResetWaitingBlocks;
-		sysState[12] = priceTolInBP; 
-		sysState[13] = priceFeedTolInBP;
-		sysState[14] = priceFeedTimeTol;
-		sysState[15] = priceUpdateCoolDown;
-		sysState[16] = numOfPrices;
-		sysState[17] = nextResetAddrIndex;
-		sysState[18] = users.length;
-		sysState[19] = addrPool.length;
-	}
-
-	function getStagingPrices() 
-		public 
-		view 
-		returns (
-			address addr1, 
-			uint px1, 
-			uint ts1, 
-			address addr2, 
-			uint px2, 
-			uint ts2) {
-		addr1 = firstAddr;
-		addr2 = secondAddr;
-		px1 = firstPrice.priceInWei;
-		ts1 = firstPrice.timeInSecond;
-		px2 = secondPrice.priceInWei;
-		ts2 = secondPrice.timeInSecond;
-	}
+	// end of internal utility functions
 }
