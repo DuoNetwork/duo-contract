@@ -14,7 +14,7 @@ const TokenBInit = InitParas['TokenB'];
 
 module.exports = async (deployer, network, accounts) => {
 	let CustodianToDeploy = network !== 'development' ? Custodian : CustodianMock;
-	let creator, feeAdd, pf1, pf2, pf3;
+	let creator, feeAdd, pf1, pf2, pf3, poolManager;
 
 	if (network == 'kovan') {
 		creator = accounts[3];
@@ -22,13 +22,15 @@ module.exports = async (deployer, network, accounts) => {
 		pf1 = accounts[0];
 		pf2 = accounts[1];
 		pf3 = accounts[2];
+		
 	}
 	if (network == 'development') {
 		creator = accounts[0];
-		feeAdd = accounts[0];
-		pf1 = accounts[0];
-		pf2 = accounts[1];
-		pf3 = accounts[2];
+		pf1 = accounts[1];
+		pf2 = accounts[2];
+		pf3 = accounts[3];
+		feeAdd = accounts[4];
+		poolManager = accounts[5];
 	}
 
 	await deployer.deploy(
@@ -47,6 +49,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf1,
 		pf2,
 		pf3,
+		poolManager,
 		CustodianInit.alphaInBP,
 		web3.utils.toWei(CustodianInit.couponRate),
 		web3.utils.toWei(CustodianInit.hp),
@@ -54,8 +57,8 @@ module.exports = async (deployer, network, accounts) => {
 		web3.utils.toWei(CustodianInit.hd),
 		CustodianInit.commissionRateInBP,
 		CustodianInit.period,
-		web3.utils.toWei(CustodianInit.memberThreshold),
-		CustodianInit.gasThreshhold,
+		// web3.utils.toWei(CustodianInit.memberThreshold),
+		// CustodianInit.gasThreshhold,
 		CustodianInit.coolDown,
 		{ from: creator }
 	);

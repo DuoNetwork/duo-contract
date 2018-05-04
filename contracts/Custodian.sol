@@ -68,10 +68,12 @@ contract Custodian {
 
 	// address pool for allocation
 	address[] public addrPool =[
-	    0x1952E39f7Bc9E00FAffcEa0305E09c065DBd8eFd,
-	    0x51a123239894F0C7175F9c0e9e9519d9D74194f6,
-	    0x15421ef85E1f4ED8e20Cdf35894caa3d2fb43344,
-		0x11B73358799D057D195fCeC8B93C70E54E39da27
+		0x1952E39f7Bc9E00FAffcEa0305E09c065DBd8eFd,
+		0x51a123239894F0C7175F9c0e9e9519d9D74194f6,
+		0x15421ef85E1f4ED8e20Cdf35894caa3d2fb43344,
+		0x11B73358799D057D195fCeC8B93C70E54E39da27,
+		0xaC5E46B58417a111aAa2Dfd972e86C87C55d1c83,
+		0xB7c034Cad16Adbcb3aD10bdAd9160220Cd0aa8BD
 	];
 	mapping(address => uint) addrStatus;
 
@@ -98,8 +100,8 @@ contract Custodian {
 	uint limitLowerInWei;
 	uint commissionRateInBP;
 	uint period;
-	uint iterationGasThreshold;
-	uint memberThresholdInWei;
+	uint iterationGasThreshold = 60000;
+	uint memberThresholdInWei = 10;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
@@ -175,6 +177,7 @@ contract Custodian {
 		address pf1,
 		address pf2,
 		address pf3,
+		address poolMng,
 		uint alpha,
 		uint r,
 		uint hp,
@@ -182,8 +185,8 @@ contract Custodian {
 		uint hd,
 		uint c,
 		uint p,
-		uint memberThreshold,
-		uint gasThreshold,
+		// uint memberThreshold,
+		// uint gasThreshold,
 		uint coolDown) 
 		public 
 	{
@@ -191,9 +194,10 @@ contract Custodian {
 			addrStatus[addrPool[i]] = 1;
 		}
 		state = State.Inception;
-		poolManager = msg.sender;
-		admin = msg.sender;
+		poolManager = poolMng;
 		addrStatus[poolManager] = 2;
+		admin = msg.sender;
+		addrStatus[admin] = 2;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		addrStatus[feeCollector] = 2;
@@ -212,8 +216,8 @@ contract Custodian {
 		limitLowerInWei = hd;
 		commissionRateInBP = c;
 		period = p;
-		memberThresholdInWei = memberThreshold;
-		iterationGasThreshold = gasThreshold;
+		// memberThresholdInWei = memberThreshold;
+		// iterationGasThreshold = gasThreshold;
 		navAInWei = 1;
 		navBInWei = 1;
 		priceUpdateCoolDown = coolDown;
@@ -749,7 +753,7 @@ contract Custodian {
 
 	function addAddr(address addr1, address addr2) public only(poolManager) returns (bool success) {
 		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
-		uint index = getNowTimestamp() % addrPool.length;
+		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
 		addrPool.push(addr1);
@@ -762,7 +766,7 @@ contract Custodian {
 
 	function removeAddr(address addr) public only(poolManager) returns (bool success) {
 		require(addrPool.length > 3 && addrStatus[addr] == 1);
-		uint index = getNowTimestamp() % addrPool.length;
+		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
 		for (uint i = 0; i < addrPool.length; i++) {
@@ -775,14 +779,6 @@ contract Custodian {
 		return true;
 	}
 
-	function removeFromPool(uint idx) internal  {
-		addrStatus[addrPool[idx]] = 2;
-		if (idx < addrPool.length - 1)
-			addrPool[idx] = addrPool[addrPool.length-1];
-		delete addrPool[addrPool.length - 1];
-		addrPool.length--;
-	}
-
 	function updateAddr(address current) public inAddrPool() returns (address addr) {
 		require(addrPool.length > 3);
 		for (uint i = 0; i < addrPool.length; i++) {
@@ -791,7 +787,7 @@ contract Custodian {
 				break;
             }
 		}
-		uint index = getNowTimestamp() % addrPool.length;
+		uint index = getNextAddrIndex();
 		addr = addrPool[index];
 		removeFromPool(index);
 
@@ -810,6 +806,18 @@ contract Custodian {
 		}
 
 		emit UpdateAddress(current, addr);
+	}
+
+	function removeFromPool(uint idx) internal  {
+		addrStatus[addrPool[idx]] = 2;
+		if (idx < addrPool.length - 1)
+			addrPool[idx] = addrPool[addrPool.length-1];
+		delete addrPool[addrPool.length - 1];
+		addrPool.length--;
+	}
+
+	function getNextAddrIndex() internal view returns (uint) {
+		return getNowTimestamp() % addrPool.length;
 	}
 
 	// end of admin functions
