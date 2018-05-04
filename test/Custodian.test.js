@@ -5,7 +5,7 @@ const web3 = require('web3');
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
-//const PoolInit = InitParas['Pool'];
+const PoolInit = InitParas['Pool'];
 
 const ACCEPT_PRICE = 'AcceptPrice';
 const START_PRE_RESET = 'StartPreReset';
@@ -24,7 +24,7 @@ const IDX_FEE_COLLECTOR = 1;
 const IDX_PRICEFEED_1 = 2;
 const IDX_PRICEFEED_2 = 3;
 const IDX_PRICEFEED_3 = 4;
-const IDX_ADDR_ADDER = 5;
+const IDX_POOL_MANAGER = 5;
 
 // const alphaInBP = 0;
 const IDX_BETA_IN_WEI = 1;
@@ -73,14 +73,16 @@ contract('Custodian', accounts => {
 	let duoContract;
 
 	const creator = accounts[0];
-	const alice = accounts[1]; //duoMember
-	const bob = accounts[2];
-	const charles = accounts[3];
-	const nonDuoMember = accounts[4];
-	const pf1 = accounts[5];
-	const pf2 = accounts[6];
-	const pf3 = accounts[7];
-	const fc = accounts[8];
+	const pf1 = accounts[1];
+	const pf2 = accounts[2];
+	const pf3 = accounts[3];
+	const fc = accounts[4];
+	const pm = accounts[5];
+	const alice = accounts[6]; //duoMember
+	const bob = accounts[7];
+	const charles = accounts[8];
+	const nonDuoMember = accounts[9];
+	
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -94,13 +96,14 @@ contract('Custodian', accounts => {
 				from: creator
 			}
 		);
-
+		
 		custodianContract = await Custodian.new(
 			fc,
 			duoContract.address,
 			pf1,
 			pf2,
 			pf3,
+			pm,
 			CustodianInit.alphaInBP,
 			web3.utils.toWei(CustodianInit.couponRate),
 			web3.utils.toWei(CustodianInit.hp),
@@ -108,15 +111,13 @@ contract('Custodian', accounts => {
 			web3.utils.toWei(CustodianInit.hd),
 			CustodianInit.commissionRateInBP,
 			CustodianInit.period,
-			web3.utils.toWei(CustodianInit.memberThreshold),
-			CustodianInit.gasThreshhold,
+			// web3.utils.toWei(CustodianInit.memberThreshold),
+			// CustodianInit.gasThreshhold,
 			CustodianInit.coolDown,
 			{
 				from: creator
 			}
 		);
-
-		// await custodianContract.startContract('507', 1524105709, {from: pf1});
 	};
 
 	describe('constructor', () => {
@@ -176,6 +177,17 @@ contract('Custodian', accounts => {
 			assert.equal(sysAddress[IDX_ADMIN].valueOf(), creator, 'admin specified incorrect');
 			let addrStatus = await custodianContract.getAddrStatus.call(creator);
 			assert.isTrue(addrStatus.toNumber() === 2, 'admin not marked as used');
+		});
+
+		it('poolManager should equal specified value', async () => {
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			assert.equal(
+				sysAddress[IDX_POOL_MANAGER].valueOf(),
+				pm,
+				'poolManager specified incorrect'
+			);
+			let addrStatus = await custodianContract.getAddrStatus.call(pm);
+			assert.isTrue(addrStatus.toNumber() === 2, 'pf3 not marked as used');
 		});
 
 		it('priceTolInBP should equal 500', async () => {
@@ -312,7 +324,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A correctly', async () => {
-			let balanceA = await custodianContract.balanceAOf.call(alice);
+			let balanceA = await custodianContract.balanceOf.call(0, alice);
 			assert.isTrue(
 				isEqual(balanceA.toString(), web3.utils.toWei(tokenValueA + '')),
 				'balance A not updated correctly'
@@ -320,7 +332,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let balanceB = await custodianContract.balanceBOf.call(alice);
+			let balanceB = await custodianContract.balanceOf.call(1, alice);
 			assert.isTrue(
 				isEqual(balanceB.toString(), web3.utils.toWei(tokenValueB + '')),
 				'balance B not updated correctly'
@@ -393,8 +405,8 @@ contract('Custodian', accounts => {
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
-			prevBalanceA = await custodianContract.balanceAOf.call(alice);
-			prevBalanceB = await custodianContract.balanceBOf.call(alice);
+			prevBalanceA = await custodianContract.balanceOf.call(0, alice);
+			prevBalanceB = await custodianContract.balanceOf.call(1, alice);
 			let sysStates = await custodianContract.getSystemStates.call();
 			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
 		});
@@ -455,7 +467,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A correctly', async () => {
-			let currentBalanceA = await custodianContract.balanceAOf.call(alice);
+			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
 			assert.isTrue(
 				isEqual(
 					currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
@@ -466,7 +478,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let currentBalanceB = await custodianContract.balanceBOf.call(alice);
+			let currentBalanceB = await custodianContract.balanceOf.call(1, alice);
 			assert.isTrue(
 				isEqual(
 					currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
@@ -1148,7 +1160,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of A', async () => {
 			try {
-				await custodianContract.transferA(alice, bob, web3.utils.toWei('1'));
+				await custodianContract.transfer(0, alice, bob, web3.utils.toWei('1'));
 
 				assert.isTrue(false, 'still can transfer A token');
 			} catch (err) {
@@ -1158,7 +1170,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of B', async () => {
 			try {
-				await custodianContract.transferB(alice, bob, web3.utils.toWei('1'));
+				await custodianContract.transfer(1, alice, bob, web3.utils.toWei('1'));
 
 				assert.isTrue(false, 'still can transfer B token');
 			} catch (err) {
@@ -1166,9 +1178,19 @@ contract('Custodian', accounts => {
 			}
 		});
 
+		it('should not allow admin setCommissionRate', async () => {
+			try {
+				await custodianContract.setValue(0, 1000, {from: creator});
+
+				assert.isTrue(false, 'still can setMemberThresholdInWei');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei');
+			}
+		});
+
 		it('should not allow admin setMemberThresholdInWei', async () => {
 			try {
-				await custodianContract.setMemberThresholdInWei(1000);
+				await custodianContract.setValue(1, 1000, {from: creator});
 
 				assert.isTrue(false, 'still can setMemberThresholdInWei');
 			} catch (err) {
@@ -1178,7 +1200,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setIterationGasThreshold', async () => {
 			try {
-				await custodianContract.setIterationGasThreshold(1000);
+				await custodianContract.setValue(2, 1000, {from: creator});
 				assert.isTrue(false, 'still can setIterationGasThreshold');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold');
@@ -1187,7 +1209,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPreResetWaitingBlocks', async () => {
 			try {
-				await custodianContract.setPreResetWaitingBlocks(1000);
+				await custodianContract.setValue(3, 1000, {from: creator});
 				assert.isTrue(false, 'still can setPreResetWaitingBlocks');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks');
@@ -1196,7 +1218,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceTolInBP', async () => {
 			try {
-				await custodianContract.setPriceTolInBP(1000);
+				await custodianContract.setValue(4, 1000, {from: creator});
 
 				assert.isTrue(false, 'still can setPriceTolInBP');
 			} catch (err) {
@@ -1206,7 +1228,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceFeedTolInBP', async () => {
 			try {
-				await custodianContract.setPriceFeedTolInBP(1000);
+				await custodianContract.setValue(5, 1000, {from: creator});
 				assert.isTrue(false, 'still can setPriceFeedTolInBP');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP');
@@ -1215,7 +1237,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceFeedTimeTol', async () => {
 			try {
-				await custodianContract.setPriceFeedTimeTol(1000);
+				await custodianContract.setValue(6, 1000, {from: creator});
 				assert.isTrue(false, 'still can setPriceFeedTimeTol');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol');
@@ -1224,7 +1246,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow admin setPriceUpdateCoolDown', async () => {
 			try {
-				await custodianContract.setPriceUpdateCoolDown(1000);
+				await custodianContract.setValue(7, 1000, {from: creator});
 				assert.isTrue(false, 'still can setPriceUpdateCoolDown');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown');
@@ -1290,7 +1312,7 @@ contract('Custodian', accounts => {
 		}
 
 		function assertABalanceForAddress(addr, expected) {
-			return custodianContract.balanceAOf.call(addr).then(currentBalanceA => {
+			return custodianContract.balanceOf.call(0, addr).then(currentBalanceA => {
 				assert.isTrue(
 					isEqual(currentBalanceA.valueOf() / WEI_DENOMINATOR, expected),
 					'BalanceA not updated correctly'
@@ -1299,8 +1321,8 @@ contract('Custodian', accounts => {
 		}
 
 		function assertBBalanceForAddress(addr, expected) {
-			return custodianContract.balanceBOf
-				.call(addr)
+			return custodianContract.balanceOf
+				.call(1, addr)
 				.then(currentBalanceB =>
 					assert.isTrue(
 						isEqual(currentBalanceB.valueOf() / WEI_DENOMINATOR, expected),
@@ -1364,29 +1386,29 @@ contract('Custodian', accounts => {
 				});
 
 				if (transferABRequired) {
-					let aliceA = await custodianContract.balanceAOf.call(alice);
+					let aliceA = await custodianContract.balanceOf.call(0, alice);
 
-					custodianContract.transferA(alice, bob, aliceA.valueOf(), {
+					custodianContract.transfer(0, alice, bob, aliceA.valueOf(), {
 						from: alice
 					});
-					await custodianContract.balanceBOf.call(bob).then(bobB => {
-						custodianContract.transferB(bob, alice, bobB.valueOf(), {
+					await custodianContract.balanceOf.call(1, bob).then(bobB => {
+						custodianContract.transfer(1, bob, alice, bobB.valueOf(), {
 							from: bob
 						});
 					});
 				}
 
-				await custodianContract.balanceAOf
-					.call(alice)
+				await custodianContract.balanceOf
+					.call(0, alice)
 					.then(aliceA => (prevBalanceAalice = aliceA.toNumber() / WEI_DENOMINATOR));
-				let aliceB = await custodianContract.balanceBOf.call(alice);
+				let aliceB = await custodianContract.balanceOf.call(1, alice);
 
 				prevBalanceBalice = aliceB.toNumber() / WEI_DENOMINATOR;
 
-				await custodianContract.balanceAOf
-					.call(bob)
+				await custodianContract.balanceOf
+					.call(0, bob)
 					.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR));
-				let bobB = await custodianContract.balanceBOf.call(bob);
+				let bobB = await custodianContract.balanceOf.call(1, bob);
 				prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR;
 
 				await custodianContract.skipCooldown(skipNum);
@@ -1485,8 +1507,8 @@ contract('Custodian', accounts => {
 				let sysStates = await custodianContract.getSystemStates.call();
 				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
-				let currentBalanceAalice = await custodianContract.balanceAOf.call(alice);
-				let currentBalanceBalice = await custodianContract.balanceBOf.call(alice);
+				let currentBalanceAalice = await custodianContract.balanceOf.call(0, alice);
+				let currentBalanceBalice = await custodianContract.balanceOf.call(1, alice);
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAalice,
 					prevBalanceBalice,
@@ -1606,12 +1628,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance', async () => {
-			let balance = await custodianContract.balanceAOf.call(alice);
+			let balance = await custodianContract.balanceOf.call(0, alice);
 			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
 		it('should be able to approve', async () => {
-			let success = await custodianContract.approveA.call(
+			let success = await custodianContract.approve.call(
+				0,
 				alice,
 				bob,
 				web3.utils.toWei('100'),
@@ -1620,11 +1643,11 @@ contract('Custodian', accounts => {
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approveA(alice, bob, web3.utils.toWei('100'), { from: alice });
+			await custodianContract.approve(0, alice, bob, web3.utils.toWei('100'), { from: alice });
 		});
 
 		it('should show allowance', async () => {
-			let allowance = await custodianContract.allowanceA.call(alice, bob);
+			let allowance = await custodianContract.allowance.call(0, alice, bob);
 			assert.equal(
 				allowance.toNumber() / WEI_DENOMINATOR,
 				100,
@@ -1633,7 +1656,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should be able to transfer', async () => {
-			let success = await custodianContract.transferA.call(
+			let success = await custodianContract.transfer.call(
+				0,
 				alice,
 				bob,
 				web3.utils.toWei('10'),
@@ -1641,17 +1665,17 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferA(alice, bob, web3.utils.toWei('10'), { from: alice });
+			await custodianContract.transfer(0, alice, bob, web3.utils.toWei('10'), { from: alice });
 		});
 
 		it('should show balance of bob equal to 10', async () => {
-			let balance = await custodianContract.balanceAOf.call(bob);
+			let balance = await custodianContract.balanceOf.call(0, bob);
 			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
 		});
 
 		it('should not transfer more than balance', async () => {
 			try {
-				await custodianContract.transferA.call(alice, bob, web3.utils.toWei('10000000'), {
+				await custodianContract.transfer.call(0, alice, bob, web3.utils.toWei('10000000'), {
 					from: alice
 				});
 
@@ -1666,7 +1690,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should transferAFrom less than allowance', async () => {
-			let success = await custodianContract.transferAFrom.call(
+			let success = await custodianContract.transferFrom.call(
+				0,
 				bob,
 				alice,
 				charles,
@@ -1675,12 +1700,13 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferAFrom(bob, alice, charles, web3.utils.toWei('50'));
+			await custodianContract.transferFrom(0, bob, alice, charles, web3.utils.toWei('50'));
 		});
 
 		it('should not transferFrom more than allowance', async () => {
 			try {
-				await custodianContract.transferAFrom.call(
+				await custodianContract.transferFrom.call(
+					0,
 					bob,
 					alice,
 					bob,
@@ -1698,7 +1724,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('allowance for bob should be 50', async () => {
-			let allowance = await custodianContract.allowanceA.call(alice, bob);
+			let allowance = await custodianContract.allowance.call(0, alice, bob);
 			assert.equal(
 				allowance.toNumber() / WEI_DENOMINATOR,
 				50,
@@ -1707,7 +1733,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('check balance of charles equal 50', async () => {
-			let balance = await custodianContract.balanceAOf.call(charles);
+			let balance = await custodianContract.balanceOf.call(0, charles);
 
 			assert.equal(
 				balance.toNumber() / WEI_DENOMINATOR,
@@ -1728,12 +1754,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('should show balance', async () => {
-			let balance = await custodianContract.balanceBOf.call(alice);
+			let balance = await custodianContract.balanceOf.call(1, alice);
 			assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 		});
 
 		it('should be able to approve', async () => {
-			let success = await custodianContract.approveB.call(
+			let success = await custodianContract.approve.call(
+				1,
 				alice,
 				bob,
 				web3.utils.toWei('100'),
@@ -1742,11 +1769,11 @@ contract('Custodian', accounts => {
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approveB(alice, bob, web3.utils.toWei('100'), { from: alice });
+			await custodianContract.approve(1, alice, bob, web3.utils.toWei('100'), { from: alice });
 		});
 
 		it('should show allowance', async () => {
-			let allowance = await custodianContract.allowanceB.call(alice, bob);
+			let allowance = await custodianContract.allowance.call(1, alice, bob);
 			assert.equal(
 				allowance.toNumber() / WEI_DENOMINATOR,
 				100,
@@ -1755,7 +1782,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should be able to transfer', async () => {
-			let success = await custodianContract.transferB.call(
+			let success = await custodianContract.transfer.call(
+				1,
 				alice,
 				bob,
 				web3.utils.toWei('10'),
@@ -1763,17 +1791,17 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferB(alice, bob, web3.utils.toWei('10'), { from: alice });
+			await custodianContract.transfer(1, alice, bob, web3.utils.toWei('10'), { from: alice });
 		});
 
 		it('should show balance of bob equal to 10', async () => {
-			let balance = await custodianContract.balanceBOf.call(bob);
+			let balance = await custodianContract.balanceOf.call(1, bob);
 			assert.isTrue(balance.toNumber() === 10 * WEI_DENOMINATOR, 'balance of bob not shown');
 		});
 
 		it('should not transfer more than balance', async () => {
 			try {
-				await custodianContract.transferB.call(alice, bob, web3.utils.toWei('10000000'), {
+				await custodianContract.transfer.call(1, alice, bob, web3.utils.toWei('10000000'), {
 					from: alice
 				});
 
@@ -1788,7 +1816,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should transferAFrom less than allowance', async () => {
-			let success = await custodianContract.transferBFrom.call(
+			let success = await custodianContract.transferFrom.call(
+				1, 
 				bob,
 				alice,
 				charles,
@@ -1797,12 +1826,13 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferBFrom(bob, alice, charles, web3.utils.toWei('50'));
+			await custodianContract.transferFrom(1, bob, alice, charles, web3.utils.toWei('50'));
 		});
 
 		it('should not transferFrom more than allowance', async () => {
 			try {
-				await custodianContract.transferBFrom.call(
+				await custodianContract.transferFrom.call(
+					1, 
 					bob,
 					alice,
 					bob,
@@ -1820,7 +1850,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('allowance for bob should be 50', async () => {
-			let allowance = await custodianContract.allowanceB.call(alice, bob);
+			let allowance = await custodianContract.allowance.call(1, alice, bob);
 			assert.equal(
 				allowance.toNumber() / WEI_DENOMINATOR,
 				50,
@@ -1829,7 +1859,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('check balance of charles equal 50', async () => {
-			let balance = await custodianContract.balanceBOf.call(charles);
+			let balance = await custodianContract.balanceOf.call(1, charles);
 
 			assert.equal(
 				balance.toNumber() / WEI_DENOMINATOR,
@@ -1847,33 +1877,15 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('admin should be able to set fee address', async () => {
-			let success = await custodianContract.setFeeAddress.call(creator, { from: creator });
-			assert.isTrue(success, 'not be able to set fee address');
-		});
-
-		it('non admin should not be able to set fee address', async () => {
-			try {
-				await custodianContract.setFeeAddress.call(creator, { from: alice });
-
-				assert.isTrue(false, 'non admin can change fee address');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				);
-			}
-		});
 
 		it('admin should be able to set commission', async () => {
-			let success = await custodianContract.setCommission.call(100, { from: creator });
+			let success = await custodianContract.setValue.call(0, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
 		});
 
 		it('should not be able to set commission higher than 10000', async () => {
 			try {
-				await custodianContract.setCommission.call(10001, { from: creator });
+				await custodianContract.setValue.call(0, 10001, { from: creator });
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
@@ -1887,7 +1899,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set comm', async () => {
 			try {
-				await custodianContract.setCommission.call(100, { from: alice });
+				await custodianContract.setValue.call(0, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
 				assert.equal(
@@ -1899,7 +1911,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set member threshold', async () => {
-			let success = await custodianContract.setMemberThresholdInWei.call(100, {
+			let success = await custodianContract.setValue.call(1, 100, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set member threshhold');
@@ -1907,7 +1919,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set member Threshold', async () => {
 			try {
-				await custodianContract.setMemberThresholdInWei.call(100, { from: alice });
+				await custodianContract.setValue.call(1, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change member threshhold');
 			} catch (err) {
 				assert.equal(
@@ -1919,7 +1931,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set iteration gas threshold', async () => {
-			let success = await custodianContract.setIterationGasThreshold.call(100000, {
+			let success = await custodianContract.setValue.call(2, 100000, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set gas threshhold');
@@ -1927,7 +1939,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set gas threshhold', async () => {
 			try {
-				await custodianContract.setIterationGasThreshold.call(100000, { from: alice });
+				await custodianContract.setValue.call(2, 100000, { from: alice });
 				assert.isTrue(false, 'non admin can change gas threshhold');
 			} catch (err) {
 				assert.equal(
@@ -1939,7 +1951,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set pre reset waiting blocks', async () => {
-			let success = await custodianContract.setPreResetWaitingBlocks.call(100, {
+			let success = await custodianContract.setValue.call(3, 100, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set pre reset waiting block');
@@ -1947,7 +1959,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set pre reset waiting blocks', async () => {
 			try {
-				await custodianContract.setPreResetWaitingBlocks.call(100, { from: alice });
+				await custodianContract.setValue.call(3, 100, { from: alice });
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
 			} catch (err) {
@@ -1960,13 +1972,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price tolerance', async () => {
-			let success = await custodianContract.setPriceTolInBP.call(100, { from: creator });
+			let success = await custodianContract.setValue.call(4, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price tolerance');
 		});
 
 		it('non admin should not be able to set price tolerance', async () => {
 			try {
-				await custodianContract.setPriceTolInBP.call(100, { from: alice });
+				await custodianContract.setValue.call(4, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price tolerance');
 			} catch (err) {
 				assert.equal(
@@ -1978,13 +1990,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price feed tolerance', async () => {
-			let success = await custodianContract.setPriceFeedTolInBP.call(100, { from: creator });
+			let success = await custodianContract.setValue.call(5, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed tolerance');
 		});
 
 		it('non admin should not be able to set price tolerance', async () => {
 			try {
-				await custodianContract.setPriceFeedTolInBP.call(100, { from: alice });
+				await custodianContract.setValue.call(5, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price feed tolerance');
 			} catch (err) {
 				assert.equal(
@@ -1996,13 +2008,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price feed time tolerance', async () => {
-			let success = await custodianContract.setPriceFeedTimeTol.call(100, { from: creator });
+			let success = await custodianContract.setValue.call(6, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed time tolerance');
 		});
 
 		it('non admin should not be able to set price feed time tolerance', async () => {
 			try {
-				await custodianContract.setPriceFeedTimeTol.call(100, { from: alice });
+				await custodianContract.setValue.call(6, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price feed time tolerance');
 			} catch (err) {
 				assert.equal(
@@ -2014,7 +2026,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price update coolupdate', async () => {
-			let success = await custodianContract.setPriceUpdateCoolDown.call(10000, {
+			let success = await custodianContract.setValue.call(7, 10000, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set price update coolupdate');
@@ -2022,7 +2034,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price update coolupdate', async () => {
 			try {
-				await custodianContract.setPriceUpdateCoolDown.call(10000, { from: alice });
+				await custodianContract.setValue.call(7, 10000, { from: alice });
 				assert.isTrue(false, 'non admin can change price update coolupdate');
 			} catch (err) {
 				assert.equal(
@@ -2034,7 +2046,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('add and assign', () => {
+	describe('poolManager add address', () => {
 		before(async () => {
 			await initContracts();
 			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
@@ -2042,9 +2054,11 @@ contract('Custodian', accounts => {
 			});
 		});
 
-		it('non adder cannot add address', async () => {
+		let poolManager = pm;
+
+		it('non poolManager cannot add address', async () => {
 			try {
-				await custodianContract.addAddr.call(alice, bob, { from: charles });
+				await custodianContract.addAddress.call(alice, bob, { from: charles });
 				assert.isTrue(false, 'non adder can add address');
 			} catch (err) {
 				assert.equal(
@@ -2057,7 +2071,7 @@ contract('Custodian', accounts => {
 
 		it('should not add two same address', async () => {
 			try {
-				await custodianContract.addAddr.call(alice, alice, { from: creator });
+				await custodianContract.addAddress.call(alice, alice, { from: poolManager });
 				assert.isTrue(false, 'can add two same address');
 			} catch (err) {
 				assert.equal(
@@ -2068,9 +2082,9 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should not add adder itself', async () => {
+		it('should not add poolManager itself', async () => {
 			try {
-				await custodianContract.addAddr.call(creator, alice, { from: creator });
+				await custodianContract.addAddress.call(creator, alice, { from: poolManager });
 				assert.isTrue(false, 'can add adder itself address');
 			} catch (err) {
 				assert.equal(
@@ -2081,43 +2095,10 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should add two different address and not itself', async () => {
-			let addStatus = await custodianContract.addAddr.call(alice, bob, { from: creator });
-			assert.isTrue(addStatus, 'cannot add address');
-			let tx = await custodianContract.addAddr(alice, bob, { from: creator });
-			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
-			let args = tx.logs[0].args;
-			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
-			let newAdder = sysAddress[IDX_ADDR_ADDER];
-			assert.isTrue(
-				args['added1'] === alice && args['added2'] === bob && args['newAdder'] === newAdder,
-				'event args is wrong'
-			);
-		});
-
-		it('new adder should be marked as used', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
-			let newAdder = sysAddress[IDX_ADDR_ADDER];
-			let addStatus = await custodianContract.getAddrStatus.call(newAdder);
-			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
-		});
-
-		it('new adder should be removed from the pool', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
-			let newAdder = sysAddress[IDX_ADDR_ADDER];
-			let sysStates = await custodianContract.getSystemStates.call();
-			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
-			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
-				assert.isTrue(web3.utils.checkAddressChecksum(addr), 'invalid address');
-				assert.isTrue(addr !== newAdder, 'new adder is still in the pool');
-			}
-		});
-
-		it('address not in the pool cannot assign', async () => {
+		it('should not add used account', async () => {
 			try {
-				await custodianContract.updateAddr(pf1, { from: charles });
-				assert.isTrue(false, 'member not in the pool can assign role');
+				await custodianContract.addAddress(pf1, pf2, { from: poolManager });
+				assert.isTrue(false, 'can add used account');
 			} catch (err) {
 				assert.equal(
 					err.message,
@@ -2127,38 +2108,312 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		// used account cannot be added again
-		// check pool length
-		// check random next
-		// total supply
-
-		it('pool account can assign another pool account as role', async () => {
-			let tx = await custodianContract.updateAddr(pf1, { from: alice });
+		it('should add two different address and not itself', async () => {
+			let addStatus = await custodianContract.addAddress.call(
+				web3.utils.toChecksumAddress(alice),
+				web3.utils.toChecksumAddress(bob),
+				{ from: poolManager }
+			);
+			assert.isTrue(addStatus, 'cannot add address');
+			let tx = await custodianContract.addAddress(
+				web3.utils.toChecksumAddress(alice),
+				web3.utils.toChecksumAddress(bob),
+				{ from: poolManager }
+			);
 			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
 			let args = tx.logs[0].args;
-			let sysAddress = await custodianContract.getSystemAddresses.call({ from: creator });
-			let newPF1 = sysAddress[IDX_PRICEFEED_1];
-
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			poolManager = sysAddress[IDX_POOL_MANAGER];
 			assert.isTrue(
-				args['current'] === pf1 && args['newAddr'] === newPF1,
+				args['added1'] === alice &&
+					args['added2'] === bob &&
+					args['newPoolManager'] === poolManager,
 				'event args is wrong'
 			);
-			assert.isTrue(newPF1 !== pf1, 'pf1 not updated');
+		});
 
-			let addrStatusNewPF = await custodianContract.getAddrStatus.call(newPF1);
-			let addrStatusAssigner = await custodianContract.getAddrStatus.call(alice);
+		it('pool size should be 7 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			// check correct poolSize
+			assert.isTrue(poolSize === PoolInit.length + 1, 'cannot add address');
+			let poolList = [];
+			// check validatdion of address
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(
+					web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
+					' invalid address'
+				);
+				poolList.push(addr);
+			}
+			// check duplication
 			assert.isTrue(
-				addrStatusNewPF.toNumber() === 2 && addrStatusAssigner.toNumber() === 2,
-				'assigner and newPFaddr not marked as used'
+				new Set(poolList).size === poolList.length,
+				'pool candidate contains duplicated value'
 			);
+		});
+
+		it('new poolManager should be set correctly', async () => {
+			let timestamp = await custodianContract.timestamp.call({ from: creator });
+			let adderAddr = PoolInit[timestamp % PoolInit.length];
+			assert.isTrue(
+				web3.utils.toChecksumAddress(adderAddr) ===
+					web3.utils.toChecksumAddress(poolManager),
+				'adder address not updated correctly'
+			);
+		});
+
+		it('new poolManager should be marked as used', async () => {
+			let addStatus = await custodianContract.getAddrStatus.call(poolManager);
+			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
+		});
+
+		it('new poolManager should be removed from the pool', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			for (let i = 0; i < poolSize; i++) {
 				let addr = await custodianContract.addrPool.call(i);
-				assert.isTrue(web3.utils.checkAddressChecksum(addr), 'invalid address');
-				assert.isTrue(addr !== newPF1, 'newPF address is still in the pool');
-				assert.isTrue(addr !== alice, 'assigner is still in the pool');
+				assert.isTrue(
+					web3.utils.toChecksumAddress(addr) !==
+						web3.utils.toChecksumAddress(poolManager),
+					'new adder is still in the pool'
+				);
 			}
 		});
 	});
+
+	describe('poolManger remove from pool', () => {
+		before(async () => {
+			await initContracts();
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+				from: pf1
+			});
+		});
+
+		let poolManager = pm;
+
+		it('non poolManager cannot remove address', async () => {
+			try {
+				await custodianContract.removeAddress.call(alice, { from: bob });
+				assert.isTrue(false, 'non poolManager can remove address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('should not remove address not in the pool', async () => {
+			try {
+				await custodianContract.removeAddress.call(charles, { from: poolManager });
+				assert.isTrue(false, 'non poolManager can remove address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('poolManager should remove address in the pool', async () => {
+			let canRemove = await custodianContract.removeAddress.call(PoolInit[0], {
+				from: poolManager
+			});
+			assert.isTrue(canRemove, 'poolManager cannot remove form the pool List');
+			let tx = await custodianContract.removeAddress(PoolInit[0], { from: poolManager });
+			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
+			let args = tx.logs[0].args;
+			let sysAddress = await custodianContract.getSystemAddresses.call();
+			poolManager = sysAddress[IDX_POOL_MANAGER];
+			assert.isTrue(
+				web3.utils.toChecksumAddress(args['addr']) === PoolInit[0] &&
+					args['newPoolManager'] === poolManager,
+				'event args is wrong'
+			);
+		});
+
+		it('pool size should be 4 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			// check correct poolSize
+			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot add address');
+			let poolList = [];
+			// check validatdion of address
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(
+					web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
+					' invalid address'
+				);
+				poolList.push(addr);
+			}
+			// check duplication
+			assert.isTrue(
+				new Set(poolList).size === poolList.length,
+				'pool candidate contains duplicated value'
+			);
+		});
+
+		it('removed address should be marked as used', async () => {
+			let addStatus = await custodianContract.getAddrStatus.call(PoolInit[0]);
+			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
+		});
+
+		it('removed address should be not in the poolList', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(
+					web3.utils.toChecksumAddress(addr) !==
+						web3.utils.toChecksumAddress(PoolInit[0]),
+					'new adder is still in the pool'
+				);
+			}
+		});
+
+		it('new poolManager should be set correctly', async () => {
+			let timestamp = await custodianContract.timestamp.call({ from: creator });
+			let adderAddr = PoolInit[timestamp % PoolInit.length];
+			assert.isTrue(
+				web3.utils.toChecksumAddress(adderAddr) ===
+					web3.utils.toChecksumAddress(poolManager),
+				'adder address not updated correctly'
+			);
+		});
+
+		it('new poolManager should be marked as used', async () => {
+			let addStatus = await custodianContract.getAddrStatus.call(poolManager);
+			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
+		});
+
+		it('new poolManager should be removed from the pool', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+			for (let i = 0; i < poolSize; i++) {
+				let addr = await custodianContract.addrPool.call(i);
+				assert.isTrue(
+					web3.utils.toChecksumAddress(addr) !==
+						web3.utils.toChecksumAddress(poolManager),
+					'new adder is still in the pool'
+				);
+			}
+		});
+	});
+
+	describe('update role', () => {
+		function updateRole(
+			currentRole, roelIndex
+		) {
+			let preAddr, newAddr;
+			let poolSize;
+			
+			before(async () => {
+				// poolManager = creator;
+				await initContracts();
+				await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+					from: pf1
+				});
+				await custodianContract.addAddress(
+					web3.utils.toChecksumAddress(alice),
+					web3.utils.toChecksumAddress(bob),
+					{ from: pm }
+				);
+			});
+
+			it('address not in the pool cannot assign', async () => {
+				try {
+					await custodianContract.updateAddress(currentRole, { from: charles });
+					assert.isTrue(false, 'member not in the pool can assign role');
+				} catch (err) {
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					);
+				}
+			});
+
+			it('pool account can assign another pool account as role', async () => {
+				preAddr = currentRole;
+				let tx = await custodianContract.updateAddress(currentRole, { from: alice });
+				assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
+				let args = tx.logs[0].args;
+				let sysAddress = await custodianContract.getSystemAddresses.call({ from: alice });
+				newAddr = sysAddress[roelIndex];
+
+				assert.isTrue(
+					args['current'] === preAddr && args['newAddr'] === newAddr,
+					'event args is wrong'
+				);
+				assert.isTrue(newAddr !== preAddr, 'currentRole not updated');
+			});
+
+			it('pool size should be 5 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
+				let sysStates = await custodianContract.getSystemStates.call();
+				poolSize = sysStates[IDX_POOL_SIZE].toNumber();
+				// check correct poolSize
+				assert.isTrue(poolSize === PoolInit.length - 1, 'cannot add address');
+				let poolList = [];
+				// check validatdion of address
+				for (let i = 0; i < poolSize; i++) {
+					let addr = await custodianContract.addrPool.call(i);
+					assert.isTrue(
+						web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
+						' invalid address'
+					);
+					poolList.push(addr);
+				}
+				// check duplication
+				assert.isTrue(
+					new Set(poolList).size === poolList.length,
+					'pool candidate contains duplicated value'
+				);
+			});
+
+			it('newAddr and preAddr should be marked as used', async () => {
+				let addrStatusNewPF = await custodianContract.getAddrStatus.call(newAddr);
+				let addrStatusAssigner = await custodianContract.getAddrStatus.call(preAddr);
+				assert.isTrue(
+					addrStatusNewPF.toNumber() === 2 && addrStatusAssigner.toNumber() === 2,
+					'assigner and newPFaddr not marked as used'
+				);
+			});
+
+			it('newAddr and preAddr should be removed from poolList', async () => {
+
+				for (let i = 0; i < poolSize; i++) {
+					let addr = await custodianContract.addrPool.call(i);
+					assert.isTrue(web3.utils.toChecksumAddress(addr) !== web3.utils.toChecksumAddress(preAddr), 'newPF address is still in the pool');
+					assert.isTrue(web3.utils.toChecksumAddress(addr) !== web3.utils.toChecksumAddress(newAddr), 'assigner is still in the pool');
+				}
+				
+			});
+		}
+
+		describe('update pf1', () => {
+			updateRole(pf1, IDX_PRICEFEED_1);
+		});
+
+		describe('update pf2', () => {
+			updateRole(pf2, IDX_PRICEFEED_2);
+		});
+
+		describe('update pf3', () => {
+			updateRole(pf3, IDX_PRICEFEED_3);
+		});
+
+		describe('update feeCollector', () => {
+			updateRole(fc, IDX_FEE_COLLECTOR);
+		});
+
+		describe('update admin', () => {
+			updateRole(creator, IDX_ADMIN);
+		});
+	});
 });
+

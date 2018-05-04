@@ -18,10 +18,11 @@ module.exports = async (deployer, network, accounts) => {
 
 	if (network == 'kovan') {
 		creator = accounts[3];
-		feeAdd = accounts[3];
 		pf1 = accounts[0];
 		pf2 = accounts[1];
 		pf3 = accounts[2];
+		feeAdd = accounts[4];
+		poolManager = accounts[5];
 		
 	}
 	if (network == 'development') {

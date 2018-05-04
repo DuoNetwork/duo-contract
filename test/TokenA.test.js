@@ -8,6 +8,9 @@ const CustodianInit = InitParas['Custodian'];
 const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
 const ethInitPrice = 582;
+const BP_DENOMINATOR = 10000;
+
+
 
 contract('TokenA', accounts => {
 	let tokenAContract;
@@ -15,14 +18,17 @@ contract('TokenA', accounts => {
 	let custodianContract;
 
 	const creator = accounts[0];
-	const alice = accounts[1];
-	const bob = accounts[2];
-	const pf1 = accounts[3];
-	const pf2 = accounts[4];
-	const pf3 = accounts[5];
-	const feeCollector = accounts[6];
+	const pf1 = accounts[1];
+	const pf2 = accounts[2];
+	const pf3 = accounts[3];
+	const fc = accounts[4];
+	const pm = accounts[5];	
+	const alice = accounts[6]; //duoMember
+	const bob = accounts[7];
 
 	const WEI_DENOMINATOR = 1e18;
+
+	let tokenValueA;
 
 	before(async () => {
 		duoContract = await DUO.new(
@@ -34,11 +40,12 @@ contract('TokenA', accounts => {
 			}
 		);
 		custodianContract = await Custodian.new(
-			feeCollector,
+			fc,
 			duoContract.address,
 			pf1,
 			pf2,
 			pf3,
+			pm,
 			CustodianInit.alphaInBP,
 			web3.utils.toWei(CustodianInit.couponRate),
 			web3.utils.toWei(CustodianInit.hp),
@@ -46,8 +53,6 @@ contract('TokenA', accounts => {
 			web3.utils.toWei(CustodianInit.hd),
 			CustodianInit.commissionRateInBP,
 			CustodianInit.period,
-			web3.utils.toWei(CustodianInit.memberThreshold),
-			CustodianInit.gasThreshhold,
 			CustodianInit.coolDown,
 			{
 				from: creator
@@ -56,8 +61,14 @@ contract('TokenA', accounts => {
 		await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
 			from: pf1
 		});
-
-		await custodianContract.create({ from: creator, value: web3.utils.toWei('1') });
+		let amtEth = 1;
+		await custodianContract.create({ from: creator, value: web3.utils.toWei(amtEth + '') });
+		
+		let tokenValueB =
+			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
+			ethInitPrice /
+			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+		tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 		tokenAContract = await TokenA.new(
 			TokenAInit.tokenName,
 			TokenAInit.tokenSymbol,
@@ -67,7 +78,7 @@ contract('TokenA', accounts => {
 
 	it('total supply should be 0', async () => {
 		let totalSupply = await tokenAContract.totalSupply.call();
-		assert.equal(totalSupply.valueOf(), 0, 'totalSupply not equal to 0');
+		assert.equal(totalSupply.valueOf(), web3.utils.toWei(tokenValueA + ''), 'totalSupply not equal to 0');
 	});
 
 	it('should show balance', async () => {

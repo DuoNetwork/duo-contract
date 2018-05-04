@@ -101,7 +101,7 @@ contract Custodian {
 	uint commissionRateInBP;
 	uint period;
 	uint iterationGasThreshold = 60000;
-	uint memberThresholdInWei = 10;
+	uint memberThresholdInWei = 10 * WEI_DENOMINATOR;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
@@ -726,6 +726,7 @@ contract Custodian {
 		require(state == State.Inception || state == State.Trading);
 		uint oldValue;
 		if (idx == 0) {
+			require(newValue < BP_DENOMINATOR);
 			oldValue = commissionRateInBP;
 			commissionRateInBP = newValue;
 		} else if (idx == 1) {
@@ -757,7 +758,7 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddr(address addr1, address addr2) public only(poolManager) returns (bool success) {
+	function addAddress(address addr1, address addr2) public only(poolManager) returns (bool success) {
 		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
@@ -770,7 +771,7 @@ contract Custodian {
 		return true;
 	}
 
-	function removeAddr(address addr) public only(poolManager) returns (bool success) {
+	function removeAddress(address addr) public only(poolManager) returns (bool success) {
 		require(addrPool.length > 3 && addrStatus[addr] == 1);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
@@ -785,7 +786,7 @@ contract Custodian {
 		return true;
 	}
 
-	function updateAddr(address current) public inAddrPool() returns (address addr) {
+	function updateAddress(address current) public inAddrPool() returns (address addr) {
 		require(addrPool.length > 3);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
