@@ -217,8 +217,8 @@ contract Custodian {
 		limitLowerInWei = hd;
 		commissionRateInBP = c;
 		period = p;
-		navAInWei = 1;
-		navBInWei = 1;
+		navAInWei = WEI_DENOMINATOR;
+		navBInWei = WEI_DENOMINATOR;
 		priceUpdateCoolDown = coolDown;
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
