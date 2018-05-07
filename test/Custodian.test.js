@@ -372,7 +372,9 @@ contract('Custodian', accounts => {
 				from: fc
 			});
 			assert.isTrue(success);
-			await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
+			let tx = await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === 'CollectFee', 'worng event emitted');
+			assert.isTrue(tx.logs[0].args.addr.valueOf() === fc && tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001'), 'worng fee parameter');
 		});
 
 		it('should fee pending withdrawal amount should be updated correctly', async () => {
@@ -2326,6 +2328,7 @@ contract('Custodian', accounts => {
 			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot add address');
 			let poolList = [];
 			// check validatdion of address
+			console.log(poolSize);
 			for (let i = 0; i < poolSize; i++) {
 				let addr = await custodianContract.addrPool.call(i);
 				assert.isTrue(
