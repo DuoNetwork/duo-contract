@@ -57,15 +57,21 @@ const IDX_SECOND_TS = 5;
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 6e-13;
+const EPSILON = 5e-12;
 const ethInitPrice = 582;
+const ethDuoFeeRatio = 1000;
 
 const isEqual = (a, b, log = false) => {
 	if (log) {
 		console.log(a);
 		console.log(b);
 	}
-	return Math.abs(Number(a) - Number(b)) <= EPSILON;
+	if(Number(b) > 0) {
+		return Math.abs(Number(a) - Number(b)) / Number(b) <= EPSILON;
+	} else {
+		return  Math.abs(Number(a) - Number(b)) <= EPSILON;
+	}
+	
 };
 
 contract('Custodian', accounts => {
@@ -265,16 +271,19 @@ contract('Custodian', accounts => {
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 		let prevFeeAccumulated;
+		let preDUO = 1000000;
+		let feeOfDUOinWei = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio;
 
 		before(async () => {
 			await initContracts();
 			await custodianContract.startContract(web3.utils.toWei(initEthPrice + ''), 1524105709, {
 				from: pf1
 			});
-			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
+			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
+			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {from: alice});
 		});
 
-		it('should create token A and B', async () => {
+		it('should create token A and B payFee with eth', async () => {
 			let success = await custodianContract.create.call(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
@@ -316,6 +325,32 @@ contract('Custodian', accounts => {
 				isEqual(balanceB.toNumber() / WEI_DENOMINATOR, tokenValueB),
 				'balance B not updated correctly'
 			);
+		});
+
+		it('should create token A and B payFee with DUO', async () => {
+			
+			
+			let success = await custodianContract.create.call(false, {
+				from: alice,
+				value: web3.utils.toWei(amtEth + '')
+			});
+			// // first check return value with call()
+			assert.isTrue(success, 'not able to create');
+			// then send transaction to check effects
+			await custodianContract.create(false, {
+				from: alice,
+				value: web3.utils.toWei(amtEth + '')
+			});
+		});
+
+		it('should update DUO balance of Alice correctly', async () => {
+			let balanceOfAlice = await duoContract.balanceOf.call(alice);
+			assert.isTrue(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei, "DUO balance of Alice of updated correctly");
+		});
+
+		it('should update burned DUO correctly', async () => {
+			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
+			assert.isTrue(burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei, "burned DUO not updated correctly");
 		});
 
 		it('should only collect fee less than allowed', async () => {
@@ -368,19 +403,22 @@ contract('Custodian', accounts => {
 		let deductAmtA = deductAmtB * CustodianInit.alphaInBP / BP_DENOMINATOR;
 		let amtEth = (deductAmtA + deductAmtB) / ethInitPrice;
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+		let preDUO = 1000000;
+		let feeInDUO = fee * ethDuoFeeRatio;
 
 		before(async () => {
 			await initContracts();
 			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
 				from: pf1
 			});
-			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
+			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
+			await duoContract.transfer(bob, web3.utils.toWei(preDUO + ''), { from: creator });
 			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 			prevBalanceA = await custodianContract.balanceOf.call(0, alice);
 			prevBalanceB = await custodianContract.balanceOf.call(1, alice);
 			let sysStates = await custodianContract.getSystemStates.call();
 			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
+			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {from: alice});
 		});
 
 		it('should only redeem token value less than balance', async () => {
@@ -399,7 +437,7 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should redeem token A and B', async () => {
+		it('should redeem token A and B fee paying with eth', async () => {
 			let success = await custodianContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
@@ -426,6 +464,7 @@ contract('Custodian', accounts => {
 
 		it('should update balance of A correctly', async () => {
 			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
+			// console.log(currentBalanceA.toNumber() / WEI_DENOMINATOR);
 			assert.isTrue(
 				isEqual(
 					currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
@@ -487,6 +526,33 @@ contract('Custodian', accounts => {
 				'pending withdrawal eth not updated correctly'
 			);
 		});
+
+		it('should redeem token A and B fee paying with DUO token', async () => {
+			let success = await custodianContract.redeem.call(
+				web3.utils.toWei(amtA + ''),
+				web3.utils.toWei(amtB + ''),
+				false,
+				{ from: alice }
+			);
+			assert.isTrue(success, 'not able to redeem');
+			await custodianContract.redeem(
+				web3.utils.toWei(amtA + ''),
+				web3.utils.toWei(amtB + ''),
+				false,
+				{ from: alice }
+			);
+		});
+
+		it('should update DUO balance of Alice correctly', async () => {
+			let balanceOfAlice = await duoContract.balanceOf.call(alice);
+			assert.isTrue(isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeInDUO, true), "DUO balance of Alice of updated correctly");
+		});
+
+		it('should update burned DUO correctly', async () => {
+			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
+			assert.isTrue(isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO), "burned DUO not updated correctly");
+		});
+
 	});
 
 	describe('nav calculation', () => {
@@ -2293,7 +2359,6 @@ contract('Custodian', accounts => {
 			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot add address');
 			let poolList = [];
 			// check validatdion of address
-			console.log(poolSize);
 			for (let i = 0; i < poolSize; i++) {
 				let addr = await custodianContract.addrPool.call(i);
 				assert.isTrue(

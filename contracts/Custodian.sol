@@ -622,8 +622,8 @@ contract Custodian {
 		uint ethAmtInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
-			.mul(WEI_DENOMINATOR)
 			.div(resetPrice.priceInWei)
+			.mul(WEI_DENOMINATOR)
 			.div(betaInWei);
 		ethAmtInWei = deductFee(ethAmtInWei, payFeeInEth);
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);

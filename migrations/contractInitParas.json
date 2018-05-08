@@ -16,7 +16,7 @@
 		"coolDown": 3000
 	},
 	"DUO": {
-		"initSupply": "10000",
+		"initSupply": "100000000",
 		"tokenName": "DUO",
 		"tokenSymbol": "DUO"
 	},
