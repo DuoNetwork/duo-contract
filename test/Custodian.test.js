@@ -66,7 +66,7 @@ const isEqual = (a, b, log = false) => {
 		console.log(a);
 		console.log(b);
 	}
-	if(Number(b) > 0) {
+	if(Math.abs(Number(b)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
 		return Math.abs(Number(a) - Number(b)) / Number(b) <= EPSILON;
 	} else {
 		return  Math.abs(Number(a) - Number(b)) <= EPSILON;
