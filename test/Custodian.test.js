@@ -1,4 +1,4 @@
-let Custodian = artifacts.require('./CustodianMock.sol');
+const Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const web3 = require('web3');
 

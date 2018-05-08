@@ -17,32 +17,32 @@ contract Owned {
 	}
 }
 
-interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public; }
+interface tokenRecipient { function receiveApproval(address _from, uint _value, address _token, bytes _extraData) public; }
 
 contract TokenA is Owned {
 	// Public variables of the token
 	string public name;
 	string public symbol;
 	uint8 public decimals = 18;
-	uint256 public sellPrice;
-	uint256 public buyPrice;
+	uint public sellPrice;
+	uint public buyPrice;
 	// 18 decimals is the strongly suggested default, avoid changing it
-	uint256 public totalSupply;
+	uint public totalSupply;
 	bool public transferable=true;
 
 	// This creates an array with all balances
-	mapping (address => uint256) public balanceOf;
-	mapping (address => mapping (address => uint256)) public allowance;
+	mapping (address => uint) public balanceOf;
+	mapping (address => mapping (address => uint)) public allowance;
 	mapping (address => bool) public frozenAccount;
 
 	/* This generates a public event on the blockchain that will notify clients */
 	event FrozenFunds(address target, bool frozen);
 
 	// This generates a public event on the blockchain that will notify clients
-	event Transfer(address indexed from, address indexed to, uint256 value);
+	event Transfer(address indexed from, address indexed to, uint value);
 
 	// This notifies clients about the amount burnt
-	event Burn(address indexed from, uint256 value);
+	event Burn(address indexed from, uint value);
 
 	// This generates a public event on the blockchain that will lock or unlock token transfer
 	event Lock(bool locking);
@@ -54,7 +54,7 @@ contract TokenA is Owned {
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
 	function TokenA(
-		uint256 initialSupply,
+		uint initialSupply,
 		string tokenName,
 		string tokenSymbol,
 		address centralMinter
@@ -62,7 +62,7 @@ contract TokenA is Owned {
 	{
 		if (centralMinter != 0) 
 			owner = centralMinter;
-		totalSupply = initialSupply * 10 ** uint256(decimals);  // Update total supply with the decimal amount
+		totalSupply = initialSupply * 10 ** uint(decimals);  // Update total supply with the decimal amount
 		balanceOf[msg.sender] = totalSupply;				// Give the creator all initial tokens
 		name = tokenName;								   // Set the name for display purposes
 		symbol = tokenSymbol;							   // Set the symbol for display purposes
@@ -103,7 +103,7 @@ contract TokenA is Owned {
 	 * @param _to The address of the recipient
 	 * @param _value the amount to send
 	 */
-	function transfer(address _to, uint256 _value) public {
+	function transfer(address _to, uint _value) public {
 		_transfer(msg.sender, _to, _value);
 	}
 
@@ -116,7 +116,7 @@ contract TokenA is Owned {
 	 * @param _to The address of the recipient
 	 * @param _value the amount to send
 	 */
-	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+	function transferFrom(address _from, address _to, uint _value) public returns (bool success) {
 		require(_value <= allowance[_from][msg.sender]);	 // Check allowance
 		allowance[_from][msg.sender] -= _value;
 		_transfer(_from, _to, _value);
@@ -131,7 +131,7 @@ contract TokenA is Owned {
 	 * @param _spender The address authorized to spend
 	 * @param _value the max amount they can spend
 	 */
-	function approve(address _spender, uint256 _value) public returns (bool success) {
+	function approve(address _spender, uint _value) public returns (bool success) {
 		allowance[msg.sender][_spender] = _value;
 		return true;
 	}
@@ -145,7 +145,7 @@ contract TokenA is Owned {
 	 * @param _value the max amount they can spend
 	 * @param _extraData some extra information to send to the approved contract
 	 */
-	function approveAndCall(address _spender, uint256 _value, bytes _extraData)
+	function approveAndCall(address _spender, uint _value, bytes _extraData)
 		public
 		returns (bool success) 
 	{
@@ -163,7 +163,7 @@ contract TokenA is Owned {
 	 *
 	 * @param _value the amount of money to burn
 	 */
-	function burn(uint256 _value) public returns (bool success) {
+	function burn(uint _value) public returns (bool success) {
 		require(balanceOf[msg.sender] >= _value);   // Check if the sender has enough
 		balanceOf[msg.sender] -= _value;			// Subtract from the sender
 		totalSupply -= _value;					  // Updates totalSupply
@@ -179,7 +179,7 @@ contract TokenA is Owned {
 	 * @param _from the address of the sender
 	 * @param _value the amount of money to burn
 	 */
-	function burnFrom(address _from, uint256 _value) public returns (bool success) {
+	function burnFrom(address _from, uint _value) public returns (bool success) {
 		require(balanceOf[_from] >= _value);				// Check if the targeted balance is enough
 		require(_value <= allowance[_from][msg.sender]);	// Check allowance
 		balanceOf[_from] -= _value;						 // Subtract from the targeted balance
@@ -192,7 +192,7 @@ contract TokenA is Owned {
 	/// @notice Create `mintedAmount` tokens and send it to `target`
 	/// @param target Address to receive the tokens
 	/// @param mintedAmount the amount of tokens it will receive
-	function mintToken(address target, uint256 mintedAmount) onlyOwner public {
+	function mintToken(address target, uint mintedAmount) onlyOwner public {
 		balanceOf[target] += mintedAmount;
 		totalSupply += mintedAmount;
 		Transfer(0, this, mintedAmount);
@@ -217,7 +217,7 @@ contract TokenA is Owned {
 	/// @notice Allow users to buy tokens for `newBuyPrice` eth and sell tokens for `newSellPrice` eth
 	/// @param newSellPrice Price the users can sell to the contract
 	/// @param newBuyPrice Price users can buy from the contract
-	function setPrices(uint256 newSellPrice, uint256 newBuyPrice) onlyOwner public {
+	function setPrices(uint newSellPrice, uint newBuyPrice) onlyOwner public {
 		sellPrice = newSellPrice;
 		buyPrice = newBuyPrice;
 	}

@@ -6,14 +6,14 @@ contract DUO {
 	string public symbol;
 	uint8 public decimals = 18;
 	// 18 decimals is the strongly suggested default, avoid changing it
-	uint256 public totalSupply;
+	uint public totalSupply;
 
 	// This creates an array with all balances
-	mapping (address => uint256) public balanceOf;
-	mapping (address => mapping (address => uint256)) public allowance;
+	mapping (address => uint) public balanceOf;
+	mapping (address => mapping (address => uint)) public allowance;
 
 	// This generates a public event on the blockchain that will notify clients
-	event Transfer(address indexed from, address indexed to, uint256 value);
+	event Transfer(address indexed from, address indexed to, uint value);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 
 	/**
@@ -22,7 +22,7 @@ contract DUO {
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
 	constructor(
-		uint256 initialSupply,
+		uint initialSupply,
 		string tokenName,
 		string tokenSymbol
 	) public 
@@ -62,7 +62,7 @@ contract DUO {
 	 * @param _to The address of the recipient
 	 * @param _value the amount to send
 	 */
-	function transfer(address _to, uint256 _value) public {
+	function transfer(address _to, uint _value) public {
 		_transfer(msg.sender, _to, _value);
 	}
 
@@ -75,7 +75,7 @@ contract DUO {
 	 * @param _to The address of the recipient
 	 * @param _value the amount to send
 	 */
-	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+	function transferFrom(address _from, address _to, uint _value) public returns (bool success) {
 		require(_value <= allowance[_from][msg.sender]);	 // Check allowance
 		allowance[_from][msg.sender] -= _value;
 		_transfer(_from, _to, _value);
@@ -90,7 +90,7 @@ contract DUO {
 	 * @param _spender The address authorized to spend
 	 * @param _value the max amount they can spend
 	 */
-	function approve(address _spender, uint256 _value) public returns (bool success) {
+	function approve(address _spender, uint _value) public returns (bool success) {
 		allowance[msg.sender][_spender] = _value;
 		emit Approval(msg.sender, _spender, _value);
 		return true;

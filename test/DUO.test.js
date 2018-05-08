@@ -1,5 +1,5 @@
 const web3 = require('web3');
-let DUO = artifacts.require('./DUO.sol');
+const DUO = artifacts.require('./DUO.sol');
 
 contract('DUO', accounts => {
 	let duoContract;

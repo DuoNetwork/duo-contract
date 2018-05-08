@@ -164,7 +164,7 @@ contract Custodian {
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
 
 	// token events
-	event Transfer(address indexed from, address indexed to, uint256 value, uint index);
+	event Transfer(address indexed from, address indexed to, uint value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
 	
 	// admin events
