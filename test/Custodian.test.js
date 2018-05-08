@@ -81,7 +81,6 @@ contract('Custodian', accounts => {
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
 	const charles = accounts[8];
-	const nonDuoMember = accounts[9];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -273,7 +272,6 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 		});
 
 		it('should create token A and B', async () => {
@@ -377,7 +375,6 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 			prevBalanceA = await custodianContract.balanceOf.call(0, alice);
