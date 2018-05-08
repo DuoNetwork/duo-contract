@@ -36,7 +36,7 @@ const IDX_FEE_IN_WEI = 2;
 // const commissionRateInBP = 7;
 const IDX_PERIOD = 8;
 // const iterationGasThreshold = 9;
-// const memberThresholdInWei = 10;
+// const ethDuoFeeRatio = 10;
 // const preResetWaitingBlocks = 11;
 const IDX_PRICE_TOL = 12;
 // const priceFeedTolInBP = 13;
@@ -110,8 +110,6 @@ contract('Custodian', accounts => {
 			web3.utils.toWei(CustodianInit.hd),
 			CustodianInit.commissionRateInBP,
 			CustodianInit.period,
-			// web3.utils.toWei(CustodianInit.memberThreshold),
-			// CustodianInit.gasThreshhold,
 			CustodianInit.coolDown,
 			{
 				from: creator
@@ -278,31 +276,15 @@ contract('Custodian', accounts => {
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 		});
 
-		it('should only allow duo member to create', async () => {
-			try {
-				await custodianContract.create({
-					from: nonDuoMember,
-					value: web3.utils.toWei(amtEth + '')
-				});
-				assert.isTrue(false, 'the transaction should revert');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'non DUO member still can create Tranche Token'
-				);
-			}
-		});
-
 		it('should create token A and B', async () => {
-			let success = await custodianContract.create.call({
+			let success = await custodianContract.create.call(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
 			// first check return value with call()
-			assert.isTrue(success, 'duo member is not able to create');
+			assert.isTrue(success, 'not able to create');
 			// then send transaction to check effects
-			await custodianContract.create({
+			await custodianContract.create(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
@@ -338,30 +320,12 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('only allowed account can withdraw fee', async () => {
-			try {
-				await custodianContract.collectFee.call(web3.utils.toWei('0.001'), { from: alice });
-
-				assert.isTrue(false, 'can collect fee more than allowed');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'non DUO member still can create Tranche Token'
-				);
-			}
-		});
-
 		it('should only collect fee less than allowed', async () => {
 			try {
 				await custodianContract.collectFee.call(web3.utils.toWei('1'), { from: fc });
 				assert.isTrue(false, 'can collect fee more than allowed');
 			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'non DUO member still can create Tranche Token'
-				);
+				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
 			}
 		});
 
@@ -373,8 +337,15 @@ contract('Custodian', accounts => {
 			});
 			assert.isTrue(success);
 			let tx = await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === 'CollectFee', 'worng event emitted');
-			assert.isTrue(tx.logs[0].args.addr.valueOf() === fc && tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001'), 'worng fee parameter');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'CollectFee',
+				'worng event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.addr.valueOf() === fc &&
+					tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001'),
+				'worng fee parameter'
+			);
 		});
 
 		it('should fee pending withdrawal amount should be updated correctly', async () => {
@@ -408,7 +379,7 @@ contract('Custodian', accounts => {
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await duoContract.transfer(nonDuoMember, web3.utils.toWei('2'), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
-			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
+			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 			prevBalanceA = await custodianContract.balanceOf.call(0, alice);
 			prevBalanceB = await custodianContract.balanceOf.call(1, alice);
 			let sysStates = await custodianContract.getSystemStates.call();
@@ -417,33 +388,17 @@ contract('Custodian', accounts => {
 
 		it('should only redeem token value less than balance', async () => {
 			try {
-				await custodianContract.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), {
-					from: alice
-				});
-				assert.isTrue(false, 'duomember not able to create more than allowed');
+				await custodianContract.redeem(
+					web3.utils.toWei('2800'),
+					web3.utils.toWei('2900'),
+					true,
+					{
+						from: alice
+					}
+				);
+				assert.isTrue(false, 'able to redeem more than allowed');
 			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'non DUO member still can create Tranche Token'
-				);
-			}
-		});
-
-		it('only duo member can redeem', async () => {
-			try {
-				await custodianContract.redeem.call(
-					web3.utils.toWei('28'),
-					web3.utils.toWei('29'),
-					{ from: nonDuoMember }
-				);
-				assert.isTrue(false, 'the transaction should revert');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'non DUO member still can redeem Tranche Token'
-				);
+				assert.equal(err.message, VM_REVERT_MSG, 'able to redeem more than allowed');
 			}
 		});
 
@@ -451,12 +406,14 @@ contract('Custodian', accounts => {
 			let success = await custodianContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
+				true,
 				{ from: alice }
 			);
-			assert.isTrue(success, 'duo member is not able to redeem');
+			assert.isTrue(success, 'not able to redeem');
 			await custodianContract.redeem(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
+				true,
 				{ from: alice }
 			);
 		});
@@ -508,7 +465,7 @@ contract('Custodian', accounts => {
 				assert.equal(
 					err.message,
 					VM_REVERT_MSG,
-					'non DUO member still can create Tranche Token'
+					'is able to with withdaw more than allowed'
 				);
 			}
 		});
@@ -1140,7 +1097,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow creation', async () => {
 			try {
-				await custodianContract.create({
+				await custodianContract.create(true, {
 					from: alice,
 					value: web3.utils.toWei('1')
 				});
@@ -1152,9 +1109,14 @@ contract('Custodian', accounts => {
 
 		it('should not allow redemption', async () => {
 			try {
-				await custodianContract.redeem(web3.utils.toWei('2800'), web3.utils.toWei('2900'), {
-					from: alice
-				});
+				await custodianContract.redeem(
+					web3.utils.toWei('2800'),
+					web3.utils.toWei('2900'),
+					true,
+					{
+						from: alice
+					}
+				);
 
 				assert.isTrue(false, 'still can redeem');
 			} catch (err) {
@@ -1182,78 +1144,78 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should not allow admin setCommissionRate', async () => {
+		it('should not allow admin set commissionRate', async () => {
 			try {
 				await custodianContract.setValue(0, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can setMemberThresholdInWei');
+				assert.isTrue(false, 'still can set commissionRate');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei');
+				assert.equal(err.message, VM_REVERT_MSG, 'still can set commissionRate');
 			}
 		});
 
-		it('should not allow admin setMemberThresholdInWei', async () => {
+		it('should not allow admin set ethDuoFeeRatio', async () => {
 			try {
 				await custodianContract.setValue(1, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can setMemberThresholdInWei');
+				assert.isTrue(false, 'still can set ethDuoFeeRatio');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still cansetMemberThresholdInWei');
+				assert.equal(err.message, VM_REVERT_MSG, 'still can set ethDuoFeeRatio');
 			}
 		});
 
-		it('should not allow admin setIterationGasThreshold', async () => {
+		it('should not allow admin set iterationGasThreshold', async () => {
 			try {
 				await custodianContract.setValue(2, 1000, { from: creator });
-				assert.isTrue(false, 'still can setIterationGasThreshold');
+				assert.isTrue(false, 'still can set iterationGasThreshold');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setIterationGasThreshold');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set iterationGasThreshold');
 			}
 		});
 
-		it('should not allow admin setPreResetWaitingBlocks', async () => {
+		it('should not allow admin set preResetWaitingBlocks', async () => {
 			try {
 				await custodianContract.setValue(3, 1000, { from: creator });
-				assert.isTrue(false, 'still can setPreResetWaitingBlocks');
+				assert.isTrue(false, 'still can set preResetWaitingBlocks');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPreResetWaitingBlocks');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set preResetWaitingBlocks');
 			}
 		});
 
-		it('should not allow admin setPriceTolInBP', async () => {
+		it('should not allow admin set priceTolInBP', async () => {
 			try {
 				await custodianContract.setValue(4, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can setPriceTolInBP');
+				assert.isTrue(false, 'still can set priceTolInBP');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceTolInBP');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set priceTolInBP');
 			}
 		});
 
-		it('should not allow admin setPriceFeedTolInBP', async () => {
+		it('should not allow admin set priceFeedTolInBP', async () => {
 			try {
 				await custodianContract.setValue(5, 1000, { from: creator });
-				assert.isTrue(false, 'still can setPriceFeedTolInBP');
+				assert.isTrue(false, 'still can set priceFeedTolInBP');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTolInBP');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTolInBP');
 			}
 		});
 
-		it('should not allow admin setPriceFeedTimeTol', async () => {
+		it('should not allow admin set priceFeedTimeTol', async () => {
 			try {
 				await custodianContract.setValue(6, 1000, { from: creator });
-				assert.isTrue(false, 'still can setPriceFeedTimeTol');
+				assert.isTrue(false, 'still can set priceFeedTimeTol');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceFeedTimeTol');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTimeTol');
 			}
 		});
 
-		it('should not allow admin setPriceUpdateCoolDown', async () => {
+		it('should not allow admin set priceUpdateCoolDown', async () => {
 			try {
 				await custodianContract.setValue(7, 1000, { from: creator });
-				assert.isTrue(false, 'still can setPriceUpdateCoolDown');
+				assert.isTrue(false, 'still can set priceUpdateCoolDown');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still setPriceUpdateCoolDown');
+				assert.equal(err.message, VM_REVERT_MSG, 'still set priceUpdateCoolDown');
 			}
 		});
 
@@ -1390,11 +1352,11 @@ contract('Custodian', accounts => {
 				);
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
-				await custodianContract.create({
+				await custodianContract.create(true, {
 					from: alice,
 					value: web3.utils.toWei('1')
 				});
-				await custodianContract.create({
+				await custodianContract.create(true, {
 					from: bob,
 					value: web3.utils.toWei('1')
 				});
@@ -1471,7 +1433,13 @@ contract('Custodian', accounts => {
 
 			it('should update beta correctly', () => {
 				if (isPeriodicReset) {
-					let newBeta = updateBeta(prevBeta, price, Number(ethInitPrice), currentNavA, alphaInBP);
+					let newBeta = updateBeta(
+						prevBeta,
+						price,
+						Number(ethInitPrice),
+						currentNavA,
+						alphaInBP
+					);
 					return assert.isTrue(isEqual(beta, newBeta), 'beta is not updated correctly');
 				} else {
 					return assert.equal(beta, 1, 'beta is not reset to 1');
@@ -1715,7 +1683,7 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
+			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 		});
 
 		it('should show balance', async () => {
@@ -1845,7 +1813,7 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-			await custodianContract.create({ from: alice, value: web3.utils.toWei('1') });
+			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 		});
 
 		it('should show balance', async () => {
@@ -2008,17 +1976,17 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('admin should be able to set member threshold', async () => {
+		it('admin should be able to set ethDuoRatio', async () => {
 			let success = await custodianContract.setValue.call(1, 100, {
 				from: creator
 			});
-			assert.isTrue(success, 'not be able to set member threshhold');
+			assert.isTrue(success, 'not be able to set ethDuoRatio');
 		});
 
-		it('non admin should not be able to set member Threshold', async () => {
+		it('non admin should not be able to set ethDuoRatio', async () => {
 			try {
 				await custodianContract.setValue.call(1, 100, { from: alice });
-				assert.isTrue(false, 'non admin can change member threshhold');
+				assert.isTrue(false, 'non admin can change ethDuoRatio');
 			} catch (err) {
 				assert.equal(
 					err.message,

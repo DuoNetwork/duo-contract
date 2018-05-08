@@ -101,7 +101,7 @@ contract Custodian {
 	uint commissionRateInBP;
 	uint period;
 	uint iterationGasThreshold = 60000;
-	uint memberThresholdInWei = 10 * WEI_DENOMINATOR;
+	uint ethDuoFeeRatio = 1000;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
@@ -142,12 +142,6 @@ contract Custodian {
 
 	modifier isPriceFeed() {
 		require(msg.sender == priceFeed1 || msg.sender == priceFeed2 || msg.sender == priceFeed3);
-		_;
-	}
-
-	modifier isDuoMember() {
-		DUO duoToken = DUO(duoTokenAddress);
-		require(duoToken.balanceOf(msg.sender) >= memberThresholdInWei);
 		_;
 	}
 
@@ -427,7 +421,7 @@ contract Custodian {
 		sysState[7] = commissionRateInBP;
 		sysState[8] = period;
 		sysState[9] = iterationGasThreshold;
-		sysState[10] = memberThresholdInWei;
+		sysState[10] = ethDuoFeeRatio;
 		sysState[11] = preResetWaitingBlocks;
 		sysState[12] = priceTolInBP; 
 		sysState[13] = priceFeedTolInBP;
@@ -586,17 +580,14 @@ contract Custodian {
 	// end of price feed functions	
 	// start of DUO member functions
 
-	function create() 
+	function create(bool payFeeInEth) 
 		public 
 		payable 
 		inState(State.Trading) 
-		isDuoMember() 
 		returns (bool success) 
 	{
-		uint feeInWei = getFee(msg.value);
-		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		uint numeritor = msg.value
-						.sub(feeInWei)
+		uint ethAmtInWei = deductFee(msg.value, payFeeInEth);
+		uint numeritor = ethAmtInWei
 						.mul(resetPrice.priceInWei)
 						.mul(betaInWei)
 						.mul(BP_DENOMINATOR
@@ -608,38 +599,38 @@ contract Custodian {
 		);
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
-		checkNewUser(msg.sender);
-		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].add(tokenValueA);
-		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].add(tokenValueB);
+		address sender = msg.sender;
+		checkNewUser(sender);
+		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
+		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
 		return true;
 	}
 
-	function redeem(uint amtInWeiA, uint amtInWeiB) 
+	function redeem(uint amtInWeiA, uint amtInWeiB, bool payFeeInEth) 
 		public 
 		inState(State.Trading) 
-		isDuoMember() 
 		returns (bool success) 
 	{
 		require(amtInWeiA > 0 && amtInWeiB > 0);
 		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
-		require(balanceOf[0][msg.sender] >= deductAmtInWeiA && balanceOf[1][msg.sender] >= deductAmtInWeiB);
-		uint amtEthInWei = deductAmtInWeiA
+		address sender = msg.sender;
+		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB);
+		uint ethAmtInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
 			.mul(WEI_DENOMINATOR)
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
-		uint feeInWei = getFee(amtEthInWei);
-		balanceOf[0][msg.sender] = balanceOf[0][msg.sender].sub(deductAmtInWeiA);
-		balanceOf[1][msg.sender] = balanceOf[1][msg.sender].sub(deductAmtInWeiB);
+		ethAmtInWei = deductFee(ethAmtInWei, payFeeInEth);
+		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
+		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
-		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].add(amtEthInWei.sub(feeInWei));
+		ethPendingWithdrawal[sender] = ethPendingWithdrawal[sender].add(ethAmtInWei);
 		return true;
 	}
 
@@ -649,9 +640,17 @@ contract Custodian {
 		msg.sender.transfer(amtEthInWei);
 		return true;
 	}
-	
-	function getFee(uint ethInWei) internal view returns(uint) {
-		return ethInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+
+	function deductFee(uint ethAmtInWei, bool payFeeInEth) internal returns (uint ethAmtAfterFeeInWei) {
+		uint feeInWei = ethAmtInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+		if (payFeeInEth) {
+			feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
+		} else {
+			DUO duoToken = DUO(duoTokenAddress);
+			duoToken.transferFrom(msg.sender, this, feeInWei.mul(ethDuoFeeRatio));
+			ethAmtAfterFeeInWei = ethAmtInWei;
+		}
 	}
 
 	// end of DUO member functions
@@ -731,8 +730,8 @@ contract Custodian {
 			oldValue = commissionRateInBP;
 			commissionRateInBP = newValue;
 		} else if (idx == 1) {
-			oldValue = memberThresholdInWei;
-			memberThresholdInWei = newValue;
+			oldValue = ethDuoFeeRatio;
+			ethDuoFeeRatio = newValue;
 		} else if (idx == 2) {
 			oldValue = iterationGasThreshold;
 			iterationGasThreshold = newValue;

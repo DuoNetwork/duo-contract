@@ -11,7 +11,7 @@
 		"hd": "0.25",
 		"commissionRateInBP": 300,
 		"period": 3600,
-		"memberThreshold": "10",
+		"ethDuoRatio": 1000,
 		"gasThreshhold": 60000,
 		"coolDown": 3000
 	},

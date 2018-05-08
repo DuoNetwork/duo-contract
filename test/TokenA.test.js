@@ -62,7 +62,7 @@ contract('TokenA', accounts => {
 			from: pf1
 		});
 		let amtEth = 1;
-		await custodianContract.create({ from: creator, value: web3.utils.toWei(amtEth + '') });
+		await custodianContract.create(true, { from: creator, value: web3.utils.toWei(amtEth + '') });
 		
 		let tokenValueB =
 			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
