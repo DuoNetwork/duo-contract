@@ -650,7 +650,7 @@ contract Custodian {
 		return true;
 	}
 	
-	function getFee(uint ethInWei) internal constant returns(uint) {
+	function getFee(uint ethInWei) internal view returns(uint) {
 		return ethInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
 	}
 
