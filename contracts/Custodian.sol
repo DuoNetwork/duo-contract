@@ -107,7 +107,7 @@ contract Custodian {
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown;
-	uint adminCoolDown = 1 hours;
+	uint adminCoolDown = 30 minutes;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
 	// nav and current total supply
@@ -751,6 +751,9 @@ contract Custodian {
 			require(newValue < period);
 			oldValue = priceUpdateCoolDown;
 			priceUpdateCoolDown = newValue;
+		} else if (idx == 8) {
+			oldValue = adminCoolDown;
+			adminCoolDown = newValue;
 		} else {
 			revert();
 		}

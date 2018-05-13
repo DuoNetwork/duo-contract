@@ -87,6 +87,7 @@ contract('Custodian', accounts => {
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
 	const charles = accounts[8];
+	const david = accounts[9];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -2155,7 +2156,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price update coolupdate', async () => {
-			let success = await custodianContract.setValue.call(7, 10000, {
+			let success = await custodianContract.setValue.call(7, 10, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set price update coolupdate');
@@ -2163,7 +2164,27 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price update coolupdate', async () => {
 			try {
-				await custodianContract.setValue.call(7, 10000, { from: alice });
+				await custodianContract.setValue.call(7, 10, { from: alice });
+				assert.isTrue(false, 'non admin can change price update coolupdate');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('admin should be able to set price update coolupdate', async () => {
+			let success = await custodianContract.setValue.call(8, 10, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set price update coolupdate');
+		});
+
+		it('non admin should not be able to set price update coolupdate', async () => {
+			try {
+				await custodianContract.setValue.call(8, 10, { from: alice });
 				assert.isTrue(false, 'non admin can change price update coolupdate');
 			} catch (err) {
 				assert.equal(
@@ -2184,7 +2205,6 @@ contract('Custodian', accounts => {
 		});
 
 		let poolManager = pm;
-
 		it('non poolManager cannot add address', async () => {
 			try {
 				await custodianContract.addAddress.call(alice, bob, { from: charles });
@@ -2297,6 +2317,26 @@ contract('Custodian', accounts => {
 				);
 			}
 		});
+
+		it('new poolManager should not add within coolDown', async () => {
+			try {
+				await custodianContract.addAddress.call(charles, david, { from: poolManager });
+				assert.isTrue(false, 'can add same address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('new poolManager should only add beyond coolDown', async () => {
+			await custodianContract.skipCooldown(1);
+			let success = await custodianContract.addAddress.call(web3.utils.toChecksumAddress(charles), web3.utils.toChecksumAddress(david), { from: poolManager });
+			assert.isTrue(success, 'cannot add outside cooldown')
+			
+		});
 	});
 
 	describe('poolManger remove from pool', () => {
@@ -2308,6 +2348,7 @@ contract('Custodian', accounts => {
 		});
 
 		let poolManager = pm;
+		let nextCandidate;
 
 		it('non poolManager cannot remove address', async () => {
 			try {
@@ -2345,6 +2386,13 @@ contract('Custodian', accounts => {
 			let args = tx.logs[0].args;
 			let sysAddress = await custodianContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
+			for(let i=1; i<PoolInit.length;i++){
+				let currentCandidate = PoolInit[i];
+				if(currentCandidate != poolManager){
+					nextCandidate = currentCandidate;
+					break;
+				}
+			}
 			assert.isTrue(
 				web3.utils.toChecksumAddress(args['addr']) === PoolInit[0] &&
 					args['newPoolManager'] === poolManager,
@@ -2419,6 +2467,26 @@ contract('Custodian', accounts => {
 				);
 			}
 		});
+
+		it('new poolManager should not remove within coolDown', async () => {
+			try {
+				await custodianContract.removeAddress.call(nextCandidate, { from: poolManager });
+				assert.isTrue(false, 'non poolManager can remove address');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					'VM Exception while processing transaction: revert',
+					'transaction not reverted'
+				);
+			}
+		});
+
+		it('new poolManager should only remove beyond coolDown', async () => {
+			await custodianContract.skipCooldown(1);
+			let success = await custodianContract.removeAddress.call(nextCandidate, { from: poolManager });
+			assert.isTrue(success, 'cannot add outside cooldown')
+			
+		});
 	});
 
 	describe('update role', () => {
@@ -2441,6 +2509,7 @@ contract('Custodian', accounts => {
 					web3.utils.toChecksumAddress(bob),
 					{ from: pm }
 				);
+				await custodianContract.skipCooldown(1);
 			});
 
 			it('address not in the pool cannot assign', async () => {
@@ -2509,6 +2578,36 @@ contract('Custodian', accounts => {
 						'assigner is still in the pool'
 					);
 				}
+			});
+
+			it('should not update address within coolDonw', async () => {
+				try {
+					await custodianContract.updateAddress(newAddr, { from: bob });
+					assert.isTrue(false, 'member not in the pool can assign role');
+				} catch (err) {
+					assert.equal(
+						err.message,
+						'VM Exception while processing transaction: revert',
+						'transaction not reverted'
+					);
+				}
+			});
+
+			it('should only update beyond coolDown period', async () => {
+				await custodianContract.skipCooldown(1);
+				let currentRole = newAddr;
+				let tx = await custodianContract.updateAddress(newAddr, { from: bob });
+				assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
+				let args = tx.logs[0].args;
+				let sysAddress = await custodianContract.getSystemAddresses.call({ from: bob });
+				newAddr = sysAddress[roelIndex];
+
+				assert.isTrue(
+					args['current'] === currentRole && args['newAddr'] === newAddr,
+					'event args is wrong'
+				);
+				assert.isTrue(newAddr !== currentRole, 'currentRole not updated');
+		
 			});
 		}
 
