@@ -2175,17 +2175,17 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('admin should be able to set price update coolupdate', async () => {
+		it('admin should be able to set admin operation coolupdate', async () => {
 			let success = await custodianContract.setValue.call(8, 10, {
 				from: creator
 			});
-			assert.isTrue(success, 'not be able to set price update coolupdate');
+			assert.isTrue(success, 'not be able to set admin operation coolupdate');
 		});
 
-		it('non admin should not be able to set price update coolupdate', async () => {
+		it('non admin should not be able to set admin operation coolupdate', async () => {
 			try {
 				await custodianContract.setValue.call(8, 10, { from: alice });
-				assert.isTrue(false, 'non admin can change price update coolupdate');
+				assert.isTrue(false, 'non admin can change admin operation coolupdate');
 			} catch (err) {
 				assert.equal(
 					err.message,
@@ -2595,18 +2595,23 @@ contract('Custodian', accounts => {
 
 			it('should only update beyond coolDown period', async () => {
 				await custodianContract.skipCooldown(1);
-				let currentRole = newAddr;
+				// let res = await custodianContract.getSystemStates.call();
+				// let now = await custodianContract.timestamp.call();
+				// console.log(res[20].valueOf() - now.valueOf());
+				// console.log(res[21].valueOf());
+				// let list = await custodianContract.getSystemStates.call();
+				// console.log(list[19].valueOf());
 				let tx = await custodianContract.updateAddress(newAddr, { from: bob });
 				assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
 				let args = tx.logs[0].args;
 				let sysAddress = await custodianContract.getSystemAddresses.call({ from: bob });
-				newAddr = sysAddress[roelIndex];
+				newAddr2 = sysAddress[roelIndex];
 
 				assert.isTrue(
-					args['current'] === currentRole && args['newAddr'] === newAddr,
+					args['current'] === newAddr && args['newAddr'] === newAddr2,
 					'event args is wrong'
 				);
-				assert.isTrue(newAddr !== currentRole, 'currentRole not updated');
+				assert.isTrue(newAddr2 !== newAddr, 'currentRole not updated');
 		
 			});
 		}

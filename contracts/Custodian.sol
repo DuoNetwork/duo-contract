@@ -485,7 +485,7 @@ contract Custodian {
 		sysAddr[5] = poolManager;
 	}
 
-	function getSystemStates() public view returns (uint[21] sysState) {
+	function getSystemStates() public view returns (uint[22] sysState) {
 		sysState[0] = alphaInBP;
 		sysState[1] = betaInWei;
 		sysState[2] = feeAccumulatedInWei;
@@ -507,6 +507,7 @@ contract Custodian {
 		sysState[18] = users.length;
 		sysState[19] = addrPool.length;
 		sysState[20] = lastAdminTime;
+		sysState[21] = adminCoolDown;
 	}
 
 	function getStagingPrices() 
@@ -817,7 +818,8 @@ contract Custodian {
 			feeCollector = addr;
 		} else if (current == admin) {
 			admin = addr;
-		} else {
+		} 
+		else {
 			revert();
 		}
 		lastAdminTime = currentTime;
