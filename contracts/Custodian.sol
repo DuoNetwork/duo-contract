@@ -107,6 +107,7 @@ contract Custodian {
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown;
+	uint adminCoolDown = 1 hours;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
 	// nav and current total supply
@@ -117,6 +118,7 @@ contract Custodian {
 
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
+	uint lastAdminTime;
 	// below 4 data are returned in getStagingPrices
 	address firstAddr;
 	address secondAddr;
@@ -483,7 +485,7 @@ contract Custodian {
 		sysAddr[5] = poolManager;
 	}
 
-	function getSystemStates() public view returns (uint[20] sysState) {
+	function getSystemStates() public view returns (uint[21] sysState) {
 		sysState[0] = alphaInBP;
 		sysState[1] = betaInWei;
 		sysState[2] = feeAccumulatedInWei;
@@ -504,6 +506,7 @@ contract Custodian {
 		sysState[17] = nextResetAddrIndex;
 		sysState[18] = users.length;
 		sysState[19] = addrPool.length;
+		sysState[20] = lastAdminTime;
 	}
 
 	function getStagingPrices() 
@@ -745,6 +748,7 @@ contract Custodian {
 			oldValue = priceFeedTimeTol;
 			priceFeedTimeTol = newValue;
 		} else if (idx == 7) {
+			require(newValue < period);
 			oldValue = priceUpdateCoolDown;
 			priceUpdateCoolDown = newValue;
 		} else {
@@ -756,7 +760,8 @@ contract Custodian {
 	}
 
 	function addAddress(address addr1, address addr2) public only(poolManager) returns (bool success) {
-		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
+		uint currentTime = getNowTimestamp();
+		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2 && currentTime - lastAdminTime > adminCoolDown);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
@@ -765,11 +770,13 @@ contract Custodian {
 		addrPool.push(addr2);
 		addrStatus[addr2] = 1;
 		emit AddAddress(addr1, addr2, poolManager);
+		lastAdminTime = currentTime;
 		return true;
 	}
 
 	function removeAddress(address addr) public only(poolManager) returns (bool success) {
-		require(addrPool.length > 3 && addrStatus[addr] == 1);
+		uint currentTime = getNowTimestamp();
+		require(addrPool.length > 3 && addrStatus[addr] == 1 && currentTime - lastAdminTime > adminCoolDown);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
@@ -779,12 +786,14 @@ contract Custodian {
 				break;
             }
 		}
+		lastAdminTime = currentTime;
 		emit RemoveAddress(addr, poolManager);
 		return true;
 	}
 
 	function updateAddress(address current) public inAddrPool() returns (address addr) {
-		require(addrPool.length > 3);
+		uint currentTime = getNowTimestamp();
+		require(addrPool.length > 3 && currentTime - lastAdminTime > adminCoolDown);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
 				removeFromPool(i);
@@ -808,7 +817,7 @@ contract Custodian {
 		} else {
 			revert();
 		}
-
+		lastAdminTime = currentTime;
 		emit UpdateAddress(current, addr);
 	}
 
