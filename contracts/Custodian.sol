@@ -155,9 +155,11 @@ contract Custodian {
 	// state events
 	event StartTrading();
 	event StartPreReset();
-	event StartReset();
+	event StartReset(uint nextIndex);
+	event Creation(address indexed sender, bool isNewUser, uint ethSent, uint ethForCreation, uint tokenAInWei, uint tokenBInWei);
+	event Redemption(address indexed sender, uint tokenAInWei, uint tokenBInWei, uint ethInWei, uint ethAfterFeeInWei );
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
-	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
@@ -240,11 +242,12 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		checkNewUser(sender);
+		bool isNewUser = checkNewUser(sender);
 		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
+		emit Creation(sender, isNewUser, msg.value, ethAmtInWei, tokenValueA, tokenValueB);
 		return true;
 	}
 
@@ -265,12 +268,13 @@ contract Custodian {
 			.mul(WEI_DENOMINATOR)
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
-		ethAmtInWei = deductFee(ethAmtInWei, payFeeInEth);
+		uint ethAmtAfterFeeInWei = deductFee(ethAmtInWei, payFeeInEth);
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		ethPendingWithdrawal[sender] = ethPendingWithdrawal[sender].add(ethAmtInWei);
+		ethPendingWithdrawal[sender] = ethPendingWithdrawal[sender].add(ethAmtAfterFeeInWei);
+		emit Redemption(sender, deductAmtInWeiA, deductAmtInWeiB, ethAmtInWei, ethAmtAfterFeeInWei);
 		return true;
 	}
 
@@ -402,7 +406,7 @@ contract Custodian {
 				totalSupplyB = totalSupplyB.add(newBFromA);
 			}
 
-			emit StartReset();
+			emit StartReset(nextResetAddrIndex);
 		} else 
 			emit StartPreReset();
 
@@ -471,7 +475,7 @@ contract Custodian {
 			return true;
 		} else{
 			nextResetAddrIndex = localResetAddrIndex;
-			emit StartReset();
+			emit StartReset(localResetAddrIndex);
 			return false;
 		}
 	}
@@ -641,7 +645,7 @@ contract Custodian {
 			lastPreResetBlockNo = block.number;
 			emit StartPreReset();
 		} 
-		emit AcceptPrice(priceInWei, timeInSecond);
+		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
 	}
 
 	function getMedian(uint a, uint b, uint c) internal pure returns (uint) {
@@ -845,13 +849,15 @@ contract Custodian {
 		return now;
 	}
 	
-	function checkNewUser(address user) internal {
+	function checkNewUser(address user) internal returns(bool isNewUser) {
 		if (!existingUsers[user]) {
 			users.push(user);
 			existingUsers[user] = true;
 			balanceOf[0][user] = 0;
 			balanceOf[1][user] = 0;
+			isNewUser = true;
 		}
+		isNewUser = false;
 	}
 	// end of internal utility functions
 }
