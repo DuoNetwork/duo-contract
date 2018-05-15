@@ -106,7 +106,7 @@ contract Custodian {
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown;
-	uint adminCoolDown = 30 minutes;
+	uint adminCoolDown = 24 hours;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
 	// nav and current total supply
