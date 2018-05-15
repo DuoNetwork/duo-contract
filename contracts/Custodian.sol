@@ -83,7 +83,6 @@ contract Custodian {
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
 	mapping (address => bool) existingUsers;
-	mapping(address => uint) public ethPendingWithdrawal;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
@@ -152,12 +151,19 @@ contract Custodian {
 		_;
 	}
 
+	modifier inUpdateWindow() {
+		uint currentTime = getNowTimestamp();
+		require(currentTime - lastAdminTime > adminCoolDown);
+		_;
+		lastAdminTime = currentTime;
+	}
+
 	// state events
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
-	event Create(address indexed sender, uint createdTokenAInWei, uint createdTokenBInWei);
-	event Redeem(address indexed sender, uint redeemedTokenAInWei, uint redeemedTokenBInWei);
+	event Create(address indexed sender, uint createdTokenAInWei, uint createdTokenBInWei, uint totalSupplyA, uint totalSupplyB);
+	event Redeem(address indexed sender, uint redeemedTokenAInWei, uint redeemedTokenBInWei, uint totalSupplyA, uint totalSupplyB);
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 
@@ -247,7 +253,7 @@ contract Custodian {
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
-		emit Create(sender, tokenValueA, tokenValueB);
+		emit Create(sender, tokenValueA, tokenValueB, totalSupplyA, totalSupplyB);
 		return true;
 	}
 
@@ -273,15 +279,8 @@ contract Custodian {
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		ethPendingWithdrawal[sender] = ethPendingWithdrawal[sender].add(ethAmtInWei);
-		emit Redeem(sender, deductAmtInWeiA, deductAmtInWeiB);
-		return true;
-	}
-
-	function withdraw(uint amtEthInWei) public inState(State.Trading) returns (bool success) {
-		require(amtEthInWei > 0 && amtEthInWei <= ethPendingWithdrawal[msg.sender] && amtEthInWei < address(this).balance);
-		ethPendingWithdrawal[msg.sender] = ethPendingWithdrawal[msg.sender].sub(amtEthInWei);
-		msg.sender.transfer(amtEthInWei);
+		msg.sender.transfer(ethAmtInWei);
+		emit Redeem(sender, deductAmtInWeiA, deductAmtInWeiB, totalSupplyA, totalSupplyB);
 		return true;
 	}
 
@@ -727,7 +726,7 @@ contract Custodian {
 		return true;
 	}
 
-	function setValue(uint idx, uint newValue) public only(admin) returns (bool success) {
+	function setValue(uint idx, uint newValue) public only(admin) inUpdateWindow() returns (bool success) {
 		require(state == State.Inception || state == State.Trading);
 		uint oldValue;
 		if (idx == 0) {
@@ -756,9 +755,6 @@ contract Custodian {
 			require(newValue < period);
 			oldValue = priceUpdateCoolDown;
 			priceUpdateCoolDown = newValue;
-		} else if (idx == 8) {
-			oldValue = adminCoolDown;
-			adminCoolDown = newValue;
 		} else {
 			revert();
 		}
@@ -767,9 +763,8 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddress(address addr1, address addr2) public only(poolManager) returns (bool success) {
-		uint currentTime = getNowTimestamp();
-		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2 && currentTime - lastAdminTime > adminCoolDown);
+	function addAddress(address addr1, address addr2) public only(poolManager) inUpdateWindow() returns (bool success) {
+		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
@@ -778,13 +773,11 @@ contract Custodian {
 		addrPool.push(addr2);
 		addrStatus[addr2] = 1;
 		emit AddAddress(addr1, addr2, poolManager);
-		lastAdminTime = currentTime;
 		return true;
 	}
 
-	function removeAddress(address addr) public only(poolManager) returns (bool success) {
-		uint currentTime = getNowTimestamp();
-		require(addrPool.length > 3 && addrStatus[addr] == 1 && currentTime - lastAdminTime > adminCoolDown);
+	function removeAddress(address addr) public only(poolManager) inUpdateWindow() returns (bool success) {
+		require(addrPool.length > 3 && addrStatus[addr] == 1);
 		uint index = getNextAddrIndex();
 		poolManager = addrPool[index];
 		removeFromPool(index);
@@ -794,14 +787,12 @@ contract Custodian {
 				break;
             }
 		}
-		lastAdminTime = currentTime;
 		emit RemoveAddress(addr, poolManager);
 		return true;
 	}
 
-	function updateAddress(address current) public inAddrPool() returns (address addr) {
-		uint currentTime = getNowTimestamp();
-		require(addrPool.length > 3 && currentTime - lastAdminTime > adminCoolDown);
+	function updateAddress(address current) public inAddrPool() inUpdateWindow() returns (address addr) {
+		require(addrPool.length > 3);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
 				removeFromPool(i);
@@ -826,7 +817,6 @@ contract Custodian {
 		else {
 			revert();
 		}
-		lastAdminTime = currentTime;
 		emit UpdateAddress(current, addr);
 	}
 
