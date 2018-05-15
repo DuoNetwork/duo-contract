@@ -11,7 +11,14 @@ module.exports = {
 			host: 'localhost',
 			port: 8545,
 			network_id: '*', // Match any network id,
-			from: '0x00D8d0660b243452fC2f996A892D3083A903576F'
+			from: '0x00D8d0660b243452fC2f996A892D3083A903576F' // kovan
+			// gas:5000000
+		},
+		ropsten: {
+			host: 'localhost',
+			port: 8545,
+			network_id: '*', // Match any network id,
+			from: '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E' //ropsten
 			// gas:5000000
 		},
 		live: {

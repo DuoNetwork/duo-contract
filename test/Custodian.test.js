@@ -1,6 +1,10 @@
 const Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
-const web3 = require('web3');
+const Web3 = require('web3');
+// import Web3 from 'web3';
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:8545')
+);
 
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
@@ -66,12 +70,11 @@ const isEqual = (a, b, log = false) => {
 		console.log(a);
 		console.log(b);
 	}
-	if(Math.abs(Number(b)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
+	if (Math.abs(Number(b)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
 		return Math.abs(Number(a) - Number(b)) / Number(b) <= EPSILON;
 	} else {
-		return  Math.abs(Number(a) - Number(b)) <= EPSILON;
+		return Math.abs(Number(a) - Number(b)) <= EPSILON;
 	}
-	
 };
 
 contract('Custodian', accounts => {
@@ -271,9 +274,13 @@ contract('Custodian', accounts => {
 			initEthPrice /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
+
+		let tokenValueBPayFeeDUO = initEthPrice / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+		let tokenValueAPayFeeDUO = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueBPayFeeDUO;
 		let prevFeeAccumulated;
 		let preDUO = 1000000;
-		let feeOfDUOinWei = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio;
+		let feeOfDUOinWei =
+			amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio;
 
 		before(async () => {
 			await initContracts();
@@ -281,7 +288,9 @@ contract('Custodian', accounts => {
 				from: pf1
 			});
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
-			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {from: alice});
+			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {
+				from: alice
+			});
 		});
 
 		it('should create token A and B payFee with eth', async () => {
@@ -292,10 +301,26 @@ contract('Custodian', accounts => {
 			// first check return value with call()
 			assert.isTrue(success, 'not able to create');
 			// then send transaction to check effects
-			await custodianContract.create(true, {
+			let tx = await custodianContract.create(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'Create',
+				'incorrect event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					isEqual(
+						tx.logs[0].args.createdTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						tokenValueA
+					) &&
+					isEqual(
+						tx.logs[0].args.createdTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						tokenValueB
+					),
+				'incorrect event arguments emitted'
+			);
 		});
 
 		it('feeAccumulated should be updated', async () => {
@@ -329,8 +354,6 @@ contract('Custodian', accounts => {
 		});
 
 		it('should create token A and B payFee with DUO', async () => {
-			
-			
 			let success = await custodianContract.create.call(false, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
@@ -338,20 +361,42 @@ contract('Custodian', accounts => {
 			// // first check return value with call()
 			assert.isTrue(success, 'not able to create');
 			// then send transaction to check effects
-			await custodianContract.create(false, {
+			let tx = await custodianContract.create(false, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'Create',
+				'incorrect event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					isEqual(
+						tx.logs[0].args.createdTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						tokenValueAPayFeeDUO
+					) &&
+					isEqual(
+						tx.logs[0].args.createdTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						tokenValueBPayFeeDUO
+					),
+				'incorrect event arguments emitted'
+			);
 		});
 
 		it('should update DUO balance of Alice correctly', async () => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei, "DUO balance of Alice of updated correctly");
+			assert.isTrue(
+				preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
+				'DUO balance of Alice of updated correctly'
+			);
 		});
 
 		it('should update burned DUO correctly', async () => {
 			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
-			assert.isTrue(burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei, "burned DUO not updated correctly");
+			assert.isTrue(
+				burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
+				'burned DUO not updated correctly'
+			);
 		});
 
 		it('should only collect fee less than allowed', async () => {
@@ -396,7 +441,7 @@ contract('Custodian', accounts => {
 	});
 
 	describe('redemption and eth withdrawal', () => {
-		let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevPendingWithdrawalAMT;
+		let prevBalanceA, prevBalanceB, prevFeeAccumulated;
 		let amtA = 28;
 		let amtB = 29;
 		let adjAmtA = amtA * BP_DENOMINATOR / CustodianInit.alphaInBP;
@@ -406,6 +451,7 @@ contract('Custodian', accounts => {
 		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
 		let preDUO = 1000000;
 		let feeInDUO = fee * ethDuoFeeRatio;
+		let totalSupplyA, totalSupplyB;
 
 		before(async () => {
 			await initContracts();
@@ -419,7 +465,13 @@ contract('Custodian', accounts => {
 			prevBalanceB = await custodianContract.balanceOf.call(1, alice);
 			let sysStates = await custodianContract.getSystemStates.call();
 			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
-			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {from: alice});
+			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {
+				from: alice
+			});
+			totalSupplyA = await custodianContract.totalSupplyA.call();
+			totalSupplyA = totalSupplyA.toNumber() / WEI_DENOMINATOR;
+			totalSupplyB = await custodianContract.totalSupplyB.call();
+			totalSupplyB = totalSupplyB.toNumber() / WEI_DENOMINATOR;
 		});
 
 		it('should only redeem token value less than balance', async () => {
@@ -446,11 +498,41 @@ contract('Custodian', accounts => {
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			await custodianContract.redeem(
+			let tx = await custodianContract.redeem(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				true,
 				{ from: alice }
+			);
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'Redeem',
+				'incorrect event emitted'
+			);
+			totalSupplyA = totalSupplyA - deductAmtA;
+			totalSupplyB = totalSupplyB - deductAmtB;
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					isEqual(
+						tx.logs[0].args.redeemedTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						deductAmtA
+					) &&
+					isEqual(
+						tx.logs[0].args.redeemedTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						deductAmtB
+					) &&
+					isEqual(
+						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
+						amtEth - fee
+					) &&
+					isEqual(
+						tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR,
+						totalSupplyA
+					) &&
+					isEqual(
+						tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
+						totalSupplyB
+					),
+				'incorrect event arguments emitted'
 			);
 		});
 
@@ -486,48 +568,6 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('should update pending withdraw amount correctly', async () => {
-			let pendingWithdrawAMT = await custodianContract.ethPendingWithdrawal.call(alice);
-			assert.isTrue(
-				isEqual(amtEth - pendingWithdrawAMT.toNumber() / WEI_DENOMINATOR, fee),
-				'pending withdraw not updated correctly'
-			);
-		});
-
-		it('should not withdraw more than pending withdrawl amount', async () => {
-			try {
-				await custodianContract.withdraw.call(web3.utils.toWei('0.1'), { from: alice });
-				assert.isTrue(false, 'is able to with withdaw more than allowed');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'is able to with withdaw more than allowed'
-				);
-			}
-		});
-
-		it('should withdraw from pending withdrawal', async () => {
-			prevPendingWithdrawalAMT = await custodianContract.ethPendingWithdrawal.call(alice);
-			let success = await custodianContract.withdraw.call(web3.utils.toWei('0.01'), {
-				from: alice
-			});
-			assert.isTrue(success, 'cannot withdraw fee');
-			await custodianContract.withdraw(web3.utils.toWei('0.01'), { from: alice });
-		});
-
-		it('pending eth withdrawal should be updated correctly', async () => {
-			let currentPendingWithdrawal = await custodianContract.ethPendingWithdrawal.call(alice);
-			assert.isTrue(
-				isEqual(
-					(prevPendingWithdrawalAMT.toNumber() - currentPendingWithdrawal.toNumber()) /
-						WEI_DENOMINATOR,
-					0.01
-				),
-				'pending withdrawal eth not updated correctly'
-			);
-		});
-
 		it('should redeem token A and B fee paying with DUO token', async () => {
 			let success = await custodianContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
@@ -536,24 +576,44 @@ contract('Custodian', accounts => {
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			await custodianContract.redeem(
+			let tx = await custodianContract.redeem(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				false,
 				{ from: alice }
 			);
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'Redeem',
+				'incorrect event emitted'
+			);
+			totalSupplyA = totalSupplyA - deductAmtA;
+			totalSupplyB = totalSupplyB - deductAmtB;
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					isEqual(
+						tx.logs[0].args.redeemedTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						deductAmtA
+					) &&
+					isEqual(
+						tx.logs[0].args.redeemedTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						deductAmtB
+					) &&
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
+					isEqual(tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR , totalSupplyA) &&
+					isEqual(tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR , totalSupplyB),
+				'incorrect event arguments emitted'
+			);
 		});
 
 		it('should update DUO balance of Alice correctly', async () => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeInDUO, true), "DUO balance of Alice of updated correctly");
+			assert.isTrue(isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeInDUO), "DUO balance of Alice of updated correctly");
 		});
 
 		it('should update burned DUO correctly', async () => {
 			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
 			assert.isTrue(isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO), "burned DUO not updated correctly");
 		});
-
 	});
 
 	describe('nav calculation', () => {
@@ -680,17 +740,22 @@ contract('Custodian', accounts => {
 	describe('commit price', () => {
 		let firstPeriod;
 		let secondPeriod;
+		let blockTime;
 
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+			const blockNumber = await web3.eth.getBlockNumber();
+			// console.log(blockNumber);
+			const block = await web3.eth.getBlock(blockNumber);
+			blockTime = block.timestamp;
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 10, {
 				from: pf1
 			});
 		});
 
 		it('non pf address cannot call commitPrice method', async () => {
 			try {
-				await custodianContract.commitPrice.call(web3.utils.toWei('400'), 1522745087, {
+				await custodianContract.commitPrice.call(web3.utils.toWei('400'), blockTime, {
 					from: alice
 				});
 				assert.isTrue(false, 'non pf address can commit price');
@@ -736,12 +801,12 @@ contract('Custodian', accounts => {
 
 		it('should not accept first price arrived if it is too far away', async () => {
 			await custodianContract.skipCooldown(1);
-
 			firstPeriod = await custodianContract.timestamp.call();
-
+			// console.log(blockTime);
 			await custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
 				from: pf1
 			});
+			// console.log(tx);
 			let stagPrice = await custodianContract.getStagingPrices.call();
 			let px = stagPrice[IDX_FIRST_PX];
 			let ts = stagPrice[IDX_FIRST_TS];
@@ -850,7 +915,7 @@ contract('Custodian', accounts => {
 			assert.equal(tx.logs.length, 1, 'more than one event emitted');
 			assert.equal(tx.logs[0].event, ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
 			assert.isTrue(
-				isEqual(tx.logs[0].args.priceInWei.toNumber(), web3.utils.toWei('550')),
+				isEqual(tx.logs[0].args.priceInWei.toNumber() / WEI_DENOMINATOR, 550),
 				'last price is not updated correctly'
 			);
 			assert.isTrue(
@@ -2174,32 +2239,16 @@ contract('Custodian', accounts => {
 				);
 			}
 		});
-
-		it('admin should be able to set admin operation coolupdate', async () => {
-			let success = await custodianContract.setValue.call(8, 10, {
-				from: creator
-			});
-			assert.isTrue(success, 'not be able to set admin operation coolupdate');
-		});
-
-		it('non admin should not be able to set admin operation coolupdate', async () => {
-			try {
-				await custodianContract.setValue.call(8, 10, { from: alice });
-				assert.isTrue(false, 'non admin can change admin operation coolupdate');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					'VM Exception while processing transaction: revert',
-					'transaction not reverted'
-				);
-			}
-		});
 	});
 
 	describe('poolManager add address', () => {
+		let blockTime;
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+			const blockNumber = await web3.eth.getBlockNumber();
+			const block = await web3.eth.getBlock(blockNumber);
+			blockTime = block.timestamp;
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 30, {
 				from: pf1
 			});
 		});
@@ -2332,17 +2381,24 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should only add beyond coolDown', async () => {
-			await custodianContract.skipCooldown(1);
-			let success = await custodianContract.addAddress.call(web3.utils.toChecksumAddress(charles), web3.utils.toChecksumAddress(david), { from: poolManager });
-			assert.isTrue(success, 'cannot add outside cooldown')
-			
+			await custodianContract.skipCooldown(25);
+			let success = await custodianContract.addAddress.call(
+				web3.utils.toChecksumAddress(charles),
+				web3.utils.toChecksumAddress(david),
+				{ from: poolManager }
+			);
+			assert.isTrue(success, 'cannot add outside cooldown');
 		});
 	});
 
 	describe('poolManger remove from pool', () => {
+		let blockTime;
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
+			const blockNumber = await web3.eth.getBlockNumber();
+			const block = await web3.eth.getBlock(blockNumber);
+			blockTime = block.timestamp;
+			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 30, {
 				from: pf1
 			});
 		});
@@ -2386,9 +2442,9 @@ contract('Custodian', accounts => {
 			let args = tx.logs[0].args;
 			let sysAddress = await custodianContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
-			for(let i=1; i<PoolInit.length;i++){
+			for (let i = 1; i < PoolInit.length; i++) {
 				let currentCandidate = PoolInit[i];
-				if(currentCandidate != poolManager){
+				if (currentCandidate != poolManager) {
 					nextCandidate = currentCandidate;
 					break;
 				}
@@ -2482,10 +2538,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should only remove beyond coolDown', async () => {
-			await custodianContract.skipCooldown(1);
-			let success = await custodianContract.removeAddress.call(nextCandidate, { from: poolManager });
-			assert.isTrue(success, 'cannot add outside cooldown')
-			
+			await custodianContract.skipCooldown(25);
+			let success = await custodianContract.removeAddress.call(nextCandidate, {
+				from: poolManager
+			});
+			assert.isTrue(success, 'cannot add outside cooldown');
 		});
 	});
 
@@ -2493,13 +2550,17 @@ contract('Custodian', accounts => {
 		function updateRole(currentRole, roelIndex) {
 			let newAddr;
 			let poolSize;
+			let blockTime;
 
 			before(async () => {
 				// poolManager = creator;
 				await initContracts();
+				const blockNumber = await web3.eth.getBlockNumber();
+				const block = await web3.eth.getBlock(blockNumber);
+				blockTime = block.timestamp;
 				await custodianContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
-					1524105709,
+					blockTime - Number(CustodianInit.period) * 60,
 					{
 						from: pf1
 					}
@@ -2509,7 +2570,7 @@ contract('Custodian', accounts => {
 					web3.utils.toChecksumAddress(bob),
 					{ from: pm }
 				);
-				await custodianContract.skipCooldown(1);
+				await custodianContract.skipCooldown(25);
 			});
 
 			it('address not in the pool cannot assign', async () => {
@@ -2594,25 +2655,18 @@ contract('Custodian', accounts => {
 			});
 
 			it('should only update beyond coolDown period', async () => {
-				await custodianContract.skipCooldown(1);
-				// let res = await custodianContract.getSystemStates.call();
-				// let now = await custodianContract.timestamp.call();
-				// console.log(res[20].valueOf() - now.valueOf());
-				// console.log(res[21].valueOf());
-				// let list = await custodianContract.getSystemStates.call();
-				// console.log(list[19].valueOf());
+				await custodianContract.skipCooldown(25);
 				let tx = await custodianContract.updateAddress(newAddr, { from: bob });
 				assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
 				let args = tx.logs[0].args;
 				let sysAddress = await custodianContract.getSystemAddresses.call({ from: bob });
-				newAddr2 = sysAddress[roelIndex];
+				let newAddr2 = sysAddress[roelIndex];
 
 				assert.isTrue(
 					args['current'] === newAddr && args['newAddr'] === newAddr2,
 					'event args is wrong'
 				);
 				assert.isTrue(newAddr2 !== newAddr, 'currentRole not updated');
-		
 			});
 		}
 

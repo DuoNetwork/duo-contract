@@ -10,6 +10,7 @@
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000",
     "deploy": "truffle.cmd migrate --reset --compile-all",
     "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
+    "deployRopsten": "npm run clean && truffle.cmd migrate --reset --compile-all --network ropsten",
     "deployLive": "npm run clean && truffle.cmd migrate --reset --compile-all --network live"
   },
   "devDependencies": {
