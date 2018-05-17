@@ -235,7 +235,8 @@ contract Custodian {
 		payable 
 		inState(State.Trading) 
 		returns (bool success) 
-	{
+	{	
+		require(msg.value > 0);
 		uint ethAmtInWei = deductFee(msg.value, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPrice.priceInWei)
