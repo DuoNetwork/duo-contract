@@ -10,8 +10,6 @@ const TokenAInit = InitParas['TokenA'];
 const ethInitPrice = 582;
 const BP_DENOMINATOR = 10000;
 
-
-
 contract('TokenA', accounts => {
 	let tokenAContract;
 	let duoContract;
@@ -22,7 +20,7 @@ contract('TokenA', accounts => {
 	const pf2 = accounts[2];
 	const pf3 = accounts[3];
 	const fc = accounts[4];
-	const pm = accounts[5];	
+	const pm = accounts[5];
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
 
@@ -58,27 +56,40 @@ contract('TokenA', accounts => {
 				from: creator
 			}
 		);
-		await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-			from: pf1
-		});
-		let amtEth = 1;
-		await custodianContract.create(true, { from: creator, value: web3.utils.toWei(amtEth + '') });
-		
-		let tokenValueB =
-			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			ethInitPrice /
-			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 		tokenAContract = await TokenA.new(
 			TokenAInit.tokenName,
 			TokenAInit.tokenSymbol,
 			custodianContract.address
 		);
+		await custodianContract.startContract(
+			web3.utils.toWei(ethInitPrice + ''),
+			1524105709,
+			tokenAContract.address,
+			'0xb',
+			{
+				from: pf1
+			}
+		);
+		let amtEth = 1;
+		await custodianContract.create(true, {
+			from: creator,
+			value: web3.utils.toWei(amtEth + '')
+		});
+
+		let tokenValueB =
+			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
+			ethInitPrice /
+			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+		tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
 	});
 
-	it('total supply should be 0', async () => {
+	it('total supply should be correct', async () => {
 		let totalSupply = await tokenAContract.totalSupply.call();
-		assert.equal(totalSupply.valueOf(), web3.utils.toWei(tokenValueA + ''), 'totalSupply not equal to 0');
+		assert.equal(
+			totalSupply.valueOf(),
+			web3.utils.toWei(tokenValueA + ''),
+			'totalSupply not equal to 0'
+		);
 	});
 
 	it('should show balance', async () => {

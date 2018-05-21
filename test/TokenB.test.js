@@ -20,7 +20,7 @@ contract('TokenB', accounts => {
 	const pf2 = accounts[2];
 	const pf3 = accounts[3];
 	const fc = accounts[4];
-	const pm = accounts[5];	
+	const pm = accounts[5];
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
 
@@ -56,24 +56,32 @@ contract('TokenB', accounts => {
 				from: creator
 			}
 		);
-
-		await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-			from: pf1
-		});
-		let amtEth = 1;
-		await custodianContract.create(true, { from: creator, value: web3.utils.toWei(amtEth + '') });
-		tokenValueB =
-			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			ethInitPrice /
-			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		tokenBContract = await TokenB.new(
 			TokenBInit.tokenName,
 			TokenBInit.tokenSymbol,
 			custodianContract.address
 		);
+		await custodianContract.startContract(
+			web3.utils.toWei(ethInitPrice + ''),
+			1524105709,
+			'0xa',
+			tokenBContract.address,
+			{
+				from: pf1
+			}
+		);
+		let amtEth = 1;
+		await custodianContract.create(true, {
+			from: creator,
+			value: web3.utils.toWei(amtEth + '')
+		});
+		tokenValueB =
+			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
+			ethInitPrice /
+			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 	});
 
-	it('total supply should be 0', async () => {
+	it('total supply should be correct', async () => {
 		let totalSupply = await tokenBContract.totalSupply.call();
 		assert.equal(
 			totalSupply.valueOf(),

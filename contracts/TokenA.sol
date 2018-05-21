@@ -37,29 +37,29 @@ contract TokenA {
 		return custodianContract.balanceOf(0, add);
 	}
 
-	function allowance(address _user, address _spender) public view returns(uint value) {
+	function allowance(address user, address spender) public view returns(uint value) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.allowance(0, _user,_spender);
+		return custodianContract.allowance(0, user,spender);
 	}
 
-	function transfer(address _to, uint _value) public returns (bool success) {
+	function transfer(address to, uint value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.transfer(0, msg.sender, _to, _value);
-		emit Transfer(msg.sender, _to, _value);
+		custodianContract.transfer(0, msg.sender, to, value);
+		emit Transfer(msg.sender, to, value);
 		return true;
 	}
 
-	function transferFrom(address _from, address _to, uint _value) public returns (bool success) {
+	function transferFrom(address from, address to, uint value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.transferFrom(0, msg.sender, _from, _to, _value);
-		emit Transfer(_from, _to, _value);
+		custodianContract.transferFrom(0, msg.sender, from, to, value);
+		emit Transfer(from, to, value);
 		return true;
 	}
 
-	function approve(address _spender, uint _value) public returns (bool success) {
+	function approve(address spender, uint value) public returns (bool success) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		custodianContract.approve(0, msg.sender, _spender,  _value);
-		emit Approval(msg.sender, _spender, _value);
+		custodianContract.approve(0, msg.sender, spender,  value);
+		emit Approval(msg.sender, spender, value);
 		return true;
 	}
 }

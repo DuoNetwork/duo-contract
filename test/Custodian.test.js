@@ -2,9 +2,7 @@ const Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const Web3 = require('web3');
 // import Web3 from 'web3';
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:8545')
-);
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
@@ -236,10 +234,18 @@ contract('Custodian', accounts => {
 			let success = await custodianContract.startContract.call(
 				web3.utils.toWei('507'),
 				1524105709,
+				'0xa',
+				'0xb',
 				{ from: pf1 }
 			);
 			assert.isTrue(success, 'not able to start contract');
-			await custodianContract.startContract('507', 1524105709, { from: pf1 });
+			await custodianContract.startContract(
+				'507',
+				1524105709,
+				'0xa',
+				'0xb',
+				{ from: pf1 }
+			);
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
@@ -284,9 +290,15 @@ contract('Custodian', accounts => {
 
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(initEthPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(initEthPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
 			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {
 				from: alice
@@ -455,9 +467,15 @@ contract('Custodian', accounts => {
 
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei(preDUO + ''), { from: creator });
 			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
@@ -599,29 +617,47 @@ contract('Custodian', accounts => {
 						deductAmtB
 					) &&
 					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
-					isEqual(tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR , totalSupplyA) &&
-					isEqual(tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR , totalSupplyB),
+					isEqual(
+						tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR,
+						totalSupplyA
+					) &&
+					isEqual(
+						tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
+						totalSupplyB
+					),
 				'incorrect event arguments emitted'
 			);
 		});
 
 		it('should update DUO balance of Alice correctly', async () => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeInDUO), "DUO balance of Alice of updated correctly");
+			assert.isTrue(
+				isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeInDUO),
+				'DUO balance of Alice of updated correctly'
+			);
 		});
 
 		it('should update burned DUO correctly', async () => {
 			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
-			assert.isTrue(isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO), "burned DUO not updated correctly");
+			assert.isTrue(
+				isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO),
+				'burned DUO not updated correctly'
+			);
 		});
 	});
 
 	describe('nav calculation', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
@@ -695,9 +731,15 @@ contract('Custodian', accounts => {
 	describe('calculate median', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		it('should calculate median', () => {
@@ -748,9 +790,15 @@ contract('Custodian', accounts => {
 			// console.log(blockNumber);
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 10, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				blockTime - Number(CustodianInit.period) * 10,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		it('non pf address cannot call commitPrice method', async () => {
@@ -1192,9 +1240,15 @@ contract('Custodian', accounts => {
 	describe('pre reset', () => {
 		beforeEach(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 			await custodianContract.skipCooldown(1);
 
 			let ts = await custodianContract.timestamp.call();
@@ -1255,7 +1309,9 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of A', async () => {
 			try {
-				await custodianContract.transfer(0, alice, bob, web3.utils.toWei('1'));
+				await custodianContract.transfer(0, '0xc', bob, web3.utils.toWei('1'), {
+					from: alice
+				});
 
 				assert.isTrue(false, 'still can transfer A token');
 			} catch (err) {
@@ -1265,7 +1321,9 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of B', async () => {
 			try {
-				await custodianContract.transfer(1, alice, bob, web3.utils.toWei('1'));
+				await custodianContract.transfer(1, '0xc', bob, web3.utils.toWei('1'), {
+					from: alice
+				});
 
 				assert.isTrue(false, 'still can transfer B token');
 			} catch (err) {
@@ -1475,6 +1533,8 @@ contract('Custodian', accounts => {
 				await custodianContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
 					1524105709,
+					'0xa',
+					'0xb',
 					{
 						from: pf1
 					}
@@ -1493,11 +1553,11 @@ contract('Custodian', accounts => {
 				if (transferABRequired) {
 					let aliceA = await custodianContract.balanceOf.call(0, alice);
 
-					custodianContract.transfer(0, alice, bob, aliceA.valueOf(), {
+					custodianContract.transfer(0, '0xc', bob, aliceA.valueOf(), {
 						from: alice
 					});
 					await custodianContract.balanceOf.call(1, bob).then(bobB => {
-						custodianContract.transfer(1, bob, alice, bobB.valueOf(), {
+						custodianContract.transfer(1, '0xc', alice, bobB.valueOf(), {
 							from: bob
 						});
 					});
@@ -1808,9 +1868,15 @@ contract('Custodian', accounts => {
 	describe('A token test', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 		});
@@ -1823,15 +1889,17 @@ contract('Custodian', accounts => {
 		it('should be able to approve', async () => {
 			let success = await custodianContract.approve.call(
 				0,
-				alice,
+				'0xc',
 				bob,
 				web3.utils.toWei('100'),
-				{ from: alice }
+				{
+					from: alice
+				}
 			);
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approve(0, alice, bob, web3.utils.toWei('100'), {
+			await custodianContract.approve(0, '0xc', bob, web3.utils.toWei('100'), {
 				from: alice
 			});
 		});
@@ -1848,14 +1916,16 @@ contract('Custodian', accounts => {
 		it('should be able to transfer', async () => {
 			let success = await custodianContract.transfer.call(
 				0,
-				alice,
+				'0xc',
 				bob,
 				web3.utils.toWei('10'),
-				{ from: alice }
+				{
+					from: alice
+				}
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transfer(0, alice, bob, web3.utils.toWei('10'), {
+			await custodianContract.transfer(0, '0xc', bob, web3.utils.toWei('10'), {
 				from: alice
 			});
 		});
@@ -1867,7 +1937,7 @@ contract('Custodian', accounts => {
 
 		it('should not transfer more than balance', async () => {
 			try {
-				await custodianContract.transfer.call(0, alice, bob, web3.utils.toWei('10000000'), {
+				await custodianContract.transfer.call(0, '0xc', bob, web3.utils.toWei('10000000'), {
 					from: alice
 				});
 
@@ -1884,26 +1954,30 @@ contract('Custodian', accounts => {
 		it('should transferAFrom less than allowance', async () => {
 			let success = await custodianContract.transferFrom.call(
 				0,
-				bob,
+				'0xc',
 				alice,
 				charles,
 				web3.utils.toWei('50'),
-				{ form: bob }
+				{ from: bob }
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferFrom(0, bob, alice, charles, web3.utils.toWei('50'));
+			await custodianContract.transferFrom(0, '0xc', alice, charles, web3.utils.toWei('50'), {
+				from: bob
+			});
 		});
 
 		it('should not transferFrom more than allowance', async () => {
 			try {
 				await custodianContract.transferFrom.call(
 					0,
-					bob,
+					'0xc',
 					alice,
 					bob,
 					web3.utils.toWei('200'),
-					{ from: bob }
+					{
+						from: bob
+					}
 				);
 				assert.isTrue(false, 'can transferFrom of more than allowance');
 			} catch (err) {
@@ -1938,9 +2012,15 @@ contract('Custodian', accounts => {
 	describe('B token test', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 			await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 		});
@@ -1953,15 +2033,17 @@ contract('Custodian', accounts => {
 		it('should be able to approve', async () => {
 			let success = await custodianContract.approve.call(
 				1,
-				alice,
+				'0xc',
 				bob,
 				web3.utils.toWei('100'),
-				{ from: alice }
+				{
+					from: alice
+				}
 			);
 
 			assert.isTrue(success, 'Not able to approve');
 
-			await custodianContract.approve(1, alice, bob, web3.utils.toWei('100'), {
+			await custodianContract.approve(1, '0xc', bob, web3.utils.toWei('100'), {
 				from: alice
 			});
 		});
@@ -1978,14 +2060,16 @@ contract('Custodian', accounts => {
 		it('should be able to transfer', async () => {
 			let success = await custodianContract.transfer.call(
 				1,
-				alice,
+				'0xc',
 				bob,
 				web3.utils.toWei('10'),
-				{ from: alice }
+				{
+					from: alice
+				}
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transfer(1, alice, bob, web3.utils.toWei('10'), {
+			await custodianContract.transfer(1, '0xc', bob, web3.utils.toWei('10'), {
 				from: alice
 			});
 		});
@@ -1997,7 +2081,7 @@ contract('Custodian', accounts => {
 
 		it('should not transfer more than balance', async () => {
 			try {
-				await custodianContract.transfer.call(1, alice, bob, web3.utils.toWei('10000000'), {
+				await custodianContract.transfer.call(1, '0xc', bob, web3.utils.toWei('10000000'), {
 					from: alice
 				});
 
@@ -2014,26 +2098,30 @@ contract('Custodian', accounts => {
 		it('should transferAFrom less than allowance', async () => {
 			let success = await custodianContract.transferFrom.call(
 				1,
-				bob,
+				'0xc',
 				alice,
 				charles,
 				web3.utils.toWei('50'),
-				{ form: bob }
+				{ from: bob }
 			);
 
 			assert.isTrue(success, 'Not able to transfer');
-			await custodianContract.transferFrom(1, bob, alice, charles, web3.utils.toWei('50'));
+			await custodianContract.transferFrom(1, '0xc', alice, charles, web3.utils.toWei('50'), {
+				from: bob
+			});
 		});
 
 		it('should not transferFrom more than allowance', async () => {
 			try {
 				await custodianContract.transferFrom.call(
 					1,
-					bob,
+					'0xc',
 					alice,
 					bob,
 					web3.utils.toWei('200'),
-					{ from: bob }
+					{
+						from: bob
+					}
 				);
 				assert.isTrue(false, 'can transferFrom of more than allowance');
 			} catch (err) {
@@ -2068,9 +2156,15 @@ contract('Custodian', accounts => {
 	describe('only admin', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), 1524105709, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				1524105709,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		it('admin should be able to set commission', async () => {
@@ -2248,9 +2342,15 @@ contract('Custodian', accounts => {
 			const blockNumber = await web3.eth.getBlockNumber();
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 30, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				blockTime - Number(CustodianInit.period) * 30,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		let poolManager = pm;
@@ -2398,9 +2498,15 @@ contract('Custodian', accounts => {
 			const blockNumber = await web3.eth.getBlockNumber();
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(web3.utils.toWei(ethInitPrice + ''), blockTime - Number(CustodianInit.period) * 30, {
-				from: pf1
-			});
+			await custodianContract.startContract(
+				web3.utils.toWei(ethInitPrice + ''),
+				blockTime - Number(CustodianInit.period) * 30,
+				'0xa',
+				'0xb',
+				{
+					from: pf1
+				}
+			);
 		});
 
 		let poolManager = pm;
@@ -2436,7 +2542,7 @@ contract('Custodian', accounts => {
 			let canRemove = await custodianContract.removeAddress.call(PoolInit[0], {
 				from: poolManager
 			});
-			assert.isTrue(canRemove, 'poolManager cannot remove form the pool List');
+			assert.isTrue(canRemove, 'poolManager cannot remove from the pool List');
 			let tx = await custodianContract.removeAddress(PoolInit[0], { from: poolManager });
 			assert.isTrue(tx.logs.length === 1, 'not exactly one event emitted');
 			let args = tx.logs[0].args;
@@ -2561,6 +2667,8 @@ contract('Custodian', accounts => {
 				await custodianContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
 					blockTime - Number(CustodianInit.period) * 60,
+					'0xa',
+					'0xb',
 					{
 						from: pf1
 					}

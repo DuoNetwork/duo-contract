@@ -58,6 +58,8 @@ contract Custodian {
 
 	State public state;
 	address duoTokenAddress;
+	address aTokenAddress;
+	address bTokenAddress;
 	// below 6 address are returned by getSystemAddresses
 	address admin;
 	address feeCollector;
@@ -540,7 +542,9 @@ contract Custodian {
 
 	function startContract(
 		uint priceInWei, 
-		uint timeInSecond) 
+		uint timeInSecond,
+		address aAddr,
+		address bAddr) 
 		public 
 		inState(State.Inception) 
 		isPriceFeed() 
@@ -551,6 +555,8 @@ contract Custodian {
 		lastPrice.priceInWei = priceInWei;
 		resetPrice.timeInSecond = timeInSecond;
 		resetPrice.priceInWei = priceInWei;
+		aTokenAddress = aAddr;
+		bTokenAddress = bAddr;
 		state = State.Trading;
 		return true;
 	}
@@ -662,54 +668,66 @@ contract Custodian {
 
 	// end of price feed functions	
 	// start of token functions
-	
-	function transfer(uint index, address _from, address _to, uint _tokens) 
-		public 
+
+	function transferInternal(uint index, address from, address to, uint tokens) 
+		internal 
 		inState(State.Trading)
 		returns (bool success) 
 	{
-		require(index == 0 || index == 1);
 		// Prevent transfer to 0x0 address. Use burn() instead
-		require(_to != 0x0);
+		require(to != 0x0);
 		// Check if the sender has enough
-		require(balanceOf[index][_from] >= _tokens);
-		// Check for overflows
-		require(balanceOf[index][_to].add(_tokens) > balanceOf[index][_to]);
+		require(balanceOf[index][from] >= tokens);
 
 		// Save this for an assertion in the future
-		uint previousBalances = balanceOf[index][_from].add(balanceOf[index][_to]);
+		uint previousBalances = balanceOf[index][from].add(balanceOf[index][to]);
 		//check whether _to is new. if new then add
-		checkNewUser(_to);
+		checkNewUser(to);
 		// Subtract from the sender
-		balanceOf[index][_from] = balanceOf[index][_from].sub(_tokens);
+		balanceOf[index][from] = balanceOf[index][from].sub(tokens);
 		// Add the same to the recipient
-		balanceOf[index][_to] = balanceOf[index][_to].add(_tokens);
-		
-		emit Transfer(_from, _to, _tokens, index);
+		balanceOf[index][to] = balanceOf[index][to].add(tokens);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balanceOf[index][_from].add(balanceOf[index][_to]) == previousBalances);
+		assert(balanceOf[index][from].add(balanceOf[index][to]) == previousBalances);
+		emit Transfer(from, to, tokens, index);
 		return true;
 	}
 
-	function approve(uint index, address _sender, address _spender, uint _tokens) 
-		public 
+	function determineAddress(uint index, address from) internal view returns (address) {
+		return index == 0 && msg.sender == aTokenAddress || 
+			index == 1 && msg.sender == bTokenAddress 
+			? from : msg.sender;
+	}
+
+	function transfer(uint index, address from, address to, uint tokens)
+		public
+		inState(State.Trading)
 		returns (bool success) 
 	{
 		require(index == 0 || index == 1);
-		allowance[index][_sender][_spender] = _tokens;
-		emit Approval(_sender, _spender, _tokens, index);
-		return true;
+		return transferInternal(index, determineAddress(index, from), to, tokens);
 	}
-	
-	function transferFrom(uint index, address _spender, address _from, address _to, uint _tokens) 
+
+	function transferFrom(uint index, address spender, address from, address to, uint tokens) 
 		public 
 		inState(State.Trading)
 		returns (bool success) 
 	{
 		require(index == 0 || index == 1);
-		require(_tokens <= allowance[index][_from][_spender]);	 // Check allowance
-		allowance[index][_from][_spender] = allowance[index][_from][_spender].sub(_tokens);
-		transfer(index, _from, _to, _tokens);
+		address spenderToUse = determineAddress(index, spender);
+		require(tokens <= allowance[index][from][spenderToUse]);	 // Check allowance
+		allowance[index][from][spenderToUse] = allowance[index][from][spenderToUse].sub(tokens);
+		return transferInternal(index, from, to, tokens);
+	}
+
+	function approve(uint index, address sender, address spender, uint tokens) 
+		public 
+		returns (bool success) 
+	{
+		require(index == 0 || index == 1);
+		address senderToUse = determineAddress(index, sender);
+		allowance[index][senderToUse][spender] = tokens;
+		emit Approval(sender, senderToUse, tokens, index);
 		return true;
 	}
 
