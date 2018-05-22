@@ -484,13 +484,15 @@ contract Custodian {
 		}
 	}
 
-	function getSystemAddresses() public view returns (address[6] sysAddr) {
+	function getSystemAddresses() public view returns (address[8] sysAddr) {
 		sysAddr[0] = admin;
 		sysAddr[1] = feeCollector;
 		sysAddr[2] = priceFeed1; 
 		sysAddr[3] = priceFeed2; 
 		sysAddr[4] = priceFeed3;
 		sysAddr[5] = poolManager;
+		sysAddr[6] = aTokenAddress;
+		sysAddr[7] = bTokenAddress;
 	}
 
 	function getSystemStates() public view returns (uint[22] sysState) {
