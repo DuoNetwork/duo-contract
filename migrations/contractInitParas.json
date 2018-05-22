@@ -5,15 +5,15 @@
 		"pf2": "0x00",
 		"pf3": "0x00",
 		"alphaInBP": 10000,
-		"couponRate": "0.00002",
+		"couponRate": "0.000002",
 		"hp": "1.048",
 		"hu": "1.5",
 		"hd": "0.25",
 		"commissionRateInBP": 300,
-		"period": 3600,
+		"period": 300,
 		"ethDuoRatio": 1000,
 		"gasThreshhold": 60000,
-		"coolDown": 3000
+		"coolDown": 240
 	},
 	"DUO": {
 		"initSupply": "100000000",
