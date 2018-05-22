@@ -1869,7 +1869,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('token test', () => {
+	describe.only('token test', () => {
 		function tokenTest(index){
 			before(async () => {
 				await initContracts();
