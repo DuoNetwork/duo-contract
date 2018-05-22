@@ -729,7 +729,7 @@ contract Custodian {
 		require(index == 0 || index == 1);
 		address senderToUse = determineAddress(index, sender);
 		allowance[index][senderToUse][spender] = tokens;
-		emit Approval(sender, senderToUse, tokens, index);
+		emit Approval(senderToUse, spender, tokens, index);
 		return true;
 	}
 
