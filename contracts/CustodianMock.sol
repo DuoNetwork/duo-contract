@@ -63,6 +63,10 @@ contract CustodianMock is Custodian {
 		return addrStatus[addr];
 	}
 
+	function getNextAddrIndex() internal view returns (uint) {
+		return 0;
+	}
+
 	function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
 		return getMedian(a, b, c);
 	}

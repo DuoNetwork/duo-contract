@@ -851,7 +851,7 @@ contract Custodian {
 		addrPool.length--;
 	}
 
-	function getNextAddrIndex() private view returns (uint) {
+	function getNextAddrIndex() internal view returns (uint) {
 		uint prevHashNumber = uint256(keccak256(block.blockhash(block.number - 1)));
 		if(users.length > 255) {
 			address randomUserAddress = users[prevHashNumber % users.length];
@@ -863,6 +863,7 @@ contract Custodian {
 
 	// end of admin functions
 	// start of internal utility functions
+
 
 	function getNowTimestamp() internal view returns (uint) {
 		return now;

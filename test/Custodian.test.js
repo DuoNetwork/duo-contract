@@ -2492,8 +2492,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be set correctly', async () => {
-			let timestamp = await custodianContract.timestamp.call({ from: creator });
-			let adderAddr = PoolInit[timestamp % PoolInit.length];
+			// let timestamp = await custodianContract.timestamp.call({ from: creator });
+			let adderAddr = PoolInit[0];
 			assert.isTrue(
 				web3.utils.toChecksumAddress(adderAddr) ===
 					web3.utils.toChecksumAddress(poolManager),
@@ -2655,8 +2655,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be set correctly', async () => {
-			let timestamp = await custodianContract.timestamp.call({ from: creator });
-			let adderAddr = PoolInit[timestamp % PoolInit.length];
+			let adderAddr = PoolInit[0];
 			assert.isTrue(
 				web3.utils.toChecksumAddress(adderAddr) ===
 					web3.utils.toChecksumAddress(poolManager),
@@ -2790,6 +2789,14 @@ contract('Custodian', accounts => {
 				);
 			});
 
+			it('newAddr should be set correctly', async () => {
+				assert.isTrue(
+					web3.utils.toChecksumAddress(PoolInit[PoolInit.length - 1]) ===
+						web3.utils.toChecksumAddress(newAddr),
+					'adder address not updated correctly'
+				);
+			});
+
 			it('newAddr should be removed from poolList', async () => {
 				for (let i = 0; i < poolSize; i++) {
 					let addr = await custodianContract.addrPool.call(i);
@@ -2830,7 +2837,7 @@ contract('Custodian', accounts => {
 			});
 		}
 
-		describe('update pf1', () => {
+		describe.only('update pf1', () => {
 			updateRole(pf1, IDX_PRICEFEED_1);
 		});
 
