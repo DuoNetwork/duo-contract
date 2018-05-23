@@ -2618,7 +2618,8 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			// check correct poolSize
-			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot add address');
+			console.log(poolSize);
+			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot remove address');
 			let poolList = [];
 			// check validatdion of address
 			for (let i = 0; i < poolSize; i++) {
@@ -2655,7 +2656,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be set correctly', async () => {
-			let adderAddr = PoolInit[0];
+			let adderAddr = PoolInit[PoolInit.length - 1];
 			assert.isTrue(
 				web3.utils.toChecksumAddress(adderAddr) ===
 					web3.utils.toChecksumAddress(poolManager),
@@ -2837,7 +2838,7 @@ contract('Custodian', accounts => {
 			});
 		}
 
-		describe.only('update pf1', () => {
+		describe('update pf1', () => {
 			updateRole(pf1, IDX_PRICEFEED_1);
 		});
 

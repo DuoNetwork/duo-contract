@@ -801,20 +801,20 @@ contract Custodian {
 
 	function removeAddress(address addr) public only(poolManager) inUpdateWindow() returns (bool success) {
 		require(addrPool.length > 3 && addrStatus[addr] == 1);
-		uint index = getNextAddrIndex();
-		poolManager = addrPool[index];
-		removeFromPool(index);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == addr) {
 				removeFromPool(i);
 				break;
             }
 		}
+		uint index = getNextAddrIndex();
+		poolManager = addrPool[index];
+		removeFromPool(index);
 		emit RemoveAddress(addr, poolManager);
 		return true;
 	}
 
-	function updateAddress(address current) public inAddrPool() inUpdateWindow() returns (address addr) {
+	function updateAddress(address current) public inAddrPool() inUpdateWindow() returns (bool success) {
 		require(addrPool.length > 3);
 		for (uint i = 0; i < addrPool.length; i++) {
 			if (addrPool[i] == msg.sender) {
@@ -823,7 +823,7 @@ contract Custodian {
             }
 		}
 		uint index = getNextAddrIndex();
-		addr = addrPool[index];
+		address addr = addrPool[index];
 		removeFromPool(index);
 
 		if (current == priceFeed1) {
@@ -841,9 +841,10 @@ contract Custodian {
 			revert();
 		}
 		emit UpdateAddress(current, addr);
+		return true;
 	}
 
-	function removeFromPool(uint idx) internal  {
+	function removeFromPool(uint idx) internal {
 		addrStatus[addrPool[idx]] = 2;
 		if (idx < addrPool.length - 1)
 			addrPool[idx] = addrPool[addrPool.length-1];
