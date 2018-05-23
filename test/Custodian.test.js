@@ -23,7 +23,7 @@ const ADD_ADDRESS = 'AddAddress';
 const UPDATE_ADDRESS = 'UpdateAddress';
 const REMOVE_ADDRESS = 'RemoveAddress';
 const SET_VALUE = 'SetValue';
-// const COLLECT_FEE = 'CollectFee';
+const COLLECT_FEE = 'CollectFee';
 
 const STATE_INCEPT_RESET = '0';
 const STATE_TRADING = '1';
@@ -48,11 +48,12 @@ const IDX_FEE_IN_WEI = 2;
 // const IDX_LIMIT_LOWER = 6;
 const IDX_COMM_RATE = 7;
 const IDX_PERIOD = 8;
-// const IDX_ITERATION_GAS_TH = 9;
-// const IDX_PRE_RESET_WAITING_BLK = 11;
+const IDX_ITERATION_GAS_TH = 9;
+const IDX_ETH_DUO_RATIO = 10;
+const IDX_PRE_RESET_WAITING_BLK = 11;
 const IDX_PRICE_TOL = 12;
-// const IDX_PF_TOL = 13;
-// const IDX_PF_TIME_TOL = 14;
+const IDX_PF_TOL = 13;
+const IDX_PF_TIME_TOL = 14;
 const IDX_PRICE_UPDATE_COOLDOWN = 15;
 // const IDX_NUM_OF_PX = 16;
 const IDX_NEXT_RESET_ADDR_IDX = 17;
@@ -437,7 +438,7 @@ contract('Custodian', accounts => {
 			assert.isTrue(success);
 			let tx = await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === 'CollectFee',
+				tx.logs.length === 1 && tx.logs[0].event === COLLECT_FEE,
 				'worng event emitted'
 			);
 			assert.isTrue(
@@ -1947,7 +1948,7 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.tokenOwner.valueOf() === alice &&
 					tx.logs[0].args.spender.valueOf() === bob &&
 						tx.logs[0].args.tokens.valueOf() === web3.utils.toWei('100') &&
-						tx.logs[0].args.index.toNumber() === 0,
+						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
 				);
 			});
@@ -1990,7 +1991,7 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.from.valueOf() === alice &&
 					tx.logs[0].args.to.valueOf() === bob &&
 						tx.logs[0].args.value.valueOf() === web3.utils.toWei('10') &&
-						tx.logs[0].args.index.toNumber() === 0,
+						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
 				);
 			});
@@ -2059,7 +2060,7 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.from.valueOf() === alice &&
 					tx.logs[0].args.to.valueOf() === charles &&
 						tx.logs[0].args.value.valueOf() === web3.utils.toWei('50') &&
-						tx.logs[0].args.index.toNumber() === 0,
+						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
 				);
 			});
@@ -2120,7 +2121,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('only admin', () => {
+	describe('only admin', () => {
 		before(async () => {
 			await initContracts();
 			await custodianContract.startContract(
@@ -2185,6 +2186,16 @@ contract('Custodian', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set ethDuoRatio');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_ETH_DUO_RATIO].toNumber();
+			let tx = await custodianContract.setValue(1, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 1 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set ethDuoRatio', async () => {
@@ -2205,6 +2216,16 @@ contract('Custodian', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set gas threshhold');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_ITERATION_GAS_TH].toNumber();
+			let tx = await custodianContract.setValue(2, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 2 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set gas threshhold', async () => {
@@ -2225,6 +2246,16 @@ contract('Custodian', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set pre reset waiting block');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_PRE_RESET_WAITING_BLK].toNumber();
+			let tx = await custodianContract.setValue(3, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 3 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set pre reset waiting blocks', async () => {
@@ -2244,6 +2275,16 @@ contract('Custodian', accounts => {
 		it('admin should be able to set price tolerance', async () => {
 			let success = await custodianContract.setValue.call(4, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price tolerance');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_PRICE_TOL].toNumber();
+			let tx = await custodianContract.setValue(4, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 4 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set price tolerance', async () => {
@@ -2262,6 +2303,16 @@ contract('Custodian', accounts => {
 		it('admin should be able to set price feed tolerance', async () => {
 			let success = await custodianContract.setValue.call(5, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed tolerance');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_PF_TOL].toNumber();
+			let tx = await custodianContract.setValue(5, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 5 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set price tolerance', async () => {
@@ -2280,6 +2331,16 @@ contract('Custodian', accounts => {
 		it('admin should be able to set price feed time tolerance', async () => {
 			let success = await custodianContract.setValue.call(6, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed time tolerance');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_PF_TIME_TOL].toNumber();
+			let tx = await custodianContract.setValue(6, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 6 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set price feed time tolerance', async () => {
@@ -2300,6 +2361,16 @@ contract('Custodian', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set price update coolupdate');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_PRICE_UPDATE_COOLDOWN].toNumber();
+			let tx = await custodianContract.setValue(7, 100, { from: creator });
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 7 &&
+				tx.logs[0].args.oldValue.toNumber() === preValue &&
+				tx.logs[0].args.newValue.toNumber() === 100,
+				'wrong argument emitted'
+			);
 		});
 
 		it('non admin should not be able to set price update coolupdate', async () => {
