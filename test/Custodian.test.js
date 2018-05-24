@@ -788,7 +788,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('commit price', () => {
+	describe.only('commit price', () => {
 		let firstPeriod;
 		let secondPeriod;
 		let blockTime;
@@ -848,6 +848,10 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber()),
 				'last price time is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'sender is not updated correctly'
 			);
 		});
 
@@ -925,6 +929,10 @@ contract('Custodian', accounts => {
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
 				'last price time is not updated correctly'
 			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'source is not updated correctly'
+			);
 		});
 
 		it('should not reset', async () => {
@@ -961,6 +969,10 @@ contract('Custodian', accounts => {
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
 				'last price time is not updated correctly'
 			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'source not updated correctly'
+			);
 		});
 
 		it('should accept first price arrived if second price is close to it and within cool down', async () => {
@@ -991,6 +1003,10 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 10),
 				'last price time is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'source not updated correctly'
 			);
 		});
 
@@ -1089,6 +1105,10 @@ contract('Custodian', accounts => {
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 300),
 				'last price time is not updated correctly'
 			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'source not updated correctly'
+			);
 		});
 
 		it('should accept median price if third price does not time out', async () => {
@@ -1128,6 +1148,10 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), firstPeriod.toNumber() - 300),
 				'last price time is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf1),
+				'source not updated correctly'
 			);
 		});
 
@@ -1171,6 +1195,10 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
 				'last price time is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf2),
+				'source not updated correctly'
 			);
 		});
 
@@ -1217,6 +1245,10 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(tx.logs[0].args.timeInSecond.toNumber(), secondPeriod.toNumber()),
 				'last price time is not updated correctly'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[0].args.sender.valueOf(), pf2),
+				'source not updated correctly'
 			);
 		});
 

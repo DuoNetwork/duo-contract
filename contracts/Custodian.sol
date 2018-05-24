@@ -586,17 +586,17 @@ contract Custodian {
 				if (firstPrice.source == msg.sender)
 					acceptPrice(priceInWei, timeInSecond, msg.sender);
 				else
-					acceptPrice(firstPrice.priceInWei, timeInSecond, msg.sender);
+					acceptPrice(firstPrice.priceInWei, timeInSecond, firstPrice.source);
 			} else {
 				require(firstPrice.source != msg.sender);
 				// if second price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
 					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
-					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, msg.sender);
+					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, firstPrice.source);
 				} else {
 					priceDiff = priceInWei.diff(firstPrice.priceInWei);
 					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
-						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, msg.sender);
+						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, firstPrice.source);
 					} else {
 						// wait for the third price
 						secondPrice = Price(priceInWei, timeInSecond, msg.sender);
@@ -610,7 +610,7 @@ contract Custodian {
 				if ((firstPrice.source == msg.sender || secondPrice.source == msg.sender))
 					acceptPrice(priceInWei, timeInSecond, msg.sender);
 				else
-					acceptPrice(secondPrice.priceInWei, timeInSecond, msg.sender);
+					acceptPrice(secondPrice.priceInWei, timeInSecond, secondPrice.source);
 			} else {
 				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender);
 				uint acceptedPriceInWei;
@@ -628,7 +628,7 @@ contract Custodian {
 						acceptedPriceInWei = getMedian(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
 					}
 				}
-				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond, msg.sender);
+				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond, firstPrice.source);
 			}
 		} else {
 			return false;
