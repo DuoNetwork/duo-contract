@@ -1,9 +1,5 @@
 {
 	"Custodian" :{
-		"feeAddress": "0x00",
-		"pf1": "0x00",
-		"pf2": "0x00",
-		"pf3": "0x00",
 		"alphaInBP": 10000,
 		"couponRate": "0.00002",
 		"hp": "1.048",
@@ -11,8 +7,6 @@
 		"hd": "0.25",
 		"commissionRateInBP": 300,
 		"period": 3600,
-		"ethDuoRatio": 1000,
-		"gasThreshhold": 60000,
 		"coolDown": 3000
 	},
 	"DUO": {

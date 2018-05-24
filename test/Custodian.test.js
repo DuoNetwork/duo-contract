@@ -788,7 +788,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('commit price', () => {
+	describe('commit price', () => {
 		let firstPeriod;
 		let secondPeriod;
 		let blockTime;
@@ -1845,92 +1845,92 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 3', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false, 20000);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 20000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 4', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true, 20000);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 20000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 5', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, false, 5000);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 5000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 6', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 90000, false, true, 5000);
+			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 5000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 95000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true);
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, 95000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 3', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false, 20000);
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 95000, false, false, 20000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 4', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true, 20000);
+			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, 95000, false, true, 20000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 5', () => {
-			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 90000, false, false, 5000);
+			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 95000, false, false, 5000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 6', () => {
-			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 90000, false, true, 5000);
+			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, 95000, false, true, 5000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 1', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 3', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false, 20000);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, false, 20000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 4', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true, 20000);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, true, 20000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 5', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, false, 5000);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, false, 5000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 6', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 90000, true, true, 5000);
+			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, 95000, true, true, 5000);
 		});
 	});
 

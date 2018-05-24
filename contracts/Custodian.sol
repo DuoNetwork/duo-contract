@@ -102,7 +102,7 @@ contract Custodian {
 	uint limitLowerInWei;
 	uint commissionRateInBP;
 	uint period;
-	uint iterationGasThreshold = 60000;
+	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 1000;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
@@ -467,6 +467,7 @@ contract Custodian {
 			if (state != State.PeriodicReset) {
 				resetPrice.priceInWei = lastPrice.priceInWei;
 				resetPrice.timeInSecond = lastPrice.timeInSecond;
+				resetPrice.source = lastPrice.source;
 				navBInWei = WEI_DENOMINATOR;
 			}
 			
@@ -476,7 +477,7 @@ contract Custodian {
 			state = State.Trading;
 			emit StartTrading(navAInWei, navBInWei);
 			return true;
-		} else{
+		} else {
 			nextResetAddrIndex = localResetAddrIndex;
 			emit StartReset(localResetAddrIndex, users.length);
 			return false;
@@ -554,8 +555,10 @@ contract Custodian {
 		require(timeInSecond <= getNowTimestamp());
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
+		lastPrice.source = msg.sender;
 		resetPrice.timeInSecond = timeInSecond;
 		resetPrice.priceInWei = priceInWei;
+		resetPrice.source = msg.sender;
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		state = State.Trading;
@@ -640,6 +643,7 @@ contract Custodian {
 	function acceptPrice(uint priceInWei, uint timeInSecond, address source) internal {
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.timeInSecond = timeInSecond;
+		lastPrice.source = source;
 		numOfPrices = 0;
 		(navAInWei, navBInWei) = calculateNav(
 			lastPrice.priceInWei, 
@@ -833,8 +837,7 @@ contract Custodian {
 			feeCollector = addr;
 		} else if (current == admin) {
 			admin = addr;
-		} 
-		else {
+		} else {
 			revert();
 		}
 		emit UpdateAddress(current, addr);
