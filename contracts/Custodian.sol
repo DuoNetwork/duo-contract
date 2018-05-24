@@ -54,6 +54,7 @@ contract Custodian {
 	struct Price {
 		uint priceInWei;
 		uint timeInSecond;
+		address source;
 	}
 
 	State public state;
@@ -120,11 +121,9 @@ contract Custodian {
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
 	uint lastAdminTime;
-	// below 4 data are returned in getStagingPrices
-	address firstAddr;
-	address secondAddr;
-	Price firstPrice;
-	Price secondPrice;
+	// below 2 data are returned in getStagingPrices
+	Price public firstPrice;
+	Price public secondPrice;
 	
 	// reset intermediate values
 	uint bAdj;
@@ -169,7 +168,7 @@ contract Custodian {
 		uint totalSupplyA, uint totalSupplyB
 	);
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
-	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint navAInWei, uint navBInWei);
 
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
@@ -531,8 +530,8 @@ contract Custodian {
 			uint px2, 
 			uint ts2) 
 	{
-		addr1 = firstAddr;
-		addr2 = secondAddr;
+		addr1 = firstPrice.source;
+		addr2 = secondPrice.source;
 		px1 = firstPrice.priceInWei;
 		ts1 = firstPrice.timeInSecond;
 		px2 = secondPrice.priceInWei;
@@ -575,34 +574,32 @@ contract Custodian {
 		if (numOfPrices == 0) {
 			priceDiff = priceInWei.diff(lastPrice.priceInWei);
 			if (priceDiff.mul(BP_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
-				acceptPrice(priceInWei, timeInSecond);
+				acceptPrice(priceInWei, timeInSecond, msg.sender);
 			} else {
 				// wait for the second price
-				firstPrice = Price(priceInWei, timeInSecond);
-				firstAddr = msg.sender;
+				firstPrice = Price(priceInWei, timeInSecond, msg.sender);
 				emit CommitPrice(priceInWei, timeInSecond, msg.sender, 0);
 				numOfPrices++;
 			}
 		} else if (numOfPrices == 1) {
 			if (timeInSecond > firstPrice.timeInSecond.add(priceUpdateCoolDown)) {
-				if (firstAddr == msg.sender)
-					acceptPrice(priceInWei, timeInSecond);
+				if (firstPrice.source == msg.sender)
+					acceptPrice(priceInWei, timeInSecond, msg.sender);
 				else
-					acceptPrice(firstPrice.priceInWei, timeInSecond);
+					acceptPrice(firstPrice.priceInWei, timeInSecond, msg.sender);
 			} else {
-				require(firstAddr != msg.sender);
+				require(firstPrice.source != msg.sender);
 				// if second price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
 					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
-					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
+					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, msg.sender);
 				} else {
 					priceDiff = priceInWei.diff(firstPrice.priceInWei);
 					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
-						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond);
+						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, msg.sender);
 					} else {
 						// wait for the third price
-						secondPrice = Price(priceInWei, timeInSecond);
-						secondAddr = msg.sender;
+						secondPrice = Price(priceInWei, timeInSecond, msg.sender);
 						emit CommitPrice(priceInWei, timeInSecond, msg.sender, 1);
 						numOfPrices++;
 					} 
@@ -610,12 +607,12 @@ contract Custodian {
 			}
 		} else if (numOfPrices == 2) {
 			if (timeInSecond > firstPrice.timeInSecond + priceUpdateCoolDown) {
-				if ((firstAddr == msg.sender || secondAddr == msg.sender))
-					acceptPrice(priceInWei, timeInSecond);
+				if ((firstPrice.source == msg.sender || secondPrice.source == msg.sender))
+					acceptPrice(priceInWei, timeInSecond, msg.sender);
 				else
-					acceptPrice(secondPrice.priceInWei, timeInSecond);
+					acceptPrice(secondPrice.priceInWei, timeInSecond, msg.sender);
 			} else {
-				require(firstAddr != msg.sender && secondAddr != msg.sender);
+				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender);
 				uint acceptedPriceInWei;
 				// if third price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
@@ -631,7 +628,7 @@ contract Custodian {
 						acceptedPriceInWei = getMedian(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
 					}
 				}
-				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond);
+				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond, msg.sender);
 			}
 		} else {
 			return false;
@@ -640,7 +637,7 @@ contract Custodian {
 		return true;
 	}
 
-	function acceptPrice(uint priceInWei, uint timeInSecond) internal {
+	function acceptPrice(uint priceInWei, uint timeInSecond, address source) internal {
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.timeInSecond = timeInSecond;
 		numOfPrices = 0;
@@ -655,7 +652,7 @@ contract Custodian {
 			lastPreResetBlockNo = block.number;
 			emit StartPreReset();
 		} 
-		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		emit AcceptPrice(priceInWei, timeInSecond, source, navAInWei, navBInWei);
 	}
 
 	function getMedian(uint a, uint b, uint c) internal pure returns (uint) {
