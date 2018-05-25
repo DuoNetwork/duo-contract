@@ -90,8 +90,8 @@ contract Custodian {
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
 
-	Price public resetPrice; 
-	Price public lastPrice; 
+	Price resetPrice; 
+	Price lastPrice; 
 	// below 18 states are returned in getSystemStates
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
@@ -122,8 +122,8 @@ contract Custodian {
 	uint lastPreResetBlockNo = 0;
 	uint lastAdminTime;
 	// below 2 data are returned in getStagingPrices
-	Price public firstPrice;
-	Price public secondPrice;
+	Price firstPrice;
+	Price secondPrice;
 	
 	// reset intermediate values
 	uint bAdj;
@@ -520,23 +520,35 @@ contract Custodian {
 		sysState[21] = adminCoolDown;
 	}
 
-	function getStagingPrices() 
+	function getSystemPrices() 
 		public 
 		view 
 		returns (
-			address addr1, 
-			uint px1, 
-			uint ts1, 
-			address addr2, 
-			uint px2, 
-			uint ts2) 
+			address firstAddr, 
+			uint firstPx, 
+			uint firstTs, 
+			address secondAddr, 
+			uint secondPx, 
+			uint secondTs,
+			address resetAddr,
+			uint resetPx,
+			uint resetTs,
+			address lastAddr,
+			uint lastPx,
+			uint lastTs) 
 	{
-		addr1 = firstPrice.source;
-		addr2 = secondPrice.source;
-		px1 = firstPrice.priceInWei;
-		ts1 = firstPrice.timeInSecond;
-		px2 = secondPrice.priceInWei;
-		ts2 = secondPrice.timeInSecond;
+		firstAddr = firstPrice.source;
+		firstPx = firstPrice.priceInWei;
+		firstTs = firstPrice.timeInSecond;
+		secondAddr = secondPrice.source;
+		secondPx = secondPrice.priceInWei;
+		secondTs = secondPrice.timeInSecond;
+		resetAddr = resetPrice.source;
+		resetPx = resetPrice.priceInWei;
+		resetTs = resetPrice.timeInSecond;
+		lastAddr = lastPrice.source;
+		lastPx = lastPrice.priceInWei;
+		lastTs = lastPrice.timeInSecond;
 	}
 
 	// end of public functions
