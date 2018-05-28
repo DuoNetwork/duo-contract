@@ -7,7 +7,7 @@
   "scripts": {
     "test": "truffle.cmd test",
     "clean": "rimraf build",
-    "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000",
+    "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8545",
     "deploy": "truffle.cmd migrate --reset --compile-all",
     "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle.cmd migrate --reset --compile-all --network ropsten",

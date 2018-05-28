@@ -2,7 +2,7 @@ const Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const Web3 = require('web3');
 // import Web3 from 'web3';
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:9545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
@@ -60,12 +60,19 @@ const IDX_NEXT_RESET_ADDR_IDX = 17;
 const IDX_USER_SIZE = 18;
 const IDX_POOL_SIZE = 19;
 
-// const firstAddr = 0;
+// system prices
+// const IDX_FIRST_ADDR = 0;
 const IDX_FIRST_PX = 1;
 const IDX_FIRST_TS = 2;
-// const secondAddr = 3;
+// const IDX_SECOND_ADDR = 3;
 const IDX_SECOND_PX = 4;
 const IDX_SECOND_TS = 5;
+// const IDX_RESET_ADDR = 6;
+const IDX_RESET_PX = 7;
+const IDX_RESET_TS = 8;
+// const IDX_LAST_ADDR = 9;
+const IDX_LAST_PX = 10;
+const IDX_LAST_TS = 11;
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -258,18 +265,21 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
-			let lastPrice = await custodianContract.lastPrice.call();
-			assert.equal(lastPrice[0].valueOf(), '507', 'lastPrice price not updated correctly');
+			let systPrices = await custodianContract.getSystemPrices.call();
+			let lastPrice = systPrices[IDX_LAST_PX];
+			let lastPriceTx = systPrices[IDX_LAST_TS];
+			assert.equal(lastPrice.valueOf(), '507', 'lastPrice price not updated correctly');
 			assert.equal(
-				lastPrice[1].valueOf(),
+				lastPriceTx.valueOf(),
 				'1524105709',
 				'lastPrice time not updated correctly'
 			);
 
-			let resetPrice = await custodianContract.resetPrice.call();
-			assert.equal(resetPrice[0].valueOf(), '507', 'resetPrice price not updated correctly');
+			let resetPrice = systPrices[IDX_RESET_PX];
+			let resetPriceTx = systPrices[IDX_RESET_TS];
+			assert.equal(resetPrice.valueOf(), '507', 'resetPrice price not updated correctly');
 			assert.equal(
-				resetPrice[1].valueOf(),
+				resetPriceTx.valueOf(),
 				'1524105709',
 				'resetPrice time not updated correctly'
 			);
@@ -881,9 +891,9 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.index.toNumber() === 0,
 				'incorrect event arguments emitted'
 			);
-			let stagPrice = await custodianContract.getStagingPrices.call();
-			let px = stagPrice[IDX_FIRST_PX];
-			let ts = stagPrice[IDX_FIRST_TS];
+			let sysPrices = await custodianContract.getSystemPrices.call();
+			let px = sysPrices[IDX_FIRST_PX];
+			let ts = sysPrices[IDX_FIRST_TS];
 			assert.isTrue(
 				isEqual(px.toNumber(), web3.utils.toWei('500')) &&
 					isEqual(ts.toNumber(), firstPeriod.toNumber()),
@@ -1044,9 +1054,9 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.index.toNumber() === 1,
 				'incorrect event arguments emitted'
 			);
-			let stagPrice = await custodianContract.getStagingPrices.call();
-			let px = stagPrice[IDX_SECOND_PX];
-			let ts = stagPrice[IDX_SECOND_TS];
+			let sysPrices = await custodianContract.getSystemPrices.call();
+			let px = sysPrices[IDX_SECOND_PX];
+			let ts = sysPrices[IDX_SECOND_TS];
 			assert.isTrue(
 				isEqual(px.toNumber(), web3.utils.toWei('700')) &&
 					isEqual(ts.toNumber(), firstPeriod.toNumber() - 280),
@@ -1832,10 +1842,10 @@ contract('Custodian', accounts => {
 
 			it('should update reset price', async () => {
 				if (!isPeriodicReset) {
-					let resetPrice = await custodianContract.resetPrice.call();
+					let sysPrices = await custodianContract.getSystemPrices.call();
 
 					assert.equal(
-						resetPrice[0].valueOf() / WEI_DENOMINATOR,
+						sysPrices[IDX_RESET_PX].valueOf() / WEI_DENOMINATOR,
 						price,
 						'resetprice not updated'
 					);
