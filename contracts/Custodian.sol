@@ -90,9 +90,12 @@ contract Custodian {
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
 
+	// below 4 data are returned in getSystemPrices
 	Price resetPrice; 
-	Price lastPrice; 
-	// below 18 states are returned in getSystemStates
+	Price lastPrice;
+	Price firstPrice;
+	Price secondPrice;
+	// below 20 states are returned in getSystemStates
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
 	uint feeAccumulatedInWei;
@@ -112,6 +115,7 @@ contract Custodian {
 	uint adminCoolDown = 24 hours;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
+	uint lastAdminTime;
 	// nav and current total supply
 	uint public navAInWei;
 	uint public navBInWei; 
@@ -120,11 +124,7 @@ contract Custodian {
 
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
-	uint lastAdminTime;
-	// below 2 data are returned in getStagingPrices
-	Price firstPrice;
-	Price secondPrice;
-	
+
 	// reset intermediate values
 	uint bAdj;
 	uint newAFromAPerA;
