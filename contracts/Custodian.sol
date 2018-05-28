@@ -57,6 +57,9 @@ contract Custodian {
 		address source;
 	}
 
+	uint public totalSupplyA;
+	uint public totalSupplyB;
+
 	address duoTokenAddress;
 	address aTokenAddress;
 	address bTokenAddress;
@@ -70,12 +73,12 @@ contract Custodian {
 
 	// address pool for allocation
 	address[] public addrPool =[
-		0x1952E39f7Bc9E00FAffcEa0305E09c065DBd8eFd,
-		0x51a123239894F0C7175F9c0e9e9519d9D74194f6,
-		0x15421ef85E1f4ED8e20Cdf35894caa3d2fb43344,
-		0x11B73358799D057D195fCeC8B93C70E54E39da27,
-		0xaC5E46B58417a111aAa2Dfd972e86C87C55d1c83,
-		0xB7c034Cad16Adbcb3aD10bdAd9160220Cd0aa8BD
+		0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0,
+		0xd066FbAc54838c1d3c3113fc4390B9F99fEb7678,
+		0xB0f396d1fba9a5C699695B69337635Fad6547B13,
+		0x290FC07db2BF4b385987059E919B78898941102e,
+		0x06C59e1aD2299EA99631850291021eda772715eb,
+		0xd34d743B5bfDF21e0D8829f0eEA52cC493628610
 	];
 	mapping(address => uint) addrStatus;
 
@@ -94,12 +97,10 @@ contract Custodian {
 	Price lastPrice;
 	Price firstPrice;
 	Price secondPrice;
-	// below 21 states are returned in getSystemStates
+	// below 19 states are returned in getSystemStates
 	State state;
 	uint navAInWei;
 	uint navBInWei; 
-	uint totalSupplyA;
-	uint totalSupplyB;
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
 	uint feeAccumulatedInWei;
@@ -499,7 +500,7 @@ contract Custodian {
 		sysState[1] = navAInWei;
 		sysState[2] = navBInWei; 
 		sysState[3] = totalSupplyA;
-		sysState[4] = totalSupplyB;
+		sysState[4] = totalSupplyB; 
 		sysState[5] = alphaInBP;
 		sysState[6] = betaInWei;
 		sysState[7] = feeAccumulatedInWei;

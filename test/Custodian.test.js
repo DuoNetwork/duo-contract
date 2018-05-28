@@ -2,7 +2,7 @@ const Custodian = artifacts.require('./CustodianMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const Web3 = require('web3');
 // import Web3 from 'web3';
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:9545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const CustodianInit = InitParas['Custodian'];
@@ -39,26 +39,31 @@ const IDX_PRICEFEED_2 = 3;
 const IDX_PRICEFEED_3 = 4;
 const IDX_POOL_MANAGER = 5;
 
-// const IDX_ALPHA = 0;
-const IDX_BETA_IN_WEI = 1;
-const IDX_FEE_IN_WEI = 2;
-// const IDX_COUPON_RATE = 3;
-// const IDX_PERIODICAL_INWEI = 4;
-// const IDX_LIMIT_UPPER = 5;
-// const IDX_LIMIT_LOWER = 6;
-const IDX_COMM_RATE = 7;
-const IDX_PERIOD = 8;
-const IDX_ITERATION_GAS_TH = 9;
-const IDX_ETH_DUO_RATIO = 10;
-const IDX_PRE_RESET_WAITING_BLK = 11;
-const IDX_PRICE_TOL = 12;
-const IDX_PF_TOL = 13;
-const IDX_PF_TIME_TOL = 14;
-const IDX_PRICE_UPDATE_COOLDOWN = 15;
+const IDX_STATE = 0;
+const IDX_NAV_A = 1;
+const IDX_NAV_B = 2;
+// const IDX_TOTAL_SUPPLY_A = 3;
+// const IDX_TOTAL_SUPPLY_B = 4;
+// const IDX_ALPHA_IN_WEI = 5;
+const IDX_BETA_IN_WEI = 6;
+const IDX_FEE_IN_WEI = 7;
+// const IDX_COUPON_RATE = 8;
+// const IDX_PERIODICAL_INWEI = 9;
+// const IDX_LIMIT_UPPER = 10;
+// const IDX_LIMIT_LOWER = 11;
+const IDX_COMM_RATE = 12;
+const IDX_PERIOD = 13;
+const IDX_ITERATION_GAS_TH = 14;
+const IDX_ETH_DUO_RATIO = 15;
+const IDX_PRE_RESET_WAITING_BLK = 16;
+const IDX_PRICE_TOL = 17;
+const IDX_PF_TOL = 18;
+const IDX_PF_TIME_TOL = 19;
+const IDX_PRICE_UPDATE_COOLDOWN = 20;
 // const IDX_NUM_OF_PX = 16;
-const IDX_NEXT_RESET_ADDR_IDX = 17;
-const IDX_USER_SIZE = 18;
-const IDX_POOL_SIZE = 19;
+const IDX_NEXT_RESET_ADDR_IDX = 22;
+const IDX_USER_SIZE = 25;
+const IDX_POOL_SIZE = 26;
 
 // system prices
 // const IDX_FIRST_ADDR = 0;
@@ -146,11 +151,17 @@ contract('Custodian', accounts => {
 		);
 	};
 
+	const assertState = async (state) => {
+		let sysStates = await custodianContract.getSystemStates.call();
+		assert.equal(sysStates[IDX_STATE].valueOf(), state, 'state is wrong');
+	};
+
 	describe('constructor', () => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let state = await custodianContract.state.call();
+			let sysStates = await custodianContract.getSystemStates.call();
+			let state = sysStates[IDX_STATE];
 			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
@@ -248,8 +259,8 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(sysStates[IDX_STATE].valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
 		it('should start contract', async () => {
@@ -286,8 +297,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('state should be trading', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(sysStates[IDX_STATE].valueOf(), STATE_TRADING, 'state is not trading');
 		});
 	});
 
@@ -806,7 +817,6 @@ contract('Custodian', accounts => {
 		before(async () => {
 			await initContracts();
 			const blockNumber = await web3.eth.getBlockNumber();
-			// console.log(blockNumber);
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
 			await custodianContract.startContract(
@@ -866,8 +876,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not reset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+			await assertState(STATE_TRADING);
 		});
 
 		it('should not accept first price arrived if it is too far away', async () => {
@@ -946,8 +955,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not reset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+			await assertState(STATE_TRADING);
 		});
 
 		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
@@ -1213,8 +1221,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not reset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is changed');
+			await assertState(STATE_TRADING);
 		});
 
 		it('should accept second price arrived if third price is from a different sender and is after cool down', async () => {
@@ -1311,8 +1318,7 @@ contract('Custodian', accounts => {
 				'last price time is not updated correctly'
 			);
 
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is not pre_reset');
+			await assertState(STATE_PRE_RESET);
 		});
 	});
 
@@ -1340,8 +1346,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should be in state preReset', async () => {
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in state preReset');
+			await assertState(STATE_PRE_RESET);
 		});
 
 		it('should not allow price commit', async () => {
@@ -1487,16 +1492,16 @@ contract('Custodian', accounts => {
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
 			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
-			let state = await custodianContract.state.call();
-			assert.equal(state.valueOf(), STATE_PRE_RESET, 'not in pre reset state');
+			await assertState(STATE_PRE_RESET);
 
 			await custodianContract.startPreReset();
-			let stateAfter = await custodianContract.state.call();
-			assert.equal(
-				stateAfter.valueOf(),
-				STATE_UPWARD_RESET,
-				'not transit to upward reset state'
-			);
+			await assertState(STATE_UPWARD_RESET);
+			// let stateAfter = await custodianContract.state.call();
+			// assert.equal(
+			// 	stateAfter.valueOf(),
+			// 	STATE_UPWARD_RESET,
+			// 	'not transit to upward reset state'
+			// );
 		});
 	});
 
@@ -1683,13 +1688,13 @@ contract('Custodian', accounts => {
 						}
 					);
 				}
-
-				let navAinWei = await custodianContract.navAInWei.call();
+				let sysStates = await custodianContract.getSystemStates.call();
+				let navAinWei = sysStates[IDX_NAV_A];
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 
-				let navBinWei = await custodianContract.navBInWei.call();
+				let navBinWei = sysStates[IDX_NAV_B];
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
-				let sysStates = await custodianContract.getSystemStates.call();
+				
 				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
@@ -1715,9 +1720,10 @@ contract('Custodian', accounts => {
 			});
 
 			it('should in corect reset state', async () => {
-				let state = await custodianContract.state.call();
+				assertState(resetState);
+				// let  = await custodianContract.state.call();
 
-				assert.equal(state.valueOf(), resetState, 'not in correct reset state');
+				// assert.equal(state.valueOf(), resetState, 'not in correct reset state');
 			});
 
 			it('should have two users', async () => {
@@ -1827,11 +1833,12 @@ contract('Custodian', accounts => {
 			});
 
 			it('should update nav', async () => {
-				let navA = await custodianContract.navAInWei.call();
+				let sysStates = await custodianContract.getSystemStates.call();
+				let navA = sysStates[IDX_NAV_A];
 
 				assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
 
-				let navB = await custodianContract.navBInWei.call();
+				let navB = sysStates[IDX_NAV_B];
 				assert.isTrue(
 					isPeriodicReset
 						? isEqual(web3.utils.fromWei(navB.valueOf()), currentNavB)
