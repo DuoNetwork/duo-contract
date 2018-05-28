@@ -57,7 +57,6 @@ contract Custodian {
 		address source;
 	}
 
-	State public state;
 	address duoTokenAddress;
 	address aTokenAddress;
 	address bTokenAddress;
@@ -95,7 +94,12 @@ contract Custodian {
 	Price lastPrice;
 	Price firstPrice;
 	Price secondPrice;
-	// below 20 states are returned in getSystemStates
+	// below 21 states are returned in getSystemStates
+	State state;
+	uint navAInWei;
+	uint navBInWei; 
+	uint totalSupplyA;
+	uint totalSupplyB;
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
 	uint feeAccumulatedInWei;
@@ -116,11 +120,6 @@ contract Custodian {
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
 	uint lastAdminTime;
-	// nav and current total supply
-	uint public navAInWei;
-	uint public navBInWei; 
-	uint public totalSupplyA;
-	uint public totalSupplyB;
 
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
@@ -495,29 +494,34 @@ contract Custodian {
 		sysAddr[7] = bTokenAddress;
 	}
 
-	function getSystemStates() public view returns (uint[22] sysState) {
-		sysState[0] = alphaInBP;
-		sysState[1] = betaInWei;
-		sysState[2] = feeAccumulatedInWei;
-		sysState[3] = periodCouponInWei; 
-		sysState[4] = limitPeriodicInWei; 
-		sysState[5] = limitUpperInWei; 
-		sysState[6] = limitLowerInWei;
-		sysState[7] = commissionRateInBP;
-		sysState[8] = period;
-		sysState[9] = iterationGasThreshold;
-		sysState[10] = ethDuoFeeRatio;
-		sysState[11] = preResetWaitingBlocks;
-		sysState[12] = priceTolInBP; 
-		sysState[13] = priceFeedTolInBP;
-		sysState[14] = priceFeedTimeTol;
-		sysState[15] = priceUpdateCoolDown;
-		sysState[16] = numOfPrices;
-		sysState[17] = nextResetAddrIndex;
-		sysState[18] = users.length;
-		sysState[19] = addrPool.length;
-		sysState[20] = lastAdminTime;
-		sysState[21] = adminCoolDown;
+	function getSystemStates() public view returns (uint[27] sysState) {
+		sysState[0] = uint(state);
+		sysState[1] = navAInWei;
+		sysState[2] = navBInWei; 
+		sysState[3] = totalSupplyA;
+		sysState[4] = totalSupplyB;
+		sysState[5] = alphaInBP;
+		sysState[6] = betaInWei;
+		sysState[7] = feeAccumulatedInWei;
+		sysState[8] = periodCouponInWei; 
+		sysState[9] = limitPeriodicInWei; 
+		sysState[10] = limitUpperInWei; 
+		sysState[11] = limitLowerInWei;
+		sysState[12] = commissionRateInBP;
+		sysState[13] = period;
+		sysState[14] = iterationGasThreshold;
+		sysState[15] = ethDuoFeeRatio;
+		sysState[16] = preResetWaitingBlocks;
+		sysState[17] = priceTolInBP; 
+		sysState[18] = priceFeedTolInBP;
+		sysState[19] = priceFeedTimeTol;
+		sysState[20] = priceUpdateCoolDown;
+		sysState[21] = numOfPrices;
+		sysState[22] = nextResetAddrIndex;
+		sysState[23] = lastAdminTime;
+		sysState[24] = adminCoolDown;
+		sysState[25] = users.length;
+		sysState[26] = addrPool.length;
 	}
 
 	function getSystemPrices() 
