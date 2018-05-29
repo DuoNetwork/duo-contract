@@ -427,10 +427,9 @@ contract('Custodian', accounts => {
 
 		it('should update DUO balance of Alice correctly', async () => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(
-				preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
-				'DUO balance of Alice of updated correctly'
-			);
+			assert.isTrue(isEqual(
+				preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeOfDUOinWei
+			), 'DUO balance of Alice of updated correctly');
 		});
 
 		it('should update burned DUO correctly', async () => {
