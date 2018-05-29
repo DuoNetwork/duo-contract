@@ -32,9 +32,9 @@ contract TokenA {
 		return custodianContract.totalSupplyA();
 	}
 	
-	function balanceOf(address add) public view returns(uint balance) {
+	function balanceOf(address addr) public view returns(uint balance) {
 		Custodian custodianContract = Custodian(custodianAddress);
-		return custodianContract.balanceOf(0, add);
+		return custodianContract.balanceOf(0, addr);
 	}
 
 	function allowance(address user, address spender) public view returns(uint value) {
