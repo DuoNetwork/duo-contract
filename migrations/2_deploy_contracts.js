@@ -22,9 +22,9 @@ module.exports = async (deployer, network, accounts) => {
 		// pf1 = accounts[0];
 		pf1 = "0x0022BFd6AFaD3408A1714fa8F9371ad5Ce8A0F1a";
 		// pf2 = accounts[1];
-		pf2 = "0x006f36c5B59F94688C460c4bA35c0d00a2683c76";
+		pf2 = "0x002002812b42601Ae5026344F0395E68527bb0F8";
 		// pf3 = accounts[2];
-		pf3 = "0x0015c8Ea5937dadA06074464f5b6213D93709bEC";
+		pf3 = "0x00476E55e02673B0E4D2B474071014D5a366Ed4E";
 		// feeAdd = accounts[4];
 		feeAdd = "0x0017d61f0B0a28E2F0eBB3B6E269738a6252CFeD";
 		// poolManager = accounts[5];
