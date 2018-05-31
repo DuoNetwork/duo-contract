@@ -1,8 +1,8 @@
 {
-  "name": "israfel",
+  "name": "duo-contract",
   "version": "1.0.0",
   "private": true,
-  "description": "israfel",
+  "description": "DUO Contract",
   "author": "FinBook Pte Ltd",
   "scripts": {
     "test": "truffle.cmd test",
