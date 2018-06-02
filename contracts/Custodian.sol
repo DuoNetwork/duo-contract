@@ -179,7 +179,7 @@ contract Custodian {
 	event UpdateAddress(address current, address newAddr);
 	event RemoveAddress(address addr, address newPoolManager);
 	event SetValue(uint index, uint oldValue, uint newValue);
-	event CollectFee(address addr, uint value);
+	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
 	
 	constructor(
 		address feeAddress, 
@@ -764,7 +764,7 @@ contract Custodian {
 		require(amountInWei <= feeAccumulatedInWei);
 		feeAccumulatedInWei = feeAccumulatedInWei.sub(amountInWei);
 		feeCollector.transfer(amountInWei);
-		emit CollectFee(msg.sender, amountInWei);
+		emit CollectFee(msg.sender, amountInWei, feeAccumulatedInWei);
 		return true;
 	}
 

@@ -463,7 +463,8 @@ contract('Custodian', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.addr.valueOf() === fc &&
-					tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001'),
+					tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001') &&
+					tx.logs[0].args.feeAccumulatedInWei.toNumber() === accumulatedFeeAfterWithdrawal,
 				'worng fee parameter'
 			);
 		});
