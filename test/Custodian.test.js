@@ -302,7 +302,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('creation and fee withdrawal', () => {
+	describe('creation and fee withdrawal', () => {
 		let initEthPrice = 582;
 		let amtEth = 1;
 		let tokenValueB =
