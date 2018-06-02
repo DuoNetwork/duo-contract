@@ -302,7 +302,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('creation and fee withdrawal', () => {
+	describe.only('creation and fee withdrawal', () => {
 		let initEthPrice = 582;
 		let amtEth = 1;
 		let tokenValueB =
@@ -313,7 +313,7 @@ contract('Custodian', accounts => {
 
 		let tokenValueBPayFeeDUO = initEthPrice / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueAPayFeeDUO = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueBPayFeeDUO;
-		let prevFeeAccumulated;
+		let accumulatedFeeAfterWithdrawal;
 		let preDUO = 1000000;
 		let feeOfDUOinWei =
 			amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio;
@@ -451,7 +451,7 @@ contract('Custodian', accounts => {
 
 		it('should collect fee', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
-			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
+			accumulatedFeeAfterWithdrawal = sysStates[IDX_FEE_IN_WEI].toNumber() - web3.utils.toWei('0.0001');
 			let success = await custodianContract.collectFee.call(web3.utils.toWei('0.0001'), {
 				from: fc
 			});
@@ -474,7 +474,8 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(
 					currentFee.toNumber() / WEI_DENOMINATOR,
-					prevFeeAccumulated.toNumber() / WEI_DENOMINATOR
+					accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR,
+					true
 				),
 				'fee not updated correctly'
 			);

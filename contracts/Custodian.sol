@@ -762,6 +762,7 @@ contract Custodian {
 	{
 		require(amountInWei > 0);
 		require(amountInWei <= feeAccumulatedInWei);
+		feeAccumulatedInWei = feeAccumulatedInWei.sub(amountInWei);
 		feeCollector.transfer(amountInWei);
 		emit CollectFee(msg.sender, amountInWei);
 		return true;
