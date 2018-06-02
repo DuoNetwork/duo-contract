@@ -474,8 +474,7 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				isEqual(
 					currentFee.toNumber() / WEI_DENOMINATOR,
-					accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR,
-					true
+					accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR
 				),
 				'fee not updated correctly'
 			);
