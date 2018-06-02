@@ -64,7 +64,7 @@ contract Custodian {
 	address aTokenAddress;
 	address bTokenAddress;
 	// below 6 address are returned by getSystemAddresses
-	address admin;
+	address operator;
 	address feeCollector;
 	address priceFeed1; 
 	address priceFeed2; 
@@ -204,8 +204,8 @@ contract Custodian {
 		state = State.Inception;
 		poolManager = poolMng;
 		addrStatus[poolManager] = 2;
-		admin = msg.sender;
-		addrStatus[admin] = 2;
+		operator = msg.sender;
+		addrStatus[operator] = 2;
 		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		addrStatus[feeCollector] = 2;
@@ -485,7 +485,7 @@ contract Custodian {
 	}
 
 	function getSystemAddresses() public view returns (address[8] sysAddr) {
-		sysAddr[0] = admin;
+		sysAddr[0] = operator;
 		sysAddr[1] = feeCollector;
 		sysAddr[2] = priceFeed1; 
 		sysAddr[3] = priceFeed2; 
@@ -768,7 +768,7 @@ contract Custodian {
 		return true;
 	}
 
-	function setValue(uint idx, uint newValue) public only(admin) inUpdateWindow() returns (bool success) {
+	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		require(state == State.Inception || state == State.Trading);
 		uint oldValue;
 		if (idx == 0) {
@@ -853,8 +853,8 @@ contract Custodian {
 			priceFeed3 = addr;
 		} else if (current == feeCollector) {
 			feeCollector = addr;
-		} else if (current == admin) {
-			admin = addr;
+		} else if (current == operator) {
+			operator = addr;
 		} else {
 			revert();
 		}
