@@ -579,6 +579,7 @@ contract Custodian {
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		state = State.Trading;
+		emit StartTrading(navAInWei, navBInWei);
 		return true;
 	}
 
