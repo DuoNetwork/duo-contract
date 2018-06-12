@@ -110,7 +110,7 @@ contract Custodian {
 	uint limitLowerInWei;
 	uint commissionRateInBP;
 	uint period;
-	uint iterationGasThreshold = 200000;
+	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 1000;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
@@ -427,7 +427,7 @@ contract Custodian {
 		address currentAddress;
 		uint localResetAddrIndex = nextResetAddrIndex;
 		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
-			currentAddress = users[nextResetAddrIndex];
+			currentAddress = users[localResetAddrIndex];
 			currentBalanceA = balanceOf[0][currentAddress];
 			currentBalanceB = balanceOf[1][currentAddress];
 			if (state == State.DownwardReset) {
