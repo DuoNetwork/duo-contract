@@ -110,7 +110,7 @@ contract Custodian {
 	uint limitLowerInWei;
 	uint commissionRateInBP;
 	uint period;
-	uint iterationGasThreshold = 65000;
+	uint iterationGasThreshold = 200000;
 	uint ethDuoFeeRatio = 1000;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
@@ -770,7 +770,6 @@ contract Custodian {
 	}
 
 	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
-		require(state == State.Inception || state == State.Trading);
 		uint oldValue;
 		if (idx == 0) {
 			require(newValue < BP_DENOMINATOR);
