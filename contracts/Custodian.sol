@@ -163,10 +163,9 @@ contract Custodian {
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
-	event Create(address indexed sender, uint createdTokenAInWei, uint createdTokenBInWei, uint ethAmntInWei, uint totalSupplyA, uint totalSupplyB);
-	event Redeem(address indexed sender, uint redeemedTokenAInWei, uint redeemedTokenBInWei, uint ethAmtInWei, 
-		uint totalSupplyA, uint totalSupplyB
-	);
+	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei);
+	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei);
+	event TotalSupply(uint totalSupplyA, uint totalSupplyB);
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint navAInWei, uint navBInWei);
 
@@ -257,7 +256,8 @@ contract Custodian {
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
-		emit Create(sender, tokenValueA, tokenValueB, ethAmtInWei, totalSupplyA, totalSupplyB);
+		emit Create(sender, ethAmtInWei, tokenValueA, tokenValueB);
+		emit TotalSupply(totalSupplyA, totalSupplyB);
 		return true;
 	}
 
@@ -284,7 +284,8 @@ contract Custodian {
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		msg.sender.transfer(ethAmtInWei);
-		emit Redeem(sender, deductAmtInWeiA, deductAmtInWeiB, ethAmtInWei, totalSupplyA, totalSupplyB);
+		emit Redeem(sender, ethAmtInWei, deductAmtInWeiA, deductAmtInWeiB);
+		emit TotalSupply(totalSupplyA, totalSupplyB);
 		return true;
 	}
 
@@ -408,6 +409,8 @@ contract Custodian {
 				totalSupplyA = totalSupplyA.add(newAFromA);
 				totalSupplyB = totalSupplyB.add(newBFromA);
 			}
+
+			emit TotalSupply(totalSupplyA, totalSupplyB);
 
 			emit StartReset(nextResetAddrIndex, users.length);
 		} else 

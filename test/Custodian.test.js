@@ -15,6 +15,7 @@ const START_RESET = 'StartReset';
 const START_TRADING = 'StartTrading';
 const CREATE = 'Create';
 const REDEEM = 'Redeem';
+const TOTAL_SUPPLY = 'TotalSupply';
 const COMMIT_PRICE = 'CommitPrice';
 const ACCEPT_PRICE = 'AcceptPrice';
 const TRANSFER = 'Transfer';
@@ -151,7 +152,7 @@ contract('Custodian', accounts => {
 		);
 	};
 
-	const assertState = async (state) => {
+	const assertState = async state => {
 		let sysStates = await custodianContract.getSystemStates.call();
 		assert.equal(sysStates[IDX_STATE].valueOf(), state, 'state is wrong');
 	};
@@ -260,7 +261,11 @@ contract('Custodian', accounts => {
 
 		it('state should be Inception', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
-			assert.equal(sysStates[IDX_STATE].valueOf(), STATE_INCEPT_RESET, 'state is not inception');
+			assert.equal(
+				sysStates[IDX_STATE].valueOf(),
+				STATE_INCEPT_RESET,
+				'state is not inception'
+			);
 		});
 
 		it('should start contract', async () => {
@@ -306,17 +311,18 @@ contract('Custodian', accounts => {
 		let initEthPrice = 582;
 		let amtEth = 1;
 		let tokenValueB =
-			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			initEthPrice /
+			((1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) * initEthPrice) /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		let tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
+		let tokenValueA = (CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 
 		let tokenValueBPayFeeDUO = initEthPrice / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		let tokenValueAPayFeeDUO = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueBPayFeeDUO;
+		let tokenValueAPayFeeDUO =
+			(CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
 		let accumulatedFeeAfterWithdrawal;
 		let preDUO = 1000000;
 		let feeOfDUOinWei =
-			amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio;
+			((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) * ethDuoFeeRatio;
+		let totalSupplyA, totalSupplyB;
 
 		before(async () => {
 			await initContracts();
@@ -348,26 +354,45 @@ contract('Custodian', accounts => {
 				value: web3.utils.toWei(amtEth + '')
 			});
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === CREATE,
+				tx.logs.length === 2 &&
+					tx.logs[0].event === CREATE &&
+					tx.logs[1].event === TOTAL_SUPPLY,
 				'incorrect event emitted'
 			);
 			assert.isTrue(
 				tx.logs[0].args.sender === alice &&
 					isEqual(
-						tx.logs[0].args.createdTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR,
 						tokenValueA
 					) &&
 					isEqual(
-						tx.logs[0].args.createdTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR,
 						tokenValueB
+					) &&
+					isEqual(
+						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
+						amtEth * (1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR)
 					),
 				'incorrect event arguments emitted'
+			);
+
+			// let totalSupplyA = await custodianContract.totalSupplyA.call();
+			// let totalSupplyB = await custodianContract.totalSupplyB.call();
+			totalSupplyA = tokenValueA;
+			totalSupplyB = tokenValueB;
+			assert.isTrue(
+				isEqual(tx.logs[1].args.totalSupplyA.toNumber() / WEI_DENOMINATOR, totalSupplyA) &&
+					isEqual(
+						tx.logs[1].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
+						totalSupplyB
+					),
+				'totalSupply not updated connectly'
 			);
 		});
 
 		it('feeAccumulated should be updated', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
-			let fee = 1 * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+			let fee = (1 * CustodianInit.commissionRateInBP) / BP_DENOMINATOR;
 			assert.isTrue(
 				isEqual(sysStates[IDX_FEE_IN_WEI].valueOf() / WEI_DENOMINATOR, fee),
 				'feeAccumulated not updated correctly'
@@ -408,28 +433,43 @@ contract('Custodian', accounts => {
 				value: web3.utils.toWei(amtEth + '')
 			});
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === CREATE,
+				tx.logs.length === 2 &&
+					tx.logs[0].event === CREATE &&
+					tx.logs[1].event === TOTAL_SUPPLY,
 				'incorrect event emitted'
 			);
+
+			totalSupplyA += tokenValueAPayFeeDUO;
+			totalSupplyB += tokenValueBPayFeeDUO;
 			assert.isTrue(
 				tx.logs[0].args.sender === alice &&
 					isEqual(
-						tx.logs[0].args.createdTokenAInWei.toNumber() / WEI_DENOMINATOR,
+						tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR,
 						tokenValueAPayFeeDUO
 					) &&
 					isEqual(
-						tx.logs[0].args.createdTokenBInWei.toNumber() / WEI_DENOMINATOR,
+						tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR,
 						tokenValueBPayFeeDUO
-					),
+					) &&
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth),
 				'incorrect event arguments emitted'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[1].args.totalSupplyA.toNumber() / WEI_DENOMINATOR, totalSupplyA) &&
+					isEqual(
+						tx.logs[1].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
+						totalSupplyB
+					),
+				'totalSupply not updated connectly'
 			);
 		});
 
 		it('should update DUO balance of Alice correctly', async () => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(isEqual(
-				preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR , feeOfDUOinWei
-			), 'DUO balance of Alice of updated correctly');
+			assert.isTrue(
+				isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeOfDUOinWei),
+				'DUO balance of Alice of updated correctly'
+			);
 		});
 
 		it('should update burned DUO correctly', async () => {
@@ -451,7 +491,8 @@ contract('Custodian', accounts => {
 
 		it('should collect fee', async () => {
 			let sysStates = await custodianContract.getSystemStates.call();
-			accumulatedFeeAfterWithdrawal = sysStates[IDX_FEE_IN_WEI].toNumber() - web3.utils.toWei('0.0001');
+			accumulatedFeeAfterWithdrawal =
+				sysStates[IDX_FEE_IN_WEI].toNumber() - web3.utils.toWei('0.0001');
 			let success = await custodianContract.collectFee.call(web3.utils.toWei('0.0001'), {
 				from: fc
 			});
@@ -464,7 +505,8 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				tx.logs[0].args.addr.valueOf() === fc &&
 					tx.logs[0].args.value.valueOf() === web3.utils.toWei('0.0001') &&
-					tx.logs[0].args.feeAccumulatedInWei.toNumber() === accumulatedFeeAfterWithdrawal,
+					tx.logs[0].args.feeAccumulatedInWei.toNumber() ===
+						accumulatedFeeAfterWithdrawal,
 				'worng fee parameter'
 			);
 		});
@@ -486,11 +528,11 @@ contract('Custodian', accounts => {
 		let prevBalanceA, prevBalanceB, prevFeeAccumulated;
 		let amtA = 28;
 		let amtB = 29;
-		let adjAmtA = amtA * BP_DENOMINATOR / CustodianInit.alphaInBP;
+		let adjAmtA = (amtA * BP_DENOMINATOR) / CustodianInit.alphaInBP;
 		let deductAmtB = Math.min(adjAmtA, amtB);
-		let deductAmtA = deductAmtB * CustodianInit.alphaInBP / BP_DENOMINATOR;
+		let deductAmtA = (deductAmtB * CustodianInit.alphaInBP) / BP_DENOMINATOR;
 		let amtEth = (deductAmtA + deductAmtB) / ethInitPrice;
-		let fee = amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR;
+		let fee = (amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR;
 		let preDUO = 1000000;
 		let feeInDUO = fee * ethDuoFeeRatio;
 		let totalSupplyA, totalSupplyB;
@@ -553,34 +595,23 @@ contract('Custodian', accounts => {
 				{ from: alice }
 			);
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === REDEEM,
+				tx.logs.length === 2 &&
+					tx.logs[0].event === REDEEM &&
+					tx.logs[1].event === TOTAL_SUPPLY,
 				'incorrect event emitted'
 			);
 			totalSupplyA = totalSupplyA - deductAmtA;
 			totalSupplyB = totalSupplyB - deductAmtB;
 			assert.isTrue(
 				tx.logs[0].args.sender === alice &&
-					isEqual(
-						tx.logs[0].args.redeemedTokenAInWei.toNumber() / WEI_DENOMINATOR,
-						deductAmtA
-					) &&
-					isEqual(
-						tx.logs[0].args.redeemedTokenBInWei.toNumber() / WEI_DENOMINATOR,
-						deductAmtB
-					) &&
-					isEqual(
-						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
-						amtEth - fee
-					) &&
-					isEqual(
-						tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR,
-						totalSupplyA
-					) &&
-					isEqual(
-						tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
-						totalSupplyB
-					),
+					isEqual(tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR, deductAmtA) &&
+					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth - fee),
 				'incorrect event arguments emitted'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[1].args.totalSupplyA.toNumber() / WEI_DENOMINATOR, totalSupplyA) &&
+					isEqual(tx.logs[1].args.totalSupplyB.toNumber() / WEI_DENOMINATOR, totalSupplyB)
 			);
 		});
 
@@ -631,31 +662,23 @@ contract('Custodian', accounts => {
 				{ from: alice }
 			);
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === REDEEM,
+				tx.logs.length === 2 &&
+					tx.logs[0].event === REDEEM &&
+					tx.logs[1].event === TOTAL_SUPPLY,
 				'incorrect event emitted'
 			);
 			totalSupplyA = totalSupplyA - deductAmtA;
 			totalSupplyB = totalSupplyB - deductAmtB;
 			assert.isTrue(
 				tx.logs[0].args.sender === alice &&
-					isEqual(
-						tx.logs[0].args.redeemedTokenAInWei.toNumber() / WEI_DENOMINATOR,
-						deductAmtA
-					) &&
-					isEqual(
-						tx.logs[0].args.redeemedTokenBInWei.toNumber() / WEI_DENOMINATOR,
-						deductAmtB
-					) &&
-					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
-					isEqual(
-						tx.logs[0].args.totalSupplyA.toNumber() / WEI_DENOMINATOR,
-						totalSupplyA
-					) &&
-					isEqual(
-						tx.logs[0].args.totalSupplyB.toNumber() / WEI_DENOMINATOR,
-						totalSupplyB
-					),
+					isEqual(tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR, deductAmtA) &&
+					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth),
 				'incorrect event arguments emitted'
+			);
+			assert.isTrue(
+				isEqual(tx.logs[1].args.totalSupplyA.toNumber() / WEI_DENOMINATOR, totalSupplyA) &&
+					isEqual(tx.logs[1].args.totalSupplyB.toNumber() / WEI_DENOMINATOR, totalSupplyB)
 			);
 		});
 
@@ -693,12 +716,12 @@ contract('Custodian', accounts => {
 		function calcNav(price, time, resetPrice, resetTime, beta) {
 			let numOfPeriods = Math.floor((time - resetTime) / CustodianInit.period);
 			let navParent =
-				price / resetPrice / beta * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+				(price / resetPrice / beta) * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 
 			let navA = 1 + numOfPeriods * Number(CustodianInit.couponRate);
-			let navAAdj = navA * CustodianInit.alphaInBP / BP_DENOMINATOR;
+			let navAAdj = (navA * CustodianInit.alphaInBP) / BP_DENOMINATOR;
 			if (navParent <= navAAdj)
-				return [navParent * BP_DENOMINATOR / CustodianInit.alphaInBP, 0];
+				return [(navParent * BP_DENOMINATOR) / CustodianInit.alphaInBP, 0];
 			else return [navA, navParent - navAAdj];
 		}
 
@@ -1494,14 +1517,15 @@ contract('Custodian', accounts => {
 			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
 			await assertState(STATE_PRE_RESET);
 
-			await custodianContract.startPreReset();
+			let tx = await custodianContract.startPreReset();
+			assert.isTrue(
+				tx.logs.length === 2 &&
+					tx.logs[1].event === START_RESET &&
+					tx.logs[0].event === TOTAL_SUPPLY,
+				'wrong events emitted'
+			);
+
 			await assertState(STATE_UPWARD_RESET);
-			// let stateAfter = await custodianContract.state.call();
-			// assert.equal(
-			// 	stateAfter.valueOf(),
-			// 	STATE_UPWARD_RESET,
-			// 	'not transit to upward reset state'
-			// );
 		});
 	});
 
@@ -1513,7 +1537,7 @@ contract('Custodian', accounts => {
 			//if (excessB >= excessBForA) {
 			let newAFromA = prevBalanceA * excessA;
 			let excessBAfterA = excessB - excessA;
-			let excessNewBFromB = prevBalanceB * excessBAfterA * beta / (1 + alpha);
+			let excessNewBFromB = (prevBalanceB * excessBAfterA * beta) / (1 + alpha);
 			let newBFromB = prevBalanceB * excessA + excessNewBFromB;
 			let newAFromB = excessNewBFromB * alpha;
 			return [prevBalanceA + newAFromA + newAFromB, prevBalanceB + newBFromB];
@@ -1536,7 +1560,7 @@ contract('Custodian', accounts => {
 			alphaInBP = 0
 		) {
 			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
-			let newBFromA = (currentNavA - currentNavB) / (1 + alpha) * beta;
+			let newBFromA = ((currentNavA - currentNavB) / (1 + alpha)) * beta;
 			let newAFromA = newBFromA * alpha;
 
 			let newBalanceA = prevBalanceA * (currentNavB + newAFromA);
@@ -1553,7 +1577,7 @@ contract('Custodian', accounts => {
 			alphaInBP = 0
 		) {
 			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
-			let newBFromA = (currentNavA - 1) / (1 + alpha) * beta;
+			let newBFromA = ((currentNavA - 1) / (1 + alpha)) * beta;
 			let newAFromA = newBFromA * alpha;
 
 			let newBalanceA = prevBalanceA * (1 + newAFromA);
@@ -1584,8 +1608,7 @@ contract('Custodian', accounts => {
 		function updateBeta(prevBeta, lastPrice, lastResetPrice, currentNavA, alphaInBP = 0) {
 			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
 			return (
-				(1 + alpha) *
-				lastPrice /
+				((1 + alpha) * lastPrice) /
 				((1 + alpha) * lastPrice - lastResetPrice * alpha * prevBeta * (currentNavA - 1))
 			);
 		}
@@ -1675,10 +1698,11 @@ contract('Custodian', accounts => {
 
 				await custodianContract.balanceOf
 					.call(0, charles)
-					.then(charlesA => (prevBalanceAcharles = charlesA.toNumber() / WEI_DENOMINATOR));
+					.then(
+						charlesA => (prevBalanceAcharles = charlesA.toNumber() / WEI_DENOMINATOR)
+					);
 				let charlesB = await custodianContract.balanceOf.call(1, charles);
 				prevBalanceBcharles = charlesB.toNumber() / WEI_DENOMINATOR;
-
 
 				await custodianContract.skipCooldown(skipNum);
 
@@ -1714,7 +1738,7 @@ contract('Custodian', accounts => {
 
 				let navBinWei = sysStates[IDX_NAV_B];
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
-				
+
 				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
@@ -1862,18 +1886,24 @@ contract('Custodian', accounts => {
 				let totalA = await custodianContract.totalSupplyA.call();
 				let totalB = await custodianContract.totalSupplyB.call();
 				assert.isTrue(
-					isEqual(totalA.toNumber() / WEI_DENOMINATOR, newBalanceAbob + newBalanceAalice + newBalanceAcharles),
+					isEqual(
+						totalA.toNumber() / WEI_DENOMINATOR,
+						newBalanceAbob + newBalanceAalice + newBalanceAcharles
+					),
 					'totalSupplyA is wrong'
 				);
 				assert.isTrue(
-					isEqual(totalB.toNumber() / WEI_DENOMINATOR, newBalanceBbob + newBalanceBalice + newBalanceBcharles),
+					isEqual(
+						totalB.toNumber() / WEI_DENOMINATOR,
+						newBalanceBbob + newBalanceBalice + newBalanceBcharles
+					),
 					'totalSupplyB is wrong'
 				);
 				assert.isTrue(
 					isEqual(
 						newBalanceAbob + newBalanceAalice + newBalanceAcharles,
-						(newBalanceBbob + newBalanceBalice + + newBalanceBcharles) *
-							(alphaInBP || CustodianInit.alphaInBP) /
+						((newBalanceBbob + newBalanceBalice + +newBalanceBcharles) *
+							(alphaInBP || CustodianInit.alphaInBP)) /
 							BP_DENOMINATOR
 					),
 					'total A is not equal to total B times alpha'
@@ -2034,16 +2064,22 @@ contract('Custodian', accounts => {
 
 				assert.isTrue(success, 'Not able to approve');
 
-				let tx = await custodianContract.approve(index, DUMMY_ADDR, bob, web3.utils.toWei('100'), {
-					from: alice
-				});
+				let tx = await custodianContract.approve(
+					index,
+					DUMMY_ADDR,
+					bob,
+					web3.utils.toWei('100'),
+					{
+						from: alice
+					}
+				);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === APPROVAL,
 					'incorrect event emitted'
 				);
 				assert.isTrue(
 					tx.logs[0].args.tokenOwner.valueOf() === alice &&
-					tx.logs[0].args.spender.valueOf() === bob &&
+						tx.logs[0].args.spender.valueOf() === bob &&
 						tx.logs[0].args.tokens.valueOf() === web3.utils.toWei('100') &&
 						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
@@ -2076,17 +2112,23 @@ contract('Custodian', accounts => {
 				);
 
 				assert.isTrue(success, 'Not able to transfer');
-				let tx = await custodianContract.transfer(index, DUMMY_ADDR, bob, web3.utils.toWei('10'), {
-					from: alice
-				});
-				
+				let tx = await custodianContract.transfer(
+					index,
+					DUMMY_ADDR,
+					bob,
+					web3.utils.toWei('10'),
+					{
+						from: alice
+					}
+				);
+
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === TRANSFER,
 					'incorrect event emitted'
 				);
 				assert.isTrue(
 					tx.logs[0].args.from.valueOf() === alice &&
-					tx.logs[0].args.to.valueOf() === bob &&
+						tx.logs[0].args.to.valueOf() === bob &&
 						tx.logs[0].args.value.valueOf() === web3.utils.toWei('10') &&
 						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
@@ -2155,7 +2197,7 @@ contract('Custodian', accounts => {
 				);
 				assert.isTrue(
 					tx.logs[0].args.from.valueOf() === alice &&
-					tx.logs[0].args.to.valueOf() === charles &&
+						tx.logs[0].args.to.valueOf() === charles &&
 						tx.logs[0].args.value.valueOf() === web3.utils.toWei('50') &&
 						tx.logs[0].args.index.toNumber() === index,
 					'incorrect event arguments emitted'
@@ -2233,7 +2275,7 @@ contract('Custodian', accounts => {
 		});
 
 		beforeEach(async () => {
-			await  custodianContract.skipCooldown(25);
+			await custodianContract.skipCooldown(25);
 		});
 
 		it('admin should be able to set commission', async () => {
@@ -2242,11 +2284,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_COMM_RATE].toNumber();
 			let tx = await custodianContract.setValue(0, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 0 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2286,11 +2331,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_ETH_DUO_RATIO].toNumber();
 			let tx = await custodianContract.setValue(1, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 1 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2316,11 +2364,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_ITERATION_GAS_TH].toNumber();
 			let tx = await custodianContract.setValue(2, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 2 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2346,11 +2397,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRE_RESET_WAITING_BLK].toNumber();
 			let tx = await custodianContract.setValue(3, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 3 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2375,11 +2429,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRICE_TOL].toNumber();
 			let tx = await custodianContract.setValue(4, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 4 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2403,11 +2460,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PF_TOL].toNumber();
 			let tx = await custodianContract.setValue(5, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 5 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2431,11 +2491,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PF_TIME_TOL].toNumber();
 			let tx = await custodianContract.setValue(6, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 6 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2461,11 +2524,14 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRICE_UPDATE_COOLDOWN].toNumber();
 			let tx = await custodianContract.setValue(7, 100, { from: creator });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === SET_VALUE, 'wrong event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 7 &&
-				tx.logs[0].args.oldValue.toNumber() === preValue &&
-				tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -2554,7 +2620,10 @@ contract('Custodian', accounts => {
 				web3.utils.toChecksumAddress(bob),
 				{ from: poolManager }
 			);
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === ADD_ADDRESS, 'not exactly one event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === ADD_ADDRESS,
+				'not exactly one event emitted'
+			);
 			let args = tx.logs[0].args;
 			let sysAddress = await custodianContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
@@ -2693,7 +2762,10 @@ contract('Custodian', accounts => {
 			});
 			assert.isTrue(canRemove, 'poolManager cannot remove from the pool List');
 			let tx = await custodianContract.removeAddress(PoolInit[0], { from: poolManager });
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === REMOVE_ADDRESS, 'not exactly one event emitted');
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === REMOVE_ADDRESS,
+				'not exactly one event emitted'
+			);
 			let args = tx.logs[0].args;
 			let sysAddress = await custodianContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
@@ -2845,7 +2917,10 @@ contract('Custodian', accounts => {
 
 			it('pool account can assign another pool account as role', async () => {
 				let tx = await custodianContract.updateAddress(currentRole, { from: alice });
-				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS, 'not exactly one event emitted');
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS,
+					'not exactly one event emitted'
+				);
 				let args = tx.logs[0].args;
 				let sysAddress = await custodianContract.getSystemAddresses.call({ from: alice });
 				newAddr = sysAddress[roelIndex];
@@ -2922,7 +2997,10 @@ contract('Custodian', accounts => {
 			it('should only update beyond coolDown period', async () => {
 				await custodianContract.skipCooldown(25);
 				let tx = await custodianContract.updateAddress(newAddr, { from: bob });
-				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS, 'not exactly one event emitted');
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS,
+					'not exactly one event emitted'
+				);
 				let args = tx.logs[0].args;
 				let sysAddress = await custodianContract.getSystemAddresses.call({ from: bob });
 				let newAddr2 = sysAddress[roelIndex];
