@@ -163,7 +163,7 @@ contract Custodian {
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
-	event Create(address indexed sender, uint createdTokenAInWei, uint createdTokenBInWei, uint totalSupplyA, uint totalSupplyB);
+	event Create(address indexed sender, uint createdTokenAInWei, uint createdTokenBInWei, uint ethAmntInWei, uint totalSupplyA, uint totalSupplyB);
 	event Redeem(address indexed sender, uint redeemedTokenAInWei, uint redeemedTokenBInWei, uint ethAmtInWei, 
 		uint totalSupplyA, uint totalSupplyB
 	);
@@ -257,7 +257,7 @@ contract Custodian {
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
-		emit Create(sender, tokenValueA, tokenValueB, totalSupplyA, totalSupplyB);
+		emit Create(sender, tokenValueA, tokenValueB, ethAmtInWei, totalSupplyA, totalSupplyB);
 		return true;
 	}
 
