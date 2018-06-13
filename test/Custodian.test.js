@@ -1415,80 +1415,80 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should not allow admin set commissionRate', async () => {
-			try {
-				await custodianContract.setValue(0, 1000, { from: creator });
+		// it('should not allow admin set commissionRate', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(0, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can set commissionRate');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still can set commissionRate');
-			}
-		});
+		// 		assert.isTrue(false, 'still can set commissionRate');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still can set commissionRate');
+		// 	}
+		// });
 
-		it('should not allow admin set ethDuoFeeRatio', async () => {
-			try {
-				await custodianContract.setValue(1, 1000, { from: creator });
+		// it('should not allow admin set ethDuoFeeRatio', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(1, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can set ethDuoFeeRatio');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still can set ethDuoFeeRatio');
-			}
-		});
+		// 		assert.isTrue(false, 'still can set ethDuoFeeRatio');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still can set ethDuoFeeRatio');
+		// 	}
+		// });
 
-		it('should not allow admin set iterationGasThreshold', async () => {
-			try {
-				await custodianContract.setValue(2, 1000, { from: creator });
-				assert.isTrue(false, 'still can set iterationGasThreshold');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set iterationGasThreshold');
-			}
-		});
+		// it('should not allow admin set iterationGasThreshold', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(2, 1000, { from: creator });
+		// 		assert.isTrue(false, 'still can set iterationGasThreshold');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set iterationGasThreshold');
+		// 	}
+		// });
 
-		it('should not allow admin set preResetWaitingBlocks', async () => {
-			try {
-				await custodianContract.setValue(3, 1000, { from: creator });
-				assert.isTrue(false, 'still can set preResetWaitingBlocks');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set preResetWaitingBlocks');
-			}
-		});
+		// it('should not allow admin set preResetWaitingBlocks', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(3, 1000, { from: creator });
+		// 		assert.isTrue(false, 'still can set preResetWaitingBlocks');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set preResetWaitingBlocks');
+		// 	}
+		// });
 
-		it('should not allow admin set priceTolInBP', async () => {
-			try {
-				await custodianContract.setValue(4, 1000, { from: creator });
+		// it('should not allow admin set priceTolInBP', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(4, 1000, { from: creator });
 
-				assert.isTrue(false, 'still can set priceTolInBP');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set priceTolInBP');
-			}
-		});
+		// 		assert.isTrue(false, 'still can set priceTolInBP');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceTolInBP');
+		// 	}
+		// });
 
-		it('should not allow admin set priceFeedTolInBP', async () => {
-			try {
-				await custodianContract.setValue(5, 1000, { from: creator });
-				assert.isTrue(false, 'still can set priceFeedTolInBP');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTolInBP');
-			}
-		});
+		// it('should not allow admin set priceFeedTolInBP', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(5, 1000, { from: creator });
+		// 		assert.isTrue(false, 'still can set priceFeedTolInBP');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTolInBP');
+		// 	}
+		// });
 
-		it('should not allow admin set priceFeedTimeTol', async () => {
-			try {
-				await custodianContract.setValue(6, 1000, { from: creator });
-				assert.isTrue(false, 'still can set priceFeedTimeTol');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTimeTol');
-			}
-		});
+		// it('should not allow admin set priceFeedTimeTol', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(6, 1000, { from: creator });
+		// 		assert.isTrue(false, 'still can set priceFeedTimeTol');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTimeTol');
+		// 	}
+		// });
 
-		it('should not allow admin set priceUpdateCoolDown', async () => {
-			try {
-				await custodianContract.setValue(7, 1000, { from: creator });
-				assert.isTrue(false, 'still can set priceUpdateCoolDown');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'still set priceUpdateCoolDown');
-			}
-		});
+		// it('should not allow admin set priceUpdateCoolDown', async () => {
+		// 	try {
+		// 		await custodianContract.setValue(7, 1000, { from: creator });
+		// 		assert.isTrue(false, 'still can set priceUpdateCoolDown');
+		// 	} catch (err) {
+		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceUpdateCoolDown');
+		// 	}
+		// });
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
 			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
@@ -1601,10 +1601,12 @@ contract('Custodian', accounts => {
 		) {
 			let prevBalanceAalice, prevBalanceBalice;
 			let prevBalanceAbob, prevBalanceBbob;
+			let prevBalanceAcharles, prevBalanceBcharles;
 			let currentNavA;
 			let currentNavB;
 			let newBalanceAalice, newBalanceBalice;
 			let newBalanceAbob, newBalanceBbob;
+			let newBalanceAcharles, newBalanceBcharles;
 			let timestamp;
 			let prevBeta, beta;
 
@@ -1625,13 +1627,18 @@ contract('Custodian', accounts => {
 				);
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
+				await duoContract.transfer(charles, web3.utils.toWei('100'), { from: creator });
 				await custodianContract.create(true, {
 					from: alice,
 					value: web3.utils.toWei('1')
 				});
 				await custodianContract.create(true, {
 					from: bob,
-					value: web3.utils.toWei('1')
+					value: web3.utils.toWei('1.2')
+				});
+				await custodianContract.create(true, {
+					from: charles,
+					value: web3.utils.toWei('1.5')
 				});
 
 				if (transferABRequired) {
@@ -1643,6 +1650,12 @@ contract('Custodian', accounts => {
 					await custodianContract.balanceOf.call(1, bob).then(bobB => {
 						custodianContract.transfer(1, DUMMY_ADDR, alice, bobB.valueOf(), {
 							from: bob
+						});
+					});
+
+					await custodianContract.balanceOf.call(1, charles).then(charlesB => {
+						custodianContract.transfer(1, DUMMY_ADDR, alice, charlesB.valueOf(), {
+							from: charles
 						});
 					});
 				}
@@ -1659,6 +1672,13 @@ contract('Custodian', accounts => {
 					.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR));
 				let bobB = await custodianContract.balanceOf.call(1, bob);
 				prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR;
+
+				await custodianContract.balanceOf
+					.call(0, charles)
+					.then(charlesA => (prevBalanceAcharles = charlesA.toNumber() / WEI_DENOMINATOR));
+				let charlesB = await custodianContract.balanceOf.call(1, charles);
+				prevBalanceBcharles = charlesB.toNumber() / WEI_DENOMINATOR;
+
 
 				await custodianContract.skipCooldown(skipNum);
 
@@ -1726,11 +1746,11 @@ contract('Custodian', accounts => {
 				// assert.equal(state.valueOf(), resetState, 'not in correct reset state');
 			});
 
-			it('should have two users', async () => {
+			it('should have three users', async () => {
 				let sysStates = await custodianContract.getSystemStates.call();
 				let numOfUsers = sysStates[IDX_USER_SIZE];
 
-				assert.equal(numOfUsers.toNumber(), 2, 'num of users incorrect');
+				assert.equal(numOfUsers.toNumber(), 3, 'num of users incorrect');
 			});
 
 			it('should have correct setup', () => {
@@ -1739,7 +1759,9 @@ contract('Custodian', accounts => {
 						prevBalanceAalice === 0 &&
 							prevBalanceBalice > 0 &&
 							prevBalanceAbob > 0 &&
-							prevBalanceBbob === 0,
+							prevBalanceBbob === 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles === 0,
 						'Wrong setup'
 					);
 				else
@@ -1747,7 +1769,9 @@ contract('Custodian', accounts => {
 						prevBalanceAalice > 0 &&
 							prevBalanceBalice > 0 &&
 							prevBalanceAbob > 0 &&
-							prevBalanceBbob > 0,
+							prevBalanceBbob > 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles > 0,
 						'Wrong setup'
 					);
 			});
@@ -1786,7 +1810,7 @@ contract('Custodian', accounts => {
 				);
 			});
 
-			it('should complete reset for second user and transit to trading', async () => {
+			it('should complete reset for second user', async () => {
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAbob,
 					prevBalanceBbob,
@@ -1800,31 +1824,55 @@ contract('Custodian', accounts => {
 				let tx = await custodianContract.startReset({ gas: resetGas });
 				//console.log(tx);
 				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
+					'reset not completed'
+				);
+				// let sysStates = await custodianContract.getSystemStates.call();
+				// let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
+				// assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+				await assertABalanceForAddress(bob, newBalanceA);
+				await assertBBalanceForAddress(bob, newBalanceB);
+			});
+
+			it('should complete reset for third user and transit to trading', async () => {
+				let [newBalanceA, newBalanceB] = resetFunc(
+					prevBalanceAcharles,
+					prevBalanceBcharles,
+					currentNavA,
+					currentNavB,
+					beta,
+					alphaInBP
+				);
+				newBalanceAcharles = newBalanceA;
+				newBalanceBcharles = newBalanceB;
+				let tx = await custodianContract.startReset({ gas: resetGas });
+				//console.log(tx);
+				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_TRADING,
 					'reset not completed'
 				);
 				let sysStates = await custodianContract.getSystemStates.call();
 				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
-				await assertABalanceForAddress(bob, newBalanceA);
-				await assertBBalanceForAddress(bob, newBalanceB);
+				await assertABalanceForAddress(charles, newBalanceA);
+				await assertBBalanceForAddress(charles, newBalanceB);
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
 				let totalA = await custodianContract.totalSupplyA.call();
 				let totalB = await custodianContract.totalSupplyB.call();
 				assert.isTrue(
-					isEqual(totalA.toNumber() / WEI_DENOMINATOR, newBalanceAbob + newBalanceAalice),
+					isEqual(totalA.toNumber() / WEI_DENOMINATOR, newBalanceAbob + newBalanceAalice + newBalanceAcharles),
 					'totalSupplyA is wrong'
 				);
 				assert.isTrue(
-					isEqual(totalB.toNumber() / WEI_DENOMINATOR, newBalanceBbob + newBalanceBalice),
+					isEqual(totalB.toNumber() / WEI_DENOMINATOR, newBalanceBbob + newBalanceBalice + newBalanceBcharles),
 					'totalSupplyB is wrong'
 				);
 				assert.isTrue(
 					isEqual(
-						newBalanceAbob + newBalanceAalice,
-						(newBalanceBbob + newBalanceBalice) *
+						newBalanceAbob + newBalanceAalice + newBalanceAcharles,
+						(newBalanceBbob + newBalanceBalice + + newBalanceBcharles) *
 							(alphaInBP || CustodianInit.alphaInBP) /
 							BP_DENOMINATOR
 					),
