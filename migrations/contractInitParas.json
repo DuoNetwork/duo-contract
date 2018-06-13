@@ -3,7 +3,7 @@
 		"alphaInBP": 10000,
 		"couponRate": "0.00002",
 		"hp": "1.048",
-		"hu": "1.5",
+		"hu": "2.0",
 		"hd": "0.25",
 		"commissionRateInBP": 300,
 		"period": 3600,
