@@ -163,8 +163,8 @@ contract Custodian {
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
-	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei);
-	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei);
+	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
+	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event TotalSupply(uint totalSupplyA, uint totalSupplyB);
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint navAInWei, uint navBInWei);
@@ -237,7 +237,7 @@ contract Custodian {
 		returns (bool success) 
 	{	
 		require(msg.value > 0);
-		uint ethAmtInWei = deductFee(msg.value, payFeeInEth);
+		(uint ethAmtInWei, uint feeInWei) = deductFee(msg.value, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPrice.priceInWei)
 						.mul(betaInWei)
@@ -256,7 +256,13 @@ contract Custodian {
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
-		emit Create(sender, ethAmtInWei, tokenValueA, tokenValueB);
+		emit Create(
+			sender, 
+			ethAmtInWei, 
+			tokenValueA, 
+			tokenValueB, 
+			payFeeInEth ? feeInWei : 0, 
+			payFeeInEth ? 0 : feeInWei);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
 		return true;
 	}
@@ -278,26 +284,40 @@ contract Custodian {
 			.mul(WEI_DENOMINATOR)
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
-		ethAmtInWei = deductFee(ethAmtInWei, payFeeInEth);
+		uint feeInWei;
+		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, payFeeInEth);
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		msg.sender.transfer(ethAmtInWei);
-		emit Redeem(sender, ethAmtInWei, deductAmtInWeiA, deductAmtInWeiB);
+		emit Redeem(
+			sender, 
+			ethAmtInWei, 
+			deductAmtInWeiA, 
+			deductAmtInWeiB, 
+			payFeeInEth ? feeInWei : 0, 
+			payFeeInEth ? 0 : feeInWei);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
 		return true;
 	}
 
-	function deductFee(uint ethAmtInWei, bool payFeeInEth) internal returns (uint ethAmtAfterFeeInWei) {
-		uint feeInWei = ethAmtInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+	function deductFee(
+		uint ethAmtInWei, 
+		bool payFeeInEth) 
+		internal 
+		returns (
+			uint ethAmtAfterFeeInWei, 
+			uint feeInWei) 
+	{
+		feeInWei = ethAmtInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
 		if (payFeeInEth) {
 			feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			DUO duoToken = DUO(duoTokenAddress);
-			duoToken.transferFrom(msg.sender, this, feeInWei.mul(ethDuoFeeRatio));
-			ethAmtAfterFeeInWei = ethAmtInWei;
+			feeInWei = feeInWei.mul(ethDuoFeeRatio);
+			duoToken.transferFrom(msg.sender, this, feeInWei);
 		}
 	}
 	

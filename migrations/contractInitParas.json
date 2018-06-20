@@ -1,25 +1,25 @@
 {
 	"Custodian" :{
 		"alphaInBP": 10000,
-		"couponRate": "0.00002",
-		"hp": "1.048",
+		"couponRate": "0.000017",
+		"hp": "1.035",
 		"hu": "2.0",
 		"hd": "0.25",
-		"commissionRateInBP": 300,
+		"commissionRateInBP": 100,
 		"period": 3600,
 		"coolDown": 3000
 	},
 	"DUO": {
 		"initSupply": "100000000",
-		"tokenName": "DUO",
+		"tokenName": "Test DUO Network Token",
 		"tokenSymbol": "DUO"
 	},
 	"TokenA": {
-		"tokenName": "TokenA",
+		"tokenName": "Test TokenA",
 		"tokenSymbol": "TKA"
 	},
 	"TokenB": {
-		"tokenName": "TokenB",
+		"tokenName": "Test TokenB",
 		"tokenSymbol": "TKB"
 	},
 	"Pool": [
