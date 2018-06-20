@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 import { DUO } from "./DUO.sol";
 
 library SafeMath {
@@ -237,7 +237,9 @@ contract Custodian {
 		returns (bool success) 
 	{	
 		require(msg.value > 0);
-		(uint ethAmtInWei, uint feeInWei) = deductFee(msg.value, payFeeInEth);
+		uint ethAmtInWei; 
+		uint feeInWei;
+		(ethAmtInWei, feeInWei) = deductFee(msg.value, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPrice.priceInWei)
 						.mul(betaInWei)
@@ -318,6 +320,7 @@ contract Custodian {
 			DUO duoToken = DUO(duoTokenAddress);
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
 			duoToken.transferFrom(msg.sender, this, feeInWei);
+			ethAmtAfterFeeInWei = ethAmtInWei;
 		}
 	}
 	
@@ -518,34 +521,35 @@ contract Custodian {
 		sysAddr[7] = bTokenAddress;
 	}
 
-	function getSystemStates() public view returns (uint[27] sysState) {
+	function getSystemStates() public view returns (uint[28] sysState) {
 		sysState[0] = uint(state);
 		sysState[1] = navAInWei;
 		sysState[2] = navBInWei; 
 		sysState[3] = totalSupplyA;
 		sysState[4] = totalSupplyB; 
-		sysState[5] = alphaInBP;
-		sysState[6] = betaInWei;
-		sysState[7] = feeAccumulatedInWei;
-		sysState[8] = periodCouponInWei; 
-		sysState[9] = limitPeriodicInWei; 
-		sysState[10] = limitUpperInWei; 
-		sysState[11] = limitLowerInWei;
-		sysState[12] = commissionRateInBP;
-		sysState[13] = period;
-		sysState[14] = iterationGasThreshold;
-		sysState[15] = ethDuoFeeRatio;
-		sysState[16] = preResetWaitingBlocks;
-		sysState[17] = priceTolInBP; 
-		sysState[18] = priceFeedTolInBP;
-		sysState[19] = priceFeedTimeTol;
-		sysState[20] = priceUpdateCoolDown;
-		sysState[21] = numOfPrices;
-		sysState[22] = nextResetAddrIndex;
-		sysState[23] = lastAdminTime;
-		sysState[24] = adminCoolDown;
-		sysState[25] = users.length;
-		sysState[26] = addrPool.length;
+		sysState[5] = this.balance;
+		sysState[6] = alphaInBP;
+		sysState[7] = betaInWei;
+		sysState[8] = feeAccumulatedInWei;
+		sysState[9] = periodCouponInWei; 
+		sysState[10] = limitPeriodicInWei; 
+		sysState[11] = limitUpperInWei; 
+		sysState[12] = limitLowerInWei;
+		sysState[13] = commissionRateInBP;
+		sysState[14] = period;
+		sysState[15] = iterationGasThreshold;
+		sysState[16] = ethDuoFeeRatio;
+		sysState[17] = preResetWaitingBlocks;
+		sysState[18] = priceTolInBP; 
+		sysState[19] = priceFeedTolInBP;
+		sysState[20] = priceFeedTimeTol;
+		sysState[21] = priceUpdateCoolDown;
+		sysState[22] = numOfPrices;
+		sysState[23] = nextResetAddrIndex;
+		sysState[24] = lastAdminTime;
+		sysState[25] = adminCoolDown;
+		sysState[26] = users.length;
+		sysState[27] = addrPool.length;
 	}
 
 	function getSystemPrices() 

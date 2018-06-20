@@ -46,25 +46,25 @@ const IDX_NAV_B = 2;
 // const IDX_TOTAL_SUPPLY_A = 3;
 // const IDX_TOTAL_SUPPLY_B = 4;
 // const IDX_ALPHA_IN_WEI = 5;
-const IDX_BETA_IN_WEI = 6;
-const IDX_FEE_IN_WEI = 7;
+const IDX_BETA_IN_WEI = 7;
+const IDX_FEE_IN_WEI = 8;
 // const IDX_COUPON_RATE = 8;
 // const IDX_PERIODICAL_INWEI = 9;
 // const IDX_LIMIT_UPPER = 10;
 // const IDX_LIMIT_LOWER = 11;
-const IDX_COMM_RATE = 12;
-const IDX_PERIOD = 13;
-const IDX_ITERATION_GAS_TH = 14;
-const IDX_ETH_DUO_RATIO = 15;
-const IDX_PRE_RESET_WAITING_BLK = 16;
-const IDX_PRICE_TOL = 17;
-const IDX_PF_TOL = 18;
-const IDX_PF_TIME_TOL = 19;
-const IDX_PRICE_UPDATE_COOLDOWN = 20;
+const IDX_COMM_RATE = 13;
+const IDX_PERIOD = 14;
+const IDX_ITERATION_GAS_TH = 15;
+const IDX_ETH_DUO_RATIO = 16;
+const IDX_PRE_RESET_WAITING_BLK = 17;
+const IDX_PRICE_TOL = 18;
+const IDX_PF_TOL = 19;
+const IDX_PF_TIME_TOL = 20;
+const IDX_PRICE_UPDATE_COOLDOWN = 21;
 // const IDX_NUM_OF_PX = 16;
-const IDX_NEXT_RESET_ADDR_IDX = 22;
-const IDX_USER_SIZE = 25;
-const IDX_POOL_SIZE = 26;
+const IDX_NEXT_RESET_ADDR_IDX = 23;
+const IDX_USER_SIZE = 26;
+const IDX_POOL_SIZE = 27;
 
 // system prices
 // const IDX_FIRST_ADDR = 0;
@@ -83,7 +83,7 @@ const IDX_LAST_TS = 11;
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 5e-12;
+const EPSILON = 5e-11;
 const ethInitPrice = 582;
 const ethDuoFeeRatio = 1000;
 
@@ -372,6 +372,14 @@ contract('Custodian', accounts => {
 					isEqual(
 						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
 						amtEth * (1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR)
+					) &&
+					isEqual(
+						tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR,
+						amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR
+					) &&
+					isEqual(
+						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
+						0
 					),
 				'incorrect event arguments emitted'
 			);
@@ -451,7 +459,15 @@ contract('Custodian', accounts => {
 						tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR,
 						tokenValueBPayFeeDUO
 					) &&
-					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth),
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
+					isEqual(
+						tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR,
+						0
+					) &&
+					isEqual(
+						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
+						amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio
+					),
 				'incorrect event arguments emitted'
 			);
 			assert.isTrue(
@@ -606,7 +622,9 @@ contract('Custodian', accounts => {
 				tx.logs[0].args.sender === alice &&
 					isEqual(tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR, deductAmtA) &&
 					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
-					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth - fee),
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth - fee) && 
+					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, fee) &&
+					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, 0),
 				'incorrect event arguments emitted'
 			);
 			assert.isTrue(
@@ -673,7 +691,9 @@ contract('Custodian', accounts => {
 				tx.logs[0].args.sender === alice &&
 					isEqual(tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR, deductAmtA) &&
 					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
-					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth),
+					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
+					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, 0) &&
+					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio ),
 				'incorrect event arguments emitted'
 			);
 			assert.isTrue(
@@ -1663,7 +1683,7 @@ contract('Custodian', accounts => {
 					from: charles,
 					value: web3.utils.toWei('1.5')
 				});
-
+				
 				if (transferABRequired) {
 					let aliceA = await custodianContract.balanceOf.call(0, alice);
 
@@ -1724,7 +1744,7 @@ contract('Custodian', accounts => {
 							from: pf1
 						}
 					);
-					await custodianContract.commitPrice(
+					let tx = await custodianContract.commitPrice(
 						web3.utils.toWei(price + 1 + ''),
 						timestamp.toNumber(),
 						{
@@ -1732,13 +1752,13 @@ contract('Custodian', accounts => {
 						}
 					);
 				}
+				
 				let sysStates = await custodianContract.getSystemStates.call();
 				let navAinWei = sysStates[IDX_NAV_A];
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
-
 				let navBinWei = sysStates[IDX_NAV_B];
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
-
+				
 				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
@@ -1940,32 +1960,32 @@ contract('Custodian', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, true);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 3', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 20000);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 20000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 4', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 20000);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 20000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 5', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 5000);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, false, 5000);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 6', () => {
-			resetTest(900, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 5000);
+			resetTest(1200, upwardReset, STATE_UPWARD_RESET, 95000, false, true, 5000);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
