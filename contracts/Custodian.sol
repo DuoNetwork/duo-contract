@@ -111,13 +111,13 @@ contract Custodian {
 	uint commissionRateInBP;
 	uint period;
 	uint iterationGasThreshold = 65000;
-	uint ethDuoFeeRatio = 1000;
+	uint ethDuoFeeRatio = 800;
 	uint preResetWaitingBlocks = 10;
 	uint priceTolInBP = 500; 
 	uint priceFeedTolInBP = 100;
 	uint priceFeedTimeTol = 1 minutes;
 	uint priceUpdateCoolDown;
-	uint adminCoolDown = 24 hours;
+	uint adminCoolDown = 1 hours;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
 	uint lastAdminTime;
