@@ -1744,7 +1744,7 @@ contract('Custodian', accounts => {
 							from: pf1
 						}
 					);
-					let tx = await custodianContract.commitPrice(
+					await custodianContract.commitPrice(
 						web3.utils.toWei(price + 1 + ''),
 						timestamp.toNumber(),
 						{
