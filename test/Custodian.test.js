@@ -277,14 +277,26 @@ contract('Custodian', accounts => {
 				{ from: pf1 }
 			);
 			assert.isTrue(success, 'not able to start contract');
-			await custodianContract.startContract('507', 1524105709, A_ADDR, B_ADDR, { from: pf1 });
+			let tx = await custodianContract.startContract(web3.utils.toWei('507'), 1524105709, A_ADDR, B_ADDR, { from: pf1 });
+			assert.isTrue(
+				tx.logs.length === 2 && tx.logs[0].event === ACCEPT_PRICE && tx.logs[1].event === START_TRADING,
+				'worng event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.priceInWei.toNumber() / WEI_DENOMINATOR === 507 &&
+					tx.logs[0].args.timeInSecond.valueOf() === '1524105709' &&
+					tx.logs[0].args.sender.valueOf() === pf1 &&
+					tx.logs[0].args.navAInWei.toNumber() / WEI_DENOMINATOR ===1 &&
+					tx.logs[0].args.navBInWei.toNumber() / WEI_DENOMINATOR ===1,
+				'worng event parameter emitted'
+			);
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
 			let systPrices = await custodianContract.getSystemPrices.call();
 			let lastPrice = systPrices[IDX_LAST_PX];
 			let lastPriceTx = systPrices[IDX_LAST_TS];
-			assert.equal(lastPrice.valueOf(), '507', 'lastPrice price not updated correctly');
+			assert.equal(lastPrice.valueOf(), web3.utils.toWei('507'), 'lastPrice price not updated correctly');
 			assert.equal(
 				lastPriceTx.valueOf(),
 				'1524105709',
@@ -293,7 +305,7 @@ contract('Custodian', accounts => {
 
 			let resetPrice = systPrices[IDX_RESET_PX];
 			let resetPriceTx = systPrices[IDX_RESET_TS];
-			assert.equal(resetPrice.valueOf(), '507', 'resetPrice price not updated correctly');
+			assert.equal(resetPrice.valueOf(), web3.utils.toWei('507'), 'resetPrice price not updated correctly');
 			assert.equal(
 				resetPriceTx.valueOf(),
 				'1524105709',

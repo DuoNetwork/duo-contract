@@ -606,6 +606,7 @@ contract Custodian {
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		state = State.Trading;
+		emit AcceptPrice(priceInWei, timeInSecond, msg.sender, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
 		return true;
 	}
