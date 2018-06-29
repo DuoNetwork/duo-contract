@@ -83,9 +83,9 @@ const IDX_LAST_TS = 11;
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-const EPSILON = 5e-11;
+const EPSILON = 1e-10;
 const ethInitPrice = 582;
-const ethDuoFeeRatio = 1000;
+const ethDuoFeeRatio = 800;
 
 const A_ADDR = '0xa';
 const B_ADDR = '0xb';
@@ -718,7 +718,7 @@ contract('Custodian', accounts => {
 			let balanceOfAlice = await duoContract.balanceOf.call(alice);
 			assert.isTrue(
 				isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeInDUO),
-				'DUO balance of Alice of updated correctly'
+				'DUO balance of Alice of updated incorrectly'
 			);
 		});
 

@@ -60,7 +60,7 @@ contract Custodian {
 	uint public totalSupplyA;
 	uint public totalSupplyB;
 
-	address duoTokenAddress;
+	DUO duoToken;
 	address aTokenAddress;
 	address bTokenAddress;
 	// below 6 address are returned by getSystemAddresses
@@ -214,8 +214,7 @@ contract Custodian {
 		addrStatus[priceFeed2] = 2;
 		priceFeed3 = pf3;
 		addrStatus[priceFeed3] = 2;
-		duoTokenAddress = duoAddress;
-		addrStatus[duoTokenAddress] = 2;
+		duoToken = DUO(duoAddress);
 		alphaInBP = alpha;
 		periodCouponInWei = r; 
 		limitPeriodicInWei = hp; 
@@ -317,7 +316,6 @@ contract Custodian {
 			feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
-			DUO duoToken = DUO(duoTokenAddress);
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
 			duoToken.transferFrom(msg.sender, this, feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei;
