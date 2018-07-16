@@ -525,7 +525,7 @@ contract Custodian {
 		sysState[2] = navBInWei; 
 		sysState[3] = totalSupplyA;
 		sysState[4] = totalSupplyB; 
-		sysState[5] = this.balance;
+		sysState[5] = address(this).balance;
 		sysState[6] = alphaInBP;
 		sysState[7] = betaInWei;
 		sysState[8] = feeAccumulatedInWei;
@@ -897,10 +897,10 @@ contract Custodian {
 	}
 
 	function getNextAddrIndex() internal view returns (uint) {
-		uint prevHashNumber = uint256(keccak256(block.blockhash(block.number - 1)));
+		uint prevHashNumber = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1))));
 		if(users.length > 255) {
 			address randomUserAddress = users[prevHashNumber % users.length];
-			return uint256(keccak256(randomUserAddress)) % addrPool.length;
+			return uint256(keccak256(abi.encodePacked(randomUserAddress))) % addrPool.length;
 		} else {
 			return prevHashNumber % addrPool.length;
 		}
