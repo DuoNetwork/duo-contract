@@ -8,7 +8,7 @@
     "test": "truffle.cmd test",
     "clean": "rimraf build",
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8545",
-    "copyAbi": "copyfiles -f .\\build\\contracts\\Custodian.json .\\build\\contracts\\DUO.json ..\\duo-admin\\src\\static\\",
+    "copyAbi": "copyfiles -f .\\build\\contracts\\Custodian.json .\\build\\contracts\\DUO.json .\\build\\contracts\\TokenA.json .\\build\\contracts\\TokenB.json ..\\duo-admin\\src\\static\\",
     "deploy": "truffle.cmd migrate --reset --compile-all",
     "deployKovan": "npm run clean && truffle.cmd migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle.cmd migrate --reset --compile-all --network ropsten",
