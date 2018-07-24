@@ -1,6 +1,6 @@
 const TokenA = artifacts.require('./TokenA.sol');
 const DUO = artifacts.require('./DUO.sol');
-const Custodian = artifacts.require('./CustodianMock.sol');
+const Custodian = artifacts.require('./Custodian.sol');
 const web3 = require('web3');
 
 const InitParas = require('../migrations/contractInitParas.json');
@@ -77,10 +77,9 @@ contract('TokenA', accounts => {
 		});
 
 		let tokenValueB =
-			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			ethInitPrice /
+			((1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) * ethInitPrice) /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		tokenValueA = CustodianInit.alphaInBP / BP_DENOMINATOR * tokenValueB;
+		tokenValueA = (CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 	});
 
 	it('total supply should be correct', async () => {
@@ -175,5 +174,4 @@ contract('TokenA', accounts => {
 			);
 		}
 	});
-
 });

@@ -76,8 +76,7 @@ contract('TokenB', accounts => {
 			value: web3.utils.toWei(amtEth + '')
 		});
 		tokenValueB =
-			(1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) *
-			ethInitPrice /
+			((1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) * ethInitPrice) /
 			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
 	});
 
@@ -94,7 +93,6 @@ contract('TokenB', accounts => {
 		let balance = await tokenBContract.balanceOf.call(creator);
 		assert.isTrue(balance.toNumber() > 0, 'balance of creator not equal to created amount');
 	});
-
 
 	it('should be able to approve', async () => {
 		let success = await tokenBContract.approve(alice, web3.utils.toWei('100'), {
@@ -123,7 +121,6 @@ contract('TokenB', accounts => {
 		let balance = await tokenBContract.balanceOf.call(bob);
 		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 10, 'balance of bob not equal to 10');
 	});
-
 
 	it('alice cannot transfer 200 from creator to bob', async () => {
 		try {
@@ -175,5 +172,4 @@ contract('TokenB', accounts => {
 			);
 		}
 	});
-
 });

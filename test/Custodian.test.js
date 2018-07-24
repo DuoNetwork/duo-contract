@@ -277,17 +277,25 @@ contract('Custodian', accounts => {
 				{ from: pf1 }
 			);
 			assert.isTrue(success, 'not able to start contract');
-			let tx = await custodianContract.startContract(web3.utils.toWei('507'), 1524105709, A_ADDR, B_ADDR, { from: pf1 });
+			let tx = await custodianContract.startContract(
+				web3.utils.toWei('507'),
+				1524105709,
+				A_ADDR,
+				B_ADDR,
+				{ from: pf1 }
+			);
 			assert.isTrue(
-				tx.logs.length === 2 && tx.logs[0].event === ACCEPT_PRICE && tx.logs[1].event === START_TRADING,
+				tx.logs.length === 2 &&
+					tx.logs[0].event === ACCEPT_PRICE &&
+					tx.logs[1].event === START_TRADING,
 				'worng event emitted'
 			);
 			assert.isTrue(
 				tx.logs[0].args.priceInWei.toNumber() / WEI_DENOMINATOR === 507 &&
 					tx.logs[0].args.timeInSecond.valueOf() === '1524105709' &&
 					tx.logs[0].args.sender.valueOf() === pf1 &&
-					tx.logs[0].args.navAInWei.toNumber() / WEI_DENOMINATOR ===1 &&
-					tx.logs[0].args.navBInWei.toNumber() / WEI_DENOMINATOR ===1,
+					tx.logs[0].args.navAInWei.toNumber() / WEI_DENOMINATOR === 1 &&
+					tx.logs[0].args.navBInWei.toNumber() / WEI_DENOMINATOR === 1,
 				'worng event parameter emitted'
 			);
 		});
@@ -296,7 +304,11 @@ contract('Custodian', accounts => {
 			let systPrices = await custodianContract.getSystemPrices.call();
 			let lastPrice = systPrices[IDX_LAST_PX];
 			let lastPriceTx = systPrices[IDX_LAST_TS];
-			assert.equal(lastPrice.valueOf(), web3.utils.toWei('507'), 'lastPrice price not updated correctly');
+			assert.equal(
+				lastPrice.valueOf(),
+				web3.utils.toWei('507'),
+				'lastPrice price not updated correctly'
+			);
 			assert.equal(
 				lastPriceTx.valueOf(),
 				'1524105709',
@@ -305,7 +317,11 @@ contract('Custodian', accounts => {
 
 			let resetPrice = systPrices[IDX_RESET_PX];
 			let resetPriceTx = systPrices[IDX_RESET_TS];
-			assert.equal(resetPrice.valueOf(), web3.utils.toWei('507'), 'resetPrice price not updated correctly');
+			assert.equal(
+				resetPrice.valueOf(),
+				web3.utils.toWei('507'),
+				'resetPrice price not updated correctly'
+			);
 			assert.equal(
 				resetPriceTx.valueOf(),
 				'1524105709',
@@ -387,12 +403,9 @@ contract('Custodian', accounts => {
 					) &&
 					isEqual(
 						tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR,
-						amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR
+						(amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR
 					) &&
-					isEqual(
-						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
-						0
-					),
+					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, 0),
 				'incorrect event arguments emitted'
 			);
 
@@ -472,13 +485,11 @@ contract('Custodian', accounts => {
 						tokenValueBPayFeeDUO
 					) &&
 					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
-					isEqual(
-						tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR,
-						0
-					) &&
+					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, 0) &&
 					isEqual(
 						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
-						amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio
+						((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) *
+							ethDuoFeeRatio
 					),
 				'incorrect event arguments emitted'
 			);
@@ -655,7 +666,10 @@ contract('Custodian', accounts => {
 				tx.logs[0].args.sender === alice &&
 					isEqual(tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR, deductAmtA) &&
 					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
-					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth - fee) && 
+					isEqual(
+						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
+						amtEth - fee
+					) &&
 					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, fee) &&
 					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, 0),
 				'incorrect event arguments emitted'
@@ -731,7 +745,11 @@ contract('Custodian', accounts => {
 					isEqual(tx.logs[0].args.tokenBInWei.toNumber() / WEI_DENOMINATOR, deductAmtB) &&
 					isEqual(tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR, amtEth) &&
 					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, 0) &&
-					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, amtEth * CustodianInit.commissionRateInBP / BP_DENOMINATOR * ethDuoFeeRatio ),
+					isEqual(
+						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
+						((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) *
+							ethDuoFeeRatio
+					),
 				'incorrect event arguments emitted'
 			);
 			assert.isTrue(
@@ -764,13 +782,8 @@ contract('Custodian', accounts => {
 		it('should be removed from user list if all tokens are redeemed', async () => {
 			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
 			let currentBalanceB = await custodianContract.balanceOf.call(1, alice);
-		
-			await custodianContract.redeem(
-				currentBalanceA,
-				currentBalanceB,
-				true,
-				{ from: alice }
-			);
+
+			await custodianContract.redeem(currentBalanceA, currentBalanceB, true, { from: alice });
 			let userIdx = await custodianContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
 		});
@@ -1740,7 +1753,7 @@ contract('Custodian', accounts => {
 					from: charles,
 					value: web3.utils.toWei('1.5')
 				});
-				
+
 				if (transferABRequired) {
 					let aliceA = await custodianContract.balanceOf.call(0, alice);
 
@@ -1809,13 +1822,13 @@ contract('Custodian', accounts => {
 						}
 					);
 				}
-				
+
 				let sysStates = await custodianContract.getSystemStates.call();
 				let navAinWei = sysStates[IDX_NAV_A];
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 				let navBinWei = sysStates[IDX_NAV_B];
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
-				
+
 				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
@@ -2224,7 +2237,6 @@ contract('Custodian', accounts => {
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
 			});
 
-			
 			it('should show balance of bob equal to 10', async () => {
 				let balance = await custodianContract.balanceOf.call(index, bob);
 				assert.isTrue(
@@ -2341,15 +2353,9 @@ contract('Custodian', accounts => {
 
 			it('check balance of charles equal 50', async () => {
 				let balance = await custodianContract.balanceOf.call(index, charles);
-				await custodianContract.transfer.call(
-					index,
-					alice,
-					david,
-					balance,
-					{
-						from: alice
-					}
-				);
+				await custodianContract.transfer.call(index, alice, david, balance, {
+					from: alice
+				});
 
 				assert.equal(
 					balance.toNumber() / WEI_DENOMINATOR,
@@ -2363,24 +2369,12 @@ contract('Custodian', accounts => {
 				let balanceB = await custodianContract.balanceOf.call(1, alice);
 				let userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 0, 'david is not updated');
-				await custodianContract.transfer(
-					0,
-					alice,
-					david,
-					balanceA,
-					{
-						from: alice
-					}
-				);
-				await custodianContract.transfer(
-					1,
-					alice,
-					david,
-					balanceB,
-					{
-						from: alice
-					}
-				);
+				await custodianContract.transfer(0, alice, david, balanceA, {
+					from: alice
+				});
+				await custodianContract.transfer(1, alice, david, balanceB, {
+					from: alice
+				});
 
 				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 0, 'alice is not updated');
@@ -2390,7 +2384,6 @@ contract('Custodian', accounts => {
 				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles is not updated');
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 1, 'david is not updated');
-				
 			});
 		}
 
