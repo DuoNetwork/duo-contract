@@ -1,6 +1,6 @@
 const TokenB = artifacts.require('./TokenB.sol');
 const DUO = artifacts.require('./DUO.sol');
-const Custodian = artifacts.require('./Custodian.sol');
+const Custodian = artifacts.require('./CustodianMock.sol');
 const web3 = require('web3');
 
 const InitParas = require('../migrations/contractInitParas.json');
@@ -23,6 +23,7 @@ contract('TokenB', accounts => {
 	const pm = accounts[5];
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
+	const charlses = accounts[8];
 
 	const WEI_DENOMINATOR = 1e18;
 
@@ -95,6 +96,12 @@ contract('TokenB', accounts => {
 		assert.isTrue(balance.toNumber() > 0, 'balance of creator not equal to created amount');
 	});
 
+	it('creator userIdx should be updated', async () => {
+		let userIdx = await custodianContract.getExistingUser.call(creator);
+		assert.isTrue(userIdx.toNumber() === 1, 'creator is not updated');
+	});
+
+
 	it('should be able to approve', async () => {
 		let success = await tokenBContract.approve(alice, web3.utils.toWei('100'), {
 			from: creator
@@ -121,6 +128,11 @@ contract('TokenB', accounts => {
 	it('should show balance of bob', async () => {
 		let balance = await tokenBContract.balanceOf.call(bob);
 		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 10, 'balance of bob not equal to 10');
+	});
+
+	it('bob userIdx should be updated', async () => {
+		let userIdx = await custodianContract.getExistingUser.call(bob);
+		assert.isTrue(userIdx.toNumber() === 2, 'bob is not updated');
 	});
 
 	it('alice cannot transfer 200 from creator to bob', async () => {
@@ -172,5 +184,16 @@ contract('TokenB', accounts => {
 				'transaction not reverted'
 			);
 		}
+	});
+
+	it('bob transfer all balance to charlses and update userIdx correctly', async () => {
+		let balance = await tokenBContract.balanceOf.call(bob);
+		await tokenBContract.transfer(charlses, balance, {
+			from: bob
+		});
+		let userIdxBob = await custodianContract.getExistingUser.call(bob);
+		assert.isTrue(userIdxBob.toNumber() === 0, 'bob is not updated');
+		let userIdxCharles = await custodianContract.getExistingUser.call(charlses);
+		assert.isTrue(userIdxCharles.toNumber() === 2, 'charles is not updated');
 	});
 });

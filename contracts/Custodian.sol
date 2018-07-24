@@ -265,7 +265,7 @@ contract Custodian {
 			tokenValueB, 
 			payFeeInEth ? feeInWei : 0, 
 			payFeeInEth ? 0 : feeInWei);
-		emit TotalSupply(totalSupplyA, totalSupplyB);
+		emit TotalSupply(totalSupplyA, totalSupplyB);	
 		return true;
 	}
 
@@ -288,13 +288,13 @@ contract Custodian {
 			.div(betaInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, payFeeInEth);
-		
+
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		msg.sender.transfer(ethAmtInWei);
+		sender.transfer(ethAmtInWei);
 		emit Redeem(
 			sender, 
 			ethAmtInWei, 
@@ -736,11 +736,11 @@ contract Custodian {
 		// Add the same to the recipient
 		balanceOf[index][to] = balanceOf[index][to].add(tokens);
 	
-		checkUser(from, balanceOf[index][from], balanceOf[1 - index][from]);
-		checkUser(to, balanceOf[index][to], balanceOf[1 - index][to]);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balanceOf[index][from].add(balanceOf[index][to]) == previousBalances);
 		emit Transfer(from, to, tokens, index);
+		checkUser(from, balanceOf[index][from], balanceOf[1 - index][from]);
+		checkUser(to, balanceOf[index][to], balanceOf[1 - index][to]);
 		return true;
 	}
 
@@ -919,16 +919,18 @@ contract Custodian {
 	}
 	
 	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
-		uint userIdx = existingUsers[user] - 1;
+		uint userIdx = existingUsers[user];
 		if ( userIdx > 0) {
 			if (balanceA < MIN_BALANCE && balanceB < MIN_BALANCE) {
-				uint lastIdx = users.length - 1;
-				address lastUser = users[lastIdx];
-				if (userIdx < lastIdx)
-					users[userIdx] = lastUser;
-				delete users[lastIdx];
-				users.length--;
-				existingUsers[lastUser] = userIdx + 1;
+				uint lastIdx = users.length;
+				address lastUser = users[lastIdx - 1];
+				if (userIdx < lastIdx) {
+					users[userIdx - 1] = lastUser;
+					existingUsers[lastUser] = userIdx;
+				}
+				delete users[lastIdx - 1];
+				existingUsers[user] = 0;
+				users.length--;					
 			}
 		} else if (balanceA >= MIN_BALANCE || balanceB >= MIN_BALANCE) {
 			users.push(user);

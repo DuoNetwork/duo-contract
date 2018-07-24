@@ -420,8 +420,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update user list if required', async () => {
-			let isUser = await custodianContract.getExistingUser.call(alice);
-			assert.isTrue(isUser, 'new user is not updated');
+			let userIdx = await custodianContract.getExistingUser.call(alice);
+			assert.isTrue(userIdx.toNumber() === 1, 'new user is not updated');
 		});
 
 		it('should update balance of A correctly', async () => {
@@ -506,6 +506,27 @@ contract('Custodian', accounts => {
 				burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
 				'burned DUO not updated correctly'
 			);
+		});
+
+		it('should not create token A and B payFee with insufficient DUO allowed', async () => {
+			try {
+				await custodianContract.create(false, {
+					from: bob,
+					value: web3.utils.toWei('1')
+				});
+				assert.isTrue(false, 'able to create without DUO allowed');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
+			}
+		});
+
+		it('should not be added into userList with small creation amt', async () => {
+			await custodianContract.create(true, {
+				from: charles,
+				value: web3.utils.toWei('0.00003')
+			});
+			let userIdx = await custodianContract.getExistingUser.call(charles);
+			assert.isTrue(userIdx.toNumber() === 0, 'new user is included in userList');
 		});
 
 		it('should only collect fee less than allowed', async () => {
@@ -677,6 +698,11 @@ contract('Custodian', accounts => {
 			);
 		});
 
+		it('should be in user list', async () => {
+			let userIdx = await custodianContract.getExistingUser.call(alice);
+			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+		});
+
 		it('should redeem token A and B fee paying with DUO token', async () => {
 			let success = await custodianContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
@@ -728,6 +754,25 @@ contract('Custodian', accounts => {
 				isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO),
 				'burned DUO not updated correctly'
 			);
+		});
+
+		it('should be in user list', async () => {
+			let userIdx = await custodianContract.getExistingUser.call(alice);
+			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+		});
+
+		it('should be removed from user list if all tokens are redeemed', async () => {
+			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
+			let currentBalanceB = await custodianContract.balanceOf.call(1, alice);
+		
+			await custodianContract.redeem(
+				currentBalanceA,
+				currentBalanceB,
+				true,
+				{ from: alice }
+			);
+			let userIdx = await custodianContract.getExistingUser.call(alice);
+			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
 		});
 	});
 
@@ -2819,7 +2864,6 @@ contract('Custodian', accounts => {
 			let sysStates = await custodianContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			// check correct poolSize
-			console.log(poolSize);
 			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot remove address');
 			let poolList = [];
 			// check validatdion of address
