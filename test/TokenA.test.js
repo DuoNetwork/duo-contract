@@ -23,7 +23,6 @@ contract('TokenA', accounts => {
 	const pm = accounts[5];
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
-	const charlses = accounts[8];
 
 	const WEI_DENOMINATOR = 1e18;
 
@@ -98,11 +97,6 @@ contract('TokenA', accounts => {
 		assert.isTrue(balance.toNumber() > 0, 'balance of creator not equal to created amount');
 	});
 
-	it('creator userIdx should be updated', async () => {
-		let userIdx = await custodianContract.getExistingUser.call(creator);
-		assert.isTrue(userIdx.toNumber() === 1, 'creator is not updated');
-	});
-
 	it('should be able to approve', async () => {
 		let success = await tokenAContract.approve(alice, web3.utils.toWei('100'), {
 			from: creator
@@ -129,11 +123,6 @@ contract('TokenA', accounts => {
 	it('should show balance of bob', async () => {
 		let balance = await tokenAContract.balanceOf.call(bob);
 		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 10, 'balance of bob not equal to 10');
-	});
-
-	it('bob userIdx should be updated', async () => {
-		let userIdx = await custodianContract.getExistingUser.call(bob);
-		assert.isTrue(userIdx.toNumber() === 2, 'bob is not updated');
 	});
 
 	it('alice cannot transfer 200 from creator to bob', async () => {
@@ -187,14 +176,4 @@ contract('TokenA', accounts => {
 		}
 	});
 
-	it('bob transfer all balance to charlses and update userIdx correctly', async () => {
-		let balance = await tokenAContract.balanceOf.call(bob);
-		await tokenAContract.transfer(charlses, balance, {
-			from: bob
-		});
-		let userIdxBob = await custodianContract.getExistingUser.call(bob);
-		assert.isTrue(userIdxBob.toNumber() === 0, 'bob is not updated');
-		let userIdxCharles = await custodianContract.getExistingUser.call(charlses);
-		assert.isTrue(userIdxCharles.toNumber() === 2, 'charles is not updated');
-	});
 });

@@ -2128,6 +2128,11 @@ contract('Custodian', accounts => {
 				assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 			});
 
+			it('alice userIdx should be updated', async () => {
+				let userIdx = await custodianContract.getExistingUser.call(alice);
+				assert.isTrue(userIdx.toNumber() === 1, 'alice is not updated');
+			});
+
 			it('should be able to approve', async () => {
 				let success = await custodianContract.approve.call(
 					index,
@@ -2212,6 +2217,14 @@ contract('Custodian', accounts => {
 				);
 			});
 
+			it('bob userIdx should be updated', async () => {
+				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
+				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
+			});
+
+			
 			it('should show balance of bob equal to 10', async () => {
 				let balance = await custodianContract.balanceOf.call(index, bob);
 				assert.isTrue(
@@ -2281,6 +2294,15 @@ contract('Custodian', accounts => {
 				);
 			});
 
+			it('charles userIdx should be updated', async () => {
+				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
+				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
+				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
+				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles userIdx is not updated');
+			});
+
 			it('dummy from address should not be used for transferFrom', async () => {
 				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
 				assert.isTrue(balance.toNumber() === 0, 'dummy from address is used');
@@ -2319,12 +2341,56 @@ contract('Custodian', accounts => {
 
 			it('check balance of charles equal 50', async () => {
 				let balance = await custodianContract.balanceOf.call(index, charles);
+				await custodianContract.transfer.call(
+					index,
+					alice,
+					david,
+					balance,
+					{
+						from: alice
+					}
+				);
 
 				assert.equal(
 					balance.toNumber() / WEI_DENOMINATOR,
 					50,
 					'balance of charles not equal to 50'
 				);
+			});
+
+			it('alice transfer all balance to david and update userIdx correctly', async () => {
+				let balanceA = await custodianContract.balanceOf.call(0, alice);
+				let balanceB = await custodianContract.balanceOf.call(1, alice);
+				let userIdxDavid = await custodianContract.getExistingUser.call(david);
+				assert.isTrue(userIdxDavid.toNumber() === 0, 'david is not updated');
+				await custodianContract.transfer(
+					0,
+					alice,
+					david,
+					balanceA,
+					{
+						from: alice
+					}
+				);
+				await custodianContract.transfer(
+					1,
+					alice,
+					david,
+					balanceB,
+					{
+						from: alice
+					}
+				);
+
+				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				assert.isTrue(userIdxAlice.toNumber() === 0, 'alice is not updated');
+				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				assert.isTrue(userIdxBob.toNumber() === 2, 'bob is not updated');
+				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
+				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles is not updated');
+				userIdxDavid = await custodianContract.getExistingUser.call(david);
+				assert.isTrue(userIdxDavid.toNumber() === 1, 'david is not updated');
+				
 			});
 		}
 
