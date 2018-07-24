@@ -62,8 +62,9 @@ contract DUO {
 	 * @param to The address of the recipient
 	 * @param value the amount to send
 	 */
-	function transfer(address to, uint value) public {
+	function transfer(address to, uint value) public returns (bool success) {
 		transfer(msg.sender, to, value);
+		return true;
 	}
 
 	/**
