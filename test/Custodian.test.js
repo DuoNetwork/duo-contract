@@ -715,6 +715,8 @@ contract('Custodian', accounts => {
 		it('should be in user list', async () => {
 			let userIdx = await custodianContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+			let userSize = await custodianContract.getSystemStates.call();
+			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 1, 'user size not updated correctly');
 		});
 
 		it('should redeem token A and B fee paying with DUO token', async () => {
@@ -777,6 +779,8 @@ contract('Custodian', accounts => {
 		it('should be in user list', async () => {
 			let userIdx = await custodianContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+			let userSize = await custodianContract.getSystemStates.call();
+			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 1, 'user size not updated correctly');
 		});
 
 		it('should be removed from user list if all tokens are redeemed', async () => {
@@ -786,6 +790,8 @@ contract('Custodian', accounts => {
 			await custodianContract.redeem(currentBalanceA, currentBalanceB, true, { from: alice });
 			let userIdx = await custodianContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
+			let userSize = await custodianContract.getSystemStates.call();
+			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 0, 'user size not updated correctly');
 		});
 	});
 
@@ -2144,6 +2150,12 @@ contract('Custodian', accounts => {
 			it('alice userIdx should be updated', async () => {
 				let userIdx = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(userIdx.toNumber() === 1, 'alice is not updated');
+				let userSize = await custodianContract.getSystemStates.call();
+				assert.equal(
+					userSize[IDX_USER_SIZE].toNumber(),
+					1,
+					'user size not updated correctly'
+				);
 			});
 
 			it('should be able to approve', async () => {
@@ -2235,6 +2247,12 @@ contract('Custodian', accounts => {
 				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
+				let userSize = await custodianContract.getSystemStates.call();
+				assert.equal(
+					userSize[IDX_USER_SIZE].toNumber(),
+					2,
+					'user size not updated correctly'
+				);
 			});
 
 			it('should show balance of bob equal to 10', async () => {
@@ -2313,6 +2331,12 @@ contract('Custodian', accounts => {
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
 				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
 				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles userIdx is not updated');
+				let userSize = await custodianContract.getSystemStates.call();
+				assert.equal(
+					userSize[IDX_USER_SIZE].toNumber(),
+					3,
+					'user size not updated correctly'
+				);
 			});
 
 			it('dummy from address should not be used for transferFrom', async () => {
@@ -2365,18 +2389,18 @@ contract('Custodian', accounts => {
 			});
 
 			it('alice transfer all balance to david and update userIdx correctly', async () => {
-				let balanceA = await custodianContract.balanceOf.call(0, alice);
-				let balanceB = await custodianContract.balanceOf.call(1, alice);
+				let balanceA = await custodianContract.balanceOf.call(index, alice);
+				let balanceB = await custodianContract.balanceOf.call(1 - index, alice);
 				let userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 0, 'david is not updated');
-				await custodianContract.transfer(0, alice, david, balanceA, {
+				await custodianContract.transfer(index, alice, david, balanceA, {
 					from: alice
 				});
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 4, 'david is not updated');
 				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
-				await custodianContract.transfer(1, alice, david, balanceB, {
+				await custodianContract.transfer(1 - index, alice, david, balanceB, {
 					from: alice
 				});
 
@@ -2388,6 +2412,13 @@ contract('Custodian', accounts => {
 				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles is not updated');
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 1, 'david is not updated');
+
+				let userSize = await custodianContract.getSystemStates.call();
+				assert.equal(
+					userSize[IDX_USER_SIZE].toNumber(),
+					3,
+					'user size not updated correctly'
+				);
 			});
 		}
 
