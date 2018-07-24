@@ -87,10 +87,11 @@ contract Custodian {
 	mapping(address => uint)[2] public balanceOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
-	mapping (address => bool) existingUsers;
+	mapping (address => uint) existingUsers;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
+	uint constant MIN_BALANCE = 10000000000000000;
 
 	// below 4 data are returned in getSystemPrices
 	Price resetPrice; 
@@ -252,9 +253,11 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		checkNewUser(sender);
-		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
-		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
+		uint newBalanceA = balanceOf[0][sender].add(tokenValueA);
+		uint newBalanceB = balanceOf[1][sender].add(tokenValueB);
+		balanceOf[0][sender] = newBalanceA;
+		balanceOf[1][sender] = newBalanceB;
+		checkNewUser(sender, newBalanceA, newBalanceB);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
 		emit Create(
@@ -278,7 +281,7 @@ contract Custodian {
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB);
+		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB, "not enough token balance to redeem");
 		uint ethAmtInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
@@ -317,7 +320,7 @@ contract Custodian {
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
-			duoToken.transferFrom(msg.sender, this, feeInWei);
+			require(duoToken.transferFrom(msg.sender, this, feeInWei), "failed to deduct DUO fee");
 			ethAmtAfterFeeInWei = ethAmtInWei;
 		}
 	}
@@ -615,8 +618,8 @@ contract Custodian {
 		isPriceFeed()
 		returns (bool success)
 	{	
-		require(timeInSecond <= getNowTimestamp());
-		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
+		require(timeInSecond <= getNowTimestamp(), "timesecond is more than current time");
+		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown), "in price commit cool down window");
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = priceInWei.diff(lastPrice.priceInWei);
@@ -635,7 +638,7 @@ contract Custodian {
 				else
 					acceptPrice(firstPrice.priceInWei, timeInSecond, firstPrice.source);
 			} else {
-				require(firstPrice.source != msg.sender);
+				require(firstPrice.source != msg.sender, "you committed price already, wait for next hour");
 				// if second price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
 					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
@@ -659,7 +662,7 @@ contract Custodian {
 				else
 					acceptPrice(secondPrice.priceInWei, timeInSecond, secondPrice.source);
 			} else {
-				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender);
+				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender, "you committed price already, wait for next hour");
 				uint acceptedPriceInWei;
 				// if third price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
@@ -914,12 +917,21 @@ contract Custodian {
 		return now;
 	}
 	
-	function checkNewUser(address user) internal {
-		if (!existingUsers[user]) {
+	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
+		uint userIdx = existingUsers[user] - 1;
+		if ( userIdx > 0) {
+			if (balanceA < MIN_BALANCE && balanceB < MIN_BALANCE) {
+				uint lastIdx = users.length - 1;
+				address lastUser = users[lastIdx];
+				if (userIdx < lastIdx)
+					users[userIdx] = lastUser;
+				delete users[lastIdx];
+				users.length--;
+				existingUsers[lastUser] = userIdx + 1;
+			}
+		} else if (balanceA >= MIN_BALANCE || balanceB >= MIN_BALANCE) {
 			users.push(user);
-			existingUsers[user] = true;
-			balanceOf[0][user] = 0;
-			balanceOf[1][user] = 0;
+			existingUsers[user] = users.length;
 		}
 	}
 	// end of internal utility functions
