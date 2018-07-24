@@ -2372,11 +2372,15 @@ contract('Custodian', accounts => {
 				await custodianContract.transfer(0, alice, david, balanceA, {
 					from: alice
 				});
+				userIdxDavid = await custodianContract.getExistingUser.call(david);
+				assert.isTrue(userIdxDavid.toNumber() === 4, 'david is not updated');
+				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
 				await custodianContract.transfer(1, alice, david, balanceB, {
 					from: alice
 				});
 
-				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				userIdxAlice = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 0, 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob is not updated');
