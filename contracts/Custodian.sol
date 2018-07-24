@@ -87,10 +87,11 @@ contract Custodian {
 	mapping(address => uint)[2] public balanceOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
-	mapping (address => bool) existingUsers;
+	mapping (address => uint) existingUsers;
 
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
+	uint constant MIN_BALANCE = 10000000000000000;
 
 	// below 4 data are returned in getSystemPrices
 	Price resetPrice; 
@@ -252,9 +253,9 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		checkNewUser(sender);
 		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
+		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
 		emit Create(
@@ -287,8 +288,10 @@ contract Custodian {
 			.div(betaInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, payFeeInEth);
+		
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
+		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		msg.sender.transfer(ethAmtInWei);
@@ -317,7 +320,7 @@ contract Custodian {
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
-			duoToken.transferFrom(msg.sender, this, feeInWei);
+			require(duoToken.transferFrom(msg.sender, this, feeInWei));
 			ethAmtAfterFeeInWei = ethAmtInWei;
 		}
 	}
@@ -728,12 +731,13 @@ contract Custodian {
 
 		// Save this for an assertion in the future
 		uint previousBalances = balanceOf[index][from].add(balanceOf[index][to]);
-		//check whether _to is new. if new then add
-		checkNewUser(to);
 		// Subtract from the sender
 		balanceOf[index][from] = balanceOf[index][from].sub(tokens);
 		// Add the same to the recipient
 		balanceOf[index][to] = balanceOf[index][to].add(tokens);
+	
+		checkUser(from, balanceOf[index][from], balanceOf[1 - index][from]);
+		checkUser(to, balanceOf[index][to], balanceOf[1 - index][to]);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balanceOf[index][from].add(balanceOf[index][to]) == previousBalances);
 		emit Transfer(from, to, tokens, index);
@@ -914,12 +918,21 @@ contract Custodian {
 		return now;
 	}
 	
-	function checkNewUser(address user) internal {
-		if (!existingUsers[user]) {
+	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
+		uint userIdx = existingUsers[user] - 1;
+		if ( userIdx > 0) {
+			if (balanceA < MIN_BALANCE && balanceB < MIN_BALANCE) {
+				uint lastIdx = users.length - 1;
+				address lastUser = users[lastIdx];
+				if (userIdx < lastIdx)
+					users[userIdx] = lastUser;
+				delete users[lastIdx];
+				users.length--;
+				existingUsers[lastUser] = userIdx + 1;
+			}
+		} else if (balanceA >= MIN_BALANCE || balanceB >= MIN_BALANCE) {
 			users.push(user);
-			existingUsers[user] = true;
-			balanceOf[0][user] = 0;
-			balanceOf[1][user] = 0;
+			existingUsers[user] = users.length;
 		}
 	}
 	// end of internal utility functions
