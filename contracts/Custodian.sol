@@ -253,11 +253,9 @@ contract Custodian {
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		uint newBalanceA = balanceOf[0][sender].add(tokenValueA);
-		uint newBalanceB = balanceOf[1][sender].add(tokenValueB);
-		balanceOf[0][sender] = newBalanceA;
-		balanceOf[1][sender] = newBalanceB;
-		checkNewUser(sender, newBalanceA, newBalanceB);
+		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
+		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
+		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
 		emit Create(
@@ -281,7 +279,7 @@ contract Custodian {
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
 		address sender = msg.sender;
-		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB, "not enough token balance to redeem");
+		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB);
 		uint ethAmtInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
@@ -290,8 +288,10 @@ contract Custodian {
 			.div(betaInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, payFeeInEth);
+		
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
+		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		msg.sender.transfer(ethAmtInWei);
@@ -320,7 +320,7 @@ contract Custodian {
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
-			require(duoToken.transferFrom(msg.sender, this, feeInWei), "failed to deduct DUO fee");
+			require(duoToken.transferFrom(msg.sender, this, feeInWei));
 			ethAmtAfterFeeInWei = ethAmtInWei;
 		}
 	}
@@ -618,8 +618,8 @@ contract Custodian {
 		isPriceFeed()
 		returns (bool success)
 	{	
-		require(timeInSecond <= getNowTimestamp(), "timesecond is more than current time");
-		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown), "in price commit cool down window");
+		require(timeInSecond <= getNowTimestamp());
+		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = priceInWei.diff(lastPrice.priceInWei);
@@ -638,7 +638,7 @@ contract Custodian {
 				else
 					acceptPrice(firstPrice.priceInWei, timeInSecond, firstPrice.source);
 			} else {
-				require(firstPrice.source != msg.sender, "you committed price already, wait for next hour");
+				require(firstPrice.source != msg.sender);
 				// if second price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
 					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
@@ -662,7 +662,7 @@ contract Custodian {
 				else
 					acceptPrice(secondPrice.priceInWei, timeInSecond, secondPrice.source);
 			} else {
-				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender, "you committed price already, wait for next hour");
+				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender);
 				uint acceptedPriceInWei;
 				// if third price times out, use first one
 				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
@@ -731,12 +731,13 @@ contract Custodian {
 
 		// Save this for an assertion in the future
 		uint previousBalances = balanceOf[index][from].add(balanceOf[index][to]);
-		//check whether _to is new. if new then add
-		checkNewUser(to);
 		// Subtract from the sender
 		balanceOf[index][from] = balanceOf[index][from].sub(tokens);
 		// Add the same to the recipient
 		balanceOf[index][to] = balanceOf[index][to].add(tokens);
+	
+		checkUser(from, balanceOf[index][from], balanceOf[1 - index][from]);
+		checkUser(to, balanceOf[index][to], balanceOf[1 - index][to]);
 		// Asserts are used to use static analysis to find bugs in your code. They should never fail
 		assert(balanceOf[index][from].add(balanceOf[index][to]) == previousBalances);
 		emit Transfer(from, to, tokens, index);
