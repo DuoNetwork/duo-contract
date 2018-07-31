@@ -52,7 +52,7 @@ const IDX_FEE_IN_WEI = 8;
 // const IDX_PERIODICAL_INWEI = 9;
 // const IDX_LIMIT_UPPER = 10;
 // const IDX_LIMIT_LOWER = 11;
-const IDX_COMM_RATE = 13;
+const IDX_CREATE_COMM_RATE = 13;
 const IDX_PERIOD = 14;
 const IDX_ITERATION_GAS_TH = 15;
 const IDX_ETH_DUO_RATIO = 16;
@@ -65,6 +65,7 @@ const IDX_PRICE_UPDATE_COOLDOWN = 21;
 const IDX_NEXT_RESET_ADDR_IDX = 23;
 const IDX_USER_SIZE = 26;
 const IDX_POOL_SIZE = 27;
+const IDX_REDEEM_COMM_RATE = 28;
 
 // system prices
 // const IDX_FIRST_ADDR = 0;
@@ -81,6 +82,7 @@ const IDX_LAST_PX = 10;
 const IDX_LAST_TS = 11;
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
+const VM_INVALID_OP_CODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 // const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
 const EPSILON = 1e-10;
@@ -252,6 +254,24 @@ contract('Custodian', accounts => {
 				sysStates[IDX_PRICE_UPDATE_COOLDOWN].valueOf(),
 				CustodianInit.coolDown,
 				'priceUpdateCoolDown specified incorrect'
+			);
+		});
+
+		it('createCommInBP should equal specified value', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(
+				sysStates[IDX_CREATE_COMM_RATE].valueOf(),
+				CustodianInit.commissionRateInBP,
+				'createCommInBP specified incorrect'
+			);
+		});
+
+		it('redeemCommInBP should equal specified value', async () => {
+			let sysStates = await custodianContract.getSystemStates.call();
+			assert.equal(
+				sysStates[IDX_REDEEM_COMM_RATE].valueOf(),
+				CustodianInit.commissionRateInBP,
+				'redeemCommInBP specified incorrect'
 			);
 		});
 	});
@@ -545,7 +565,7 @@ contract('Custodian', accounts => {
 				await custodianContract.collectFee.call(web3.utils.toWei('1'), { from: fc });
 				assert.isTrue(false, 'can collect fee more than allowed');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
+				assert.equal(err.message, VM_INVALID_OP_CODE_MSG, 'can collect fee more than allowed');
 			}
 		});
 
@@ -2449,12 +2469,12 @@ contract('Custodian', accounts => {
 			await custodianContract.skipCooldown(25);
 		});
 
-		it('admin should be able to set commission', async () => {
+		it('admin should be able to set createCommission', async () => {
 			let success = await custodianContract.setValue.call(0, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
 			let sysStates = await custodianContract.getSystemStates.call();
-			let preValue = sysStates[IDX_COMM_RATE].toNumber();
-			let tx = await custodianContract.setValue(0, 100, { from: creator });
+			let preValue = sysStates[IDX_CREATE_COMM_RATE].toNumber();
+			let tx = await custodianContract.setValue(0, 50, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2462,7 +2482,26 @@ contract('Custodian', accounts => {
 			assert.isTrue(
 				tx.logs[0].args.index.toNumber() === 0 &&
 					tx.logs[0].args.oldValue.toNumber() === preValue &&
-					tx.logs[0].args.newValue.toNumber() === 100,
+					tx.logs[0].args.newValue.toNumber() === 50,
+				'wrong argument emitted'
+			);
+		});
+
+		it('admin should be able to set redeemCommission', async () => {
+			let success = await custodianContract.setValue.call(8, 200, { from: creator });
+			assert.isTrue(success, 'not be able to set commissison');
+			let sysStates = await custodianContract.getSystemStates.call();
+			let preValue = sysStates[IDX_REDEEM_COMM_RATE].toNumber();
+			let tx = await custodianContract.setValue(8, 200, { from: creator });
+
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.index.toNumber() === 8 &&
+					tx.logs[0].args.oldValue.toNumber() === preValue &&
+					tx.logs[0].args.newValue.toNumber() === 200,
 				'wrong argument emitted'
 			);
 		});

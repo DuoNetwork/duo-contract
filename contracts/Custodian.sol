@@ -237,7 +237,6 @@ contract Custodian {
 		inState(State.Trading) 
 		returns (bool success) 
 	{	
-		require(msg.value > 0);
 		uint ethAmtInWei; 
 		uint feeInWei;
 		(ethAmtInWei, feeInWei) = deductFee(msg.value, createCommInBP, payFeeInEth);
@@ -275,7 +274,6 @@ contract Custodian {
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		require(amtInWeiA > 0 && amtInWeiB > 0);
 		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
@@ -794,8 +792,6 @@ contract Custodian {
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		require(amountInWei > 0);
-		require(amountInWei <= feeAccumulatedInWei);
 		feeAccumulatedInWei = feeAccumulatedInWei.sub(amountInWei);
 		feeCollector.transfer(amountInWei);
 		emit CollectFee(msg.sender, amountInWei, feeAccumulatedInWei);
