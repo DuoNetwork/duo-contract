@@ -109,7 +109,8 @@ contract Custodian {
 	uint limitPeriodicInWei; 
 	uint limitUpperInWei; 
 	uint limitLowerInWei;
-	uint commissionRateInBP;
+	uint createCommInBP;
+	uint redeemCommInBP;
 	uint period;
 	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 800;
@@ -206,7 +207,6 @@ contract Custodian {
 		addrStatus[poolManager] = 2;
 		operator = msg.sender;
 		addrStatus[operator] = 2;
-		commissionRateInBP = 100;
 		feeCollector = feeAddress;
 		addrStatus[feeCollector] = 2;
 		priceFeed1 = pf1;
@@ -221,7 +221,8 @@ contract Custodian {
 		limitPeriodicInWei = hp; 
 		limitUpperInWei = hu; 
 		limitLowerInWei = hd;
-		commissionRateInBP = c;
+		createCommInBP = c;
+		redeemCommInBP = c;
 		period = p;
 		navAInWei = WEI_DENOMINATOR;
 		navBInWei = WEI_DENOMINATOR;
@@ -239,7 +240,7 @@ contract Custodian {
 		require(msg.value > 0);
 		uint ethAmtInWei; 
 		uint feeInWei;
-		(ethAmtInWei, feeInWei) = deductFee(msg.value, payFeeInEth);
+		(ethAmtInWei, feeInWei) = deductFee(msg.value, createCommInBP, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPrice.priceInWei)
 						.mul(betaInWei)
@@ -287,7 +288,7 @@ contract Custodian {
 			.div(resetPrice.priceInWei)
 			.div(betaInWei);
 		uint feeInWei;
-		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, payFeeInEth);
+		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP, payFeeInEth);
 
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
@@ -308,13 +309,14 @@ contract Custodian {
 
 	function deductFee(
 		uint ethAmtInWei, 
+		uint commInBP,
 		bool payFeeInEth) 
 		internal 
 		returns (
 			uint ethAmtAfterFeeInWei, 
 			uint feeInWei) 
 	{
-		feeInWei = ethAmtInWei.mul(commissionRateInBP).div(BP_DENOMINATOR);
+		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
 		if (payFeeInEth) {
 			feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
@@ -522,7 +524,7 @@ contract Custodian {
 		sysAddr[7] = bTokenAddress;
 	}
 
-	function getSystemStates() public view returns (uint[28] sysState) {
+	function getSystemStates() public view returns (uint[29] sysState) {
 		sysState[0] = uint(state);
 		sysState[1] = navAInWei;
 		sysState[2] = navBInWei; 
@@ -536,7 +538,7 @@ contract Custodian {
 		sysState[10] = limitPeriodicInWei; 
 		sysState[11] = limitUpperInWei; 
 		sysState[12] = limitLowerInWei;
-		sysState[13] = commissionRateInBP;
+		sysState[13] = createCommInBP;
 		sysState[14] = period;
 		sysState[15] = iterationGasThreshold;
 		sysState[16] = ethDuoFeeRatio;
@@ -551,6 +553,7 @@ contract Custodian {
 		sysState[25] = adminCoolDown;
 		sysState[26] = users.length;
 		sysState[27] = addrPool.length;
+		sysState[28] = redeemCommInBP;
 	}
 
 	function getSystemPrices() 
@@ -802,9 +805,9 @@ contract Custodian {
 	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
-			require(newValue < BP_DENOMINATOR);
-			oldValue = commissionRateInBP;
-			commissionRateInBP = newValue;
+			require(newValue <= BP_DENOMINATOR);
+			oldValue = createCommInBP;
+			createCommInBP = newValue;
 		} else if (idx == 1) {
 			oldValue = ethDuoFeeRatio;
 			ethDuoFeeRatio = newValue;
@@ -827,6 +830,10 @@ contract Custodian {
 			require(newValue < period);
 			oldValue = priceUpdateCoolDown;
 			priceUpdateCoolDown = newValue;
+		} else if (idx == 8) {
+			require(newValue <= BP_DENOMINATOR);
+			oldValue = redeemCommInBP;
+			redeemCommInBP = newValue;
 		} else {
 			revert();
 		}
