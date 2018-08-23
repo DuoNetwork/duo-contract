@@ -1,4 +1,5 @@
 pragma solidity ^0.4.24;
+import { IOracle } from "./IOracle.sol";
 import { DUO } from "./DUO.sol";
 import { SafeMath } from "./SafeMath.sol";
 
@@ -13,25 +14,15 @@ contract Custodian {
 		PeriodicReset
 	}
 
-	struct Price {
-		uint priceInWei;
-		uint timeInSecond;
-		address source;
-	}
-
 	uint public totalSupplyA;
 	uint public totalSupplyB;
 
 	DUO duoToken;
+	IOracle oracleContract;
 	address aTokenAddress;
 	address bTokenAddress;
-	// below 6 address are returned by getSystemAddresses
 	address operator;
 	address feeCollector;
-	address priceFeed1; 
-	address priceFeed2; 
-	address priceFeed3;
-	address poolManager;
 
 	// address pool for allocation
 	address[] public addrPool =[
@@ -56,10 +47,10 @@ contract Custodian {
 	uint constant MIN_BALANCE = 10000000000000000;
 
 	// below 4 data are returned in getSystemPrices
-	Price resetPrice; 
-	Price lastPrice;
-	Price firstPrice;
-	Price secondPrice;
+	uint public lastPriceInWei;
+	uint public lastPriceTimeInSecond;
+	uint public resetPriceInWei;
+	uint public resetPriceTimeInSecond;
 	// below 19 states are returned in getSystemStates
 	State state;
 	uint navAInWei;
@@ -145,12 +136,6 @@ contract Custodian {
 	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
 	
 	constructor(
-		address feeAddress, 
-		address duoAddress,
-		address pf1,
-		address pf2,
-		address pf3,
-		address poolMng,
 		uint alpha,
 		uint r,
 		uint hp,
@@ -554,17 +539,19 @@ contract Custodian {
 	// end of public functions
 	// start of price feed functions
 
-	function startContract(
-		uint priceInWei, 
-		uint timeInSecond,
+	function startCustodian(
 		address aAddr,
-		address bAddr) 
+		address bAddr,
+		address duoAddress,
+		address feeAddress, 
+		address adminAddr,
+		address oracleAddr) 
 		public 
 		inState(State.Inception) 
 		isPriceFeed() 
 		returns (bool success) 
-	{
-		require(timeInSecond <= getNowTimestamp());
+	{	
+		oracleContract = IOracle(oracleAddr);
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.source = msg.sender;

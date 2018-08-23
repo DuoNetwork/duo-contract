@@ -1,5 +1,6 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "./SafeMath.sol";
+import { IPool } from "./IPool.sol";
 
 contract Oracle {
 	using SafeMath for uint;
@@ -10,6 +11,7 @@ contract Oracle {
 		address source;
 	}
 
+	IPool pool;
 	address public operator;
 	address public priceFeed1; 
 	address public priceFeed2; 
@@ -41,6 +43,7 @@ contract Oracle {
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender);
 	event SetValue(uint index, uint oldValue, uint newValue);
+	event UpdatePool(address newPoolAddress);
 	
 	constructor(
 		address opt,
@@ -62,19 +65,39 @@ contract Oracle {
 
 	function startOracle(
 		uint priceInWei, 
-		uint timeInSecond) 
+		uint timeInSecond,
+		address poolAddr) 
 		public 
 		isPriceFeed() 
 		returns (bool success) 
 	{
-		require(!started);
-		require(timeInSecond <= getNowTimestamp());
+		require(!started && timeInSecond <= getNowTimestamp());
+		pool = IPool(poolAddr);
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.source = msg.sender;
 		started = true;
 		emit AcceptPrice(priceInWei, timeInSecond, msg.sender);
 		return true;
+	}
+
+	function updatePool(address newPoolAddr) only(pool.poolManager()) public returns (bool) {
+		pool = IPool(newPoolAddr);
+		require(pool.poolManager() != 0x0);
+		emit UpdatePool(newPoolAddr);
+		return true;
+	}
+
+	function getLastPrice() public view returns(uint, uint) {
+		return (lastPrice.priceInWei, lastPrice.timeInSecond);
+	}
+
+	function updatePriceFeed(uint index) public returns (bool) {
+		
+	}
+
+	function updateOperator() external returns (bool) {
+
 	}
 
 	function commitPrice(uint priceInWei, uint timeInSecond) 
