@@ -1,9 +1,11 @@
 pragma solidity ^0.4.24;
-import { IOracle } from "./IOracle.sol";
+import { Base } from "./Base.sol";
 import { DUO } from "./DUO.sol";
+import { IOracle } from "./IOracle.sol";
+import { IPool } from "./IPool.sol";
 import { SafeMath } from "./SafeMath.sol";
 
-contract Custodian {
+contract Beethoven is Base {
 	using SafeMath for uint;
 	enum State {
 		Inception,
@@ -18,32 +20,15 @@ contract Custodian {
 	uint public totalSupplyB;
 
 	DUO duoToken;
-	IOracle oracleContract;
+	IOracle oracle;
+	IPool pool;
 	address aTokenAddress;
 	address bTokenAddress;
 	address operator;
 	address feeCollector;
+	address oracleAddress;
+	address poolAddress;
 
-	// address pool for allocation
-	address[] public addrPool =[
-		0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0,
-		0xd066FbAc54838c1d3c3113fc4390B9F99fEb7678,
-		0xB0f396d1fba9a5C699695B69337635Fad6547B13,
-		0x290FC07db2BF4b385987059E919B78898941102e,
-		0x06C59e1aD2299EA99631850291021eda772715eb,
-		0xd34d743B5bfDF21e0D8829f0eEA52cC493628610
-	];
-	mapping(address => uint) addrStatus;
-
-	uint constant decimals = 18;
-	// balance and allowance for A and B
-	mapping(address => uint)[2] public balanceOf;
-	mapping (address => mapping (address => uint))[2] public allowance;
-	address[] public users;
-	mapping (address => uint) existingUsers;
-
-	uint constant WEI_DENOMINATOR = 1000000000000000000;
-	uint constant BP_DENOMINATOR = 10000;
 	uint constant MIN_BALANCE = 10000000000000000;
 
 	// below 4 data are returned in getSystemPrices
@@ -68,15 +53,10 @@ contract Custodian {
 	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 800;
 	uint preResetWaitingBlocks = 10;
-	uint priceTolInBP = 500; 
-	uint priceFeedTolInBP = 100;
-	uint priceFeedTimeTol = 1 minutes;
-	uint priceUpdateCoolDown;
-	uint adminCoolDown = 1 hours;
 	uint numOfPrices = 0;
 	uint nextResetAddrIndex = 0;
-	uint lastAdminTime;
-
+	uint priceFetchCoolDown = 3000;
+	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
 
@@ -92,28 +72,6 @@ contract Custodian {
 		_;
 	}
 
-	modifier only(address addr) {
-		require(msg.sender == addr);
-		_;
-	}
-
-	modifier isPriceFeed() {
-		require(msg.sender == priceFeed1 || msg.sender == priceFeed2 || msg.sender == priceFeed3);
-		_;
-	}
-
-	modifier inAddrPool() {
-		require(addrStatus[msg.sender] == 1);
-		_;
-	}
-
-	modifier inUpdateWindow() {
-		uint currentTime = getNowTimestamp();
-		require(currentTime - lastAdminTime > adminCoolDown);
-		_;
-		lastAdminTime = currentTime;
-	}
-
 	// state events
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
@@ -121,19 +79,16 @@ contract Custodian {
 	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event TotalSupply(uint totalSupplyA, uint totalSupplyB);
-	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
-	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint navAInWei, uint navBInWei);
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
 	
 	// admin events
-	event AddAddress(address added1, address added2, address newPoolManager);
-	event UpdateAddress(address current, address newAddr);
-	event RemoveAddress(address addr, address newPoolManager);
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
+	event UpdateOperator(address updater, address newOperator);
 	
 	constructor(
 		uint alpha,
@@ -143,26 +98,16 @@ contract Custodian {
 		uint hd,
 		uint c,
 		uint p,
-		uint coolDown) 
+		uint optCoolDown,
+		uint pxFetchCoolDown,
+		uint iteGasTh,
+		uint ethDuoRate,
+		uint preResetWaitBlk
+		) 
 		public 
 	{
-		for (uint i = 0; i < addrPool.length; i++) {
-			addrStatus[addrPool[i]] = 1;
-		}
 		state = State.Inception;
-		poolManager = poolMng;
-		addrStatus[poolManager] = 2;
 		operator = msg.sender;
-		addrStatus[operator] = 2;
-		feeCollector = feeAddress;
-		addrStatus[feeCollector] = 2;
-		priceFeed1 = pf1;
-		addrStatus[priceFeed1] = 2;
-		priceFeed2 = pf2;
-		addrStatus[priceFeed2] = 2;
-		priceFeed3 = pf3;
-		addrStatus[priceFeed3] = 2;
-		duoToken = DUO(duoAddress);
 		alphaInBP = alpha;
 		periodCouponInWei = r; 
 		limitPeriodicInWei = hp; 
@@ -171,13 +116,49 @@ contract Custodian {
 		createCommInBP = c;
 		redeemCommInBP = c;
 		period = p;
+		iterationGasThreshold = iteGasTh; // 65000;
+		ethDuoFeeRatio = ethDuoRate; // 800;
+		preResetWaitingBlocks = preResetWaitBlk; // 10;
 		navAInWei = WEI_DENOMINATOR;
 		navBInWei = WEI_DENOMINATOR;
-		priceUpdateCoolDown = coolDown;
+		operationCoolDown = optCoolDown;
+		priceFetchCoolDown = pxFetchCoolDown;
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
-	// start of public functions
+	function startCustodian(
+		address aAddr,
+		address bAddr,
+		address duoAddress,
+		address feeAddress, 
+		address poolAddr,
+		address oracleAddr
+		) 
+		public 
+		inState(State.Inception) 
+		only(operator)
+		returns (bool success) 
+	{	
+		aTokenAddress = aAddr;
+		bTokenAddress = bAddr;
+		duoToken = DUO(duoAddress);
+		feeCollector = feeAddress;
+		oracleAddress = oracleAddr;
+		oracle = IOracle(oracleAddress);
+		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
+		lastPriceInWei = priceInWei;
+		lastPriceTimeInSecond = timeInSecond;
+		resetPriceInWei = priceInWei;
+		resetPriceTimeInSecond = timeInSecond;
+		poolAddress = poolAddr;
+		pool = IPool(poolAddress);
+		state = State.Trading;
+		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
+		emit StartTrading(navAInWei, navBInWei);
+		return true;
+	}
+
+	// start of public conversion functions
 	function create(bool payFeeInEth) 
 		public 
 		payable 
@@ -188,7 +169,7 @@ contract Custodian {
 		uint feeInWei;
 		(ethAmtInWei, feeInWei) = deductFee(msg.value, createCommInBP, payFeeInEth);
 		uint numeritor = ethAmtInWei
-						.mul(resetPrice.priceInWei)
+						.mul(resetPriceInWei)
 						.mul(betaInWei)
 						.mul(BP_DENOMINATOR
 		);
@@ -230,7 +211,7 @@ contract Custodian {
 			.add(deductAmtInWeiB)
 			.mul(WEI_DENOMINATOR)
 			.mul(WEI_DENOMINATOR)
-			.div(resetPrice.priceInWei)
+			.div(resetPriceInWei)
 			.div(betaInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP, payFeeInEth);
@@ -271,19 +252,44 @@ contract Custodian {
 			ethAmtAfterFeeInWei = ethAmtInWei;
 		}
 	}
+	// end of conversion
+
+	// start of priceFetch funciton
+	function fetchPrice() public inState(State.Trading) returns (bool) {
+		uint currentTime = getNowTimestamp();
+		require(currentTime > lastPriceTimeInSecond.add(priceFetchCoolDown));
+		oracle = IOracle(oracleAddress);
+		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
+		require(timeInSecond > lastPriceTimeInSecond && timeInSecond <= currentTime);
+		lastPriceInWei = priceInWei;
+		lastPriceTimeInSecond = timeInSecond;
+		(navAInWei, navBInWei) = calculateNav(
+			priceInWei, 
+			timeInSecond, 
+			resetPriceInWei, 
+			resetPriceTimeInSecond, 
+			betaInWei);
+		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
+			state = State.PreReset;
+			lastPreResetBlockNo = block.number;
+			emit StartPreReset();
+		} 
+		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		return true;
+	}
 	
 	function calculateNav(
 		uint priceInWei, 
 		uint timeInSecond, 
-		uint resetPriceInWei, 
-		uint resetTimeInSecond,
+		uint rstPriceInWei, 
+		uint rstTimeInSecond,
 		uint bInWei) 
 		public 
 		view 
 		returns (uint, uint) 
 	{
-		uint numOfPeriods = timeInSecond.sub(resetTimeInSecond).div(period);
-		uint navParent = priceInWei.mul(WEI_DENOMINATOR).div(resetPriceInWei);
+		uint numOfPeriods = timeInSecond.sub(rstTimeInSecond).div(period);
+		uint navParent = priceInWei.mul(WEI_DENOMINATOR).div(rstPriceInWei);
 		navParent = navParent
 			.mul(WEI_DENOMINATOR)
 			.mul(alphaInBP.add(BP_DENOMINATOR))
@@ -297,7 +303,9 @@ contract Custodian {
 		else
 			return (navA, navParent.sub(navAAdj));
 	}
+	// end of priceFetch function
 
+	// start of reset function
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
 			uint newBFromA;
@@ -357,10 +365,10 @@ contract Custodian {
 				state = State.PeriodicReset;
 				uint num = alphaInBP
 					.add(BP_DENOMINATOR)
-					.mul(lastPrice.priceInWei);
+					.mul(lastPriceInWei);
 				uint den = num
 					.sub(
-						resetPrice.priceInWei
+						resetPriceInWei
 							.mul(alphaInBP)
 							.mul(betaInWei)
 							.mul(navAInWei
@@ -439,9 +447,8 @@ contract Custodian {
 
 		if (localResetAddrIndex >= users.length) {
 			if (state != State.PeriodicReset) {
-				resetPrice.priceInWei = lastPrice.priceInWei;
-				resetPrice.timeInSecond = lastPrice.timeInSecond;
-				resetPrice.source = lastPrice.source;
+				resetPriceInWei = lastPriceInWei;
+				resetPriceTimeInSecond = lastPriceTimeInSecond;
 				navBInWei = WEI_DENOMINATOR;
 			}
 			
@@ -457,23 +464,19 @@ contract Custodian {
 			return false;
 		}
 	}
+	// end of reset function
 
-	function totalUsers() public view returns (uint) {
-		return users.length;
-	}
-
-	function getSystemAddresses() public view returns (address[8] sysAddr) {
+	// start of public functions
+	function getSystemAddresses() public view returns (address[6] sysAddr) {
 		sysAddr[0] = operator;
 		sysAddr[1] = feeCollector;
-		sysAddr[2] = priceFeed1; 
-		sysAddr[3] = priceFeed2; 
-		sysAddr[4] = priceFeed3;
-		sysAddr[5] = poolManager;
-		sysAddr[6] = aTokenAddress;
-		sysAddr[7] = bTokenAddress;
+		sysAddr[2] = aTokenAddress;
+		sysAddr[3] = bTokenAddress;
+		sysAddr[4] = oracleAddress;
+		sysAddr[5] = poolAddress;
 	}
 
-	function getSystemStates() public view returns (uint[29] sysState) {
+	function getSystemStates() public view returns (uint[23] sysState) {
 		sysState[0] = uint(state);
 		sysState[1] = navAInWei;
 		sysState[2] = navBInWei; 
@@ -488,191 +491,20 @@ contract Custodian {
 		sysState[11] = limitUpperInWei; 
 		sysState[12] = limitLowerInWei;
 		sysState[13] = createCommInBP;
-		sysState[14] = period;
-		sysState[15] = iterationGasThreshold;
-		sysState[16] = ethDuoFeeRatio;
-		sysState[17] = preResetWaitingBlocks;
-		sysState[18] = priceTolInBP; 
-		sysState[19] = priceFeedTolInBP;
-		sysState[20] = priceFeedTimeTol;
-		sysState[21] = priceUpdateCoolDown;
-		sysState[22] = numOfPrices;
-		sysState[23] = nextResetAddrIndex;
-		sysState[24] = lastAdminTime;
-		sysState[25] = adminCoolDown;
-		sysState[26] = users.length;
-		sysState[27] = addrPool.length;
-		sysState[28] = redeemCommInBP;
+		sysState[14] = redeemCommInBP;
+		sysState[15] = period;
+		sysState[16] = iterationGasThreshold;
+		sysState[17] = ethDuoFeeRatio;
+		sysState[18] = preResetWaitingBlocks;
+		sysState[19] = nextResetAddrIndex;
+		sysState[20] = lastOperationTime;
+		sysState[21] = operationCoolDown;
+		sysState[22] = users.length;
+		
 	}
-
-	function getSystemPrices() 
-		public 
-		view 
-		returns (
-			address firstAddr, 
-			uint firstPx, 
-			uint firstTs, 
-			address secondAddr, 
-			uint secondPx, 
-			uint secondTs,
-			address resetAddr,
-			uint resetPx,
-			uint resetTs,
-			address lastAddr,
-			uint lastPx,
-			uint lastTs) 
-	{
-		firstAddr = firstPrice.source;
-		firstPx = firstPrice.priceInWei;
-		firstTs = firstPrice.timeInSecond;
-		secondAddr = secondPrice.source;
-		secondPx = secondPrice.priceInWei;
-		secondTs = secondPrice.timeInSecond;
-		resetAddr = resetPrice.source;
-		resetPx = resetPrice.priceInWei;
-		resetTs = resetPrice.timeInSecond;
-		lastAddr = lastPrice.source;
-		lastPx = lastPrice.priceInWei;
-		lastTs = lastPrice.timeInSecond;
-	}
-
 	// end of public functions
-	// start of price feed functions
 
-	function startCustodian(
-		address aAddr,
-		address bAddr,
-		address duoAddress,
-		address feeAddress, 
-		address adminAddr,
-		address oracleAddr) 
-		public 
-		inState(State.Inception) 
-		isPriceFeed() 
-		returns (bool success) 
-	{	
-		oracleContract = IOracle(oracleAddr);
-		lastPrice.timeInSecond = timeInSecond;
-		lastPrice.priceInWei = priceInWei;
-		lastPrice.source = msg.sender;
-		resetPrice.timeInSecond = timeInSecond;
-		resetPrice.priceInWei = priceInWei;
-		resetPrice.source = msg.sender;
-		aTokenAddress = aAddr;
-		bTokenAddress = bAddr;
-		state = State.Trading;
-		emit AcceptPrice(priceInWei, timeInSecond, msg.sender, WEI_DENOMINATOR, WEI_DENOMINATOR);
-		emit StartTrading(navAInWei, navBInWei);
-		return true;
-	}
-
-	function commitPrice(uint priceInWei, uint timeInSecond) 
-		public 
-		inState(State.Trading) 
-		isPriceFeed()
-		returns (bool success)
-	{	
-		require(timeInSecond <= getNowTimestamp());
-		require(timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
-		uint priceDiff;
-		if (numOfPrices == 0) {
-			priceDiff = priceInWei.diff(lastPrice.priceInWei);
-			if (priceDiff.mul(BP_DENOMINATOR).div(lastPrice.priceInWei) <= priceTolInBP) {
-				acceptPrice(priceInWei, timeInSecond, msg.sender);
-			} else {
-				// wait for the second price
-				firstPrice = Price(priceInWei, timeInSecond, msg.sender);
-				emit CommitPrice(priceInWei, timeInSecond, msg.sender, 0);
-				numOfPrices++;
-			}
-		} else if (numOfPrices == 1) {
-			if (timeInSecond > firstPrice.timeInSecond.add(priceUpdateCoolDown)) {
-				if (firstPrice.source == msg.sender)
-					acceptPrice(priceInWei, timeInSecond, msg.sender);
-				else
-					acceptPrice(firstPrice.priceInWei, timeInSecond, firstPrice.source);
-			} else {
-				require(firstPrice.source != msg.sender);
-				// if second price times out, use first one
-				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
-					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
-					acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, firstPrice.source);
-				} else {
-					priceDiff = priceInWei.diff(firstPrice.priceInWei);
-					if (priceDiff.mul(BP_DENOMINATOR).div(firstPrice.priceInWei) <= priceTolInBP) {
-						acceptPrice(firstPrice.priceInWei, firstPrice.timeInSecond, firstPrice.source);
-					} else {
-						// wait for the third price
-						secondPrice = Price(priceInWei, timeInSecond, msg.sender);
-						emit CommitPrice(priceInWei, timeInSecond, msg.sender, 1);
-						numOfPrices++;
-					} 
-				}
-			}
-		} else if (numOfPrices == 2) {
-			if (timeInSecond > firstPrice.timeInSecond + priceUpdateCoolDown) {
-				if ((firstPrice.source == msg.sender || secondPrice.source == msg.sender))
-					acceptPrice(priceInWei, timeInSecond, msg.sender);
-				else
-					acceptPrice(secondPrice.priceInWei, timeInSecond, secondPrice.source);
-			} else {
-				require(firstPrice.source != msg.sender && secondPrice.source != msg.sender);
-				uint acceptedPriceInWei;
-				// if third price times out, use first one
-				if (firstPrice.timeInSecond.add(priceFeedTimeTol) < timeInSecond || 
-					firstPrice.timeInSecond.sub(priceFeedTimeTol) > timeInSecond) {
-					acceptedPriceInWei = firstPrice.priceInWei;
-				} else {
-					// take median and proceed
-					// first and second price will never be equal in this part
-					// if second and third price are the same, they are median
-					if (secondPrice.priceInWei == priceInWei) {
-						acceptedPriceInWei = priceInWei;
-					} else {
-						acceptedPriceInWei = getMedian(firstPrice.priceInWei, secondPrice.priceInWei, priceInWei);
-					}
-				}
-				acceptPrice(acceptedPriceInWei, firstPrice.timeInSecond, firstPrice.source);
-			}
-		} else {
-			return false;
-		}
-
-		return true;
-	}
-
-	function acceptPrice(uint priceInWei, uint timeInSecond, address source) internal {
-		lastPrice.priceInWei = priceInWei;
-		lastPrice.timeInSecond = timeInSecond;
-		lastPrice.source = source;
-		numOfPrices = 0;
-		(navAInWei, navBInWei) = calculateNav(
-			lastPrice.priceInWei, 
-			lastPrice.timeInSecond, 
-			resetPrice.priceInWei, 
-			resetPrice.timeInSecond, 
-			betaInWei);
-		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
-			state = State.PreReset;
-			lastPreResetBlockNo = block.number;
-			emit StartPreReset();
-		} 
-		emit AcceptPrice(priceInWei, timeInSecond, source, navAInWei, navBInWei);
-	}
-
-	function getMedian(uint a, uint b, uint c) internal pure returns (uint) {
-		if (a.gt(b) ^ c.gt(a) == 0x0) {
-			return a;
-		} else if(b.gt(a) ^ c.gt(b) == 0x0) {
-			return b;
-		} else {
-			return c;
-		}
-	}
-
-	// end of price feed functions	
 	// start of token functions
-
 	function transferInternal(uint index, address from, address to, uint tokens) 
 		internal 
 		inState(State.Trading)
@@ -735,10 +567,9 @@ contract Custodian {
 		emit Approval(senderToUse, spender, tokens, index);
 		return true;
 	}
-
 	// end of token functions
-	// start of admin functions
 
+	// start of operator functions
 	function collectFee(uint amountInWei) 
 		public 
 		only(feeCollector) 
@@ -758,31 +589,19 @@ contract Custodian {
 			oldValue = createCommInBP;
 			createCommInBP = newValue;
 		} else if (idx == 1) {
-			oldValue = ethDuoFeeRatio;
-			ethDuoFeeRatio = newValue;
-		} else if (idx == 2) {
-			oldValue = iterationGasThreshold;
-			iterationGasThreshold = newValue;
-		} else if (idx == 3) {
-			oldValue = preResetWaitingBlocks;
-			preResetWaitingBlocks = newValue;
-		} else if (idx == 4) {
-			oldValue = priceTolInBP;
-			priceTolInBP = newValue;
-		} else if (idx == 5) {
-			oldValue = priceFeedTolInBP;
-			priceFeedTolInBP = newValue;
-		} else if (idx == 6) {
-			oldValue = priceFeedTimeTol;
-			priceFeedTimeTol = newValue;
-		} else if (idx == 7) {
-			require(newValue < period);
-			oldValue = priceUpdateCoolDown;
-			priceUpdateCoolDown = newValue;
-		} else if (idx == 8) {
 			require(newValue <= BP_DENOMINATOR);
 			oldValue = redeemCommInBP;
 			redeemCommInBP = newValue;
+		} 
+		else if (idx == 2) {
+			oldValue = ethDuoFeeRatio;
+			ethDuoFeeRatio = newValue;
+		} else if (idx == 3) {
+			oldValue = iterationGasThreshold;
+			iterationGasThreshold = newValue;
+		} else if (idx == 4) {
+			oldValue = preResetWaitingBlocks;
+			preResetWaitingBlocks = newValue;
 		} else {
 			revert();
 		}
@@ -791,89 +610,15 @@ contract Custodian {
 		return true;
 	}
 
-	function addAddress(address addr1, address addr2) public only(poolManager) inUpdateWindow() returns (bool success) {
-		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2);
-		uint index = getNextAddrIndex();
-		poolManager = addrPool[index];
-		removeFromPool(index);
-		addrPool.push(addr1);
-		addrStatus[addr1] = 1;
-		addrPool.push(addr2);
-		addrStatus[addr2] = 1;
-		emit AddAddress(addr1, addr2, poolManager);
+	function updateOperator() public inUpdateWindow() returns (bool) {
+		address updater = msg.sender;
+		operator = pool.provideAddress(updater);
+		emit UpdateOperator(updater, operator);
 		return true;
 	}
+	// end of operator functions
 
-	function removeAddress(address addr) public only(poolManager) inUpdateWindow() returns (bool success) {
-		require(addrPool.length > 3 && addrStatus[addr] == 1);
-		for (uint i = 0; i < addrPool.length; i++) {
-			if (addrPool[i] == addr) {
-				removeFromPool(i);
-				break;
-            }
-		}
-		uint index = getNextAddrIndex();
-		poolManager = addrPool[index];
-		removeFromPool(index);
-		emit RemoveAddress(addr, poolManager);
-		return true;
-	}
-
-	function updateAddress(address current) public inAddrPool() inUpdateWindow() returns (bool success) {
-		require(addrPool.length > 3);
-		for (uint i = 0; i < addrPool.length; i++) {
-			if (addrPool[i] == msg.sender) {
-				removeFromPool(i);
-				break;
-            }
-		}
-		uint index = getNextAddrIndex();
-		address addr = addrPool[index];
-		removeFromPool(index);
-
-		if (current == priceFeed1) {
-			priceFeed1 = addr;
-		} else if (current == priceFeed2) {
-			priceFeed2 = addr;
-		} else if (current == priceFeed3) {
-			priceFeed3 = addr;
-		} else if (current == feeCollector) {
-			feeCollector = addr;
-		} else if (current == operator) {
-			operator = addr;
-		} else {
-			revert();
-		}
-		emit UpdateAddress(current, addr);
-		return true;
-	}
-
-	function removeFromPool(uint idx) internal {
-		addrStatus[addrPool[idx]] = 2;
-		if (idx < addrPool.length - 1)
-			addrPool[idx] = addrPool[addrPool.length-1];
-		delete addrPool[addrPool.length - 1];
-		addrPool.length--;
-	}
-
-	function getNextAddrIndex() internal view returns (uint) {
-		uint prevHashNumber = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1))));
-		if(users.length > 255) {
-			address randomUserAddress = users[prevHashNumber % users.length];
-			return uint256(keccak256(abi.encodePacked(randomUserAddress))) % addrPool.length;
-		} else {
-			return prevHashNumber % addrPool.length;
-		}
-	}
-
-	// end of admin functions
 	// start of internal utility functions
-
-
-	function getNowTimestamp() internal view returns (uint) {
-		return now;
-	}
-	
 	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
 		uint userIdx = existingUsers[user];
 		if ( userIdx > 0) {

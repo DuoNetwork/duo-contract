@@ -12,6 +12,7 @@ contract Oracle {
 	}
 
 	IPool pool;
+	address public poolAddress;
 	address public operator;
 	address public priceFeed1; 
 	address public priceFeed2; 
@@ -19,14 +20,16 @@ contract Oracle {
 
 	uint constant BP_DENOMINATOR = 10000;
 
-	Price public lastPrice;
 	Price public firstPrice;
 	Price public secondPrice;
+	Price public lastPrice;
 	uint public priceTolInBP = 500; 
 	uint public priceFeedTolInBP = 100;
 	uint public priceFeedTimeTol = 1 minutes;
 	uint public priceUpdateCoolDown;
 	uint public numOfPrices = 0;
+	uint lastOperationTime;
+	uint operationCoolDown;
 	bool public started = false;
 
 	modifier only(address addr) {
@@ -39,18 +42,28 @@ contract Oracle {
 		_;
 	}
 
+	modifier inUpdateWindow() {
+		uint currentTime = getNowTimestamp();
+		require(currentTime - lastOperationTime > operationCoolDown);
+		_;
+		lastOperationTime = currentTime;
+	}
+
 	// state events
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender);
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event UpdatePool(address newPoolAddress);
+	event UpdatePriceFeed(address updater, address newPriceFeed);
+	event UpdateOperator(address updater, address newOperator);
 	
 	constructor(
 		address opt,
 		address pf1,
 		address pf2,
 		address pf3,
-		uint coolDown) 
+		uint coolDown,
+		uint optColDown) 
 		public 
 	{
 		operator = opt;
@@ -58,10 +71,8 @@ contract Oracle {
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
 		priceUpdateCoolDown = coolDown;
+		operationCoolDown = optColDown;
 	}
-
-	// end of public functions
-	// start of price feed functions
 
 	function startOracle(
 		uint priceInWei, 
@@ -72,7 +83,8 @@ contract Oracle {
 		returns (bool success) 
 	{
 		require(!started && timeInSecond <= getNowTimestamp());
-		pool = IPool(poolAddr);
+		poolAddress = poolAddr;
+		pool = IPool(poolAddress);
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.source = msg.sender;
@@ -81,25 +93,12 @@ contract Oracle {
 		return true;
 	}
 
-	function updatePool(address newPoolAddr) only(pool.poolManager()) public returns (bool) {
-		pool = IPool(newPoolAddr);
-		require(pool.poolManager() != 0x0);
-		emit UpdatePool(newPoolAddr);
-		return true;
-	}
 
 	function getLastPrice() public view returns(uint, uint) {
 		return (lastPrice.priceInWei, lastPrice.timeInSecond);
 	}
 
-	function updatePriceFeed(uint index) public returns (bool) {
-		
-	}
-
-	function updateOperator() external returns (bool) {
-
-	}
-
+	// start of oracle
 	function commitPrice(uint priceInWei, uint timeInSecond) 
 		public 
 		isPriceFeed()
@@ -190,8 +189,41 @@ contract Oracle {
 			return c;
 		}
 	}
+	// end of oracle
 
-	function setValue(uint idx, uint newValue) public only(operator) returns (bool success) {
+	// start of operator function
+	function updatePriceFeed(uint index) inUpdateWindow() public returns (bool) {
+		address updater = msg.sender;
+		address newAddr = pool.provideAddress(updater);
+		if(index == 0) {
+			priceFeed1 = newAddr;
+		} else if(index == 1){
+			priceFeed2 = newAddr;
+		} else if(index == 2) {
+			priceFeed3 = newAddr;
+		} else {
+			return false;
+		}
+		emit UpdatePriceFeed(updater, newAddr);
+		return true;
+	}
+
+	function updateOperator() inUpdateWindow() public returns (bool) {
+		address updater = msg.sender;
+		operator = pool.provideAddress(updater);
+		emit UpdateOperator(updater, operator);
+		return true;
+	}
+
+	function updatePool(address newPoolAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
+		poolAddress = newPoolAddr;
+		pool = IPool(poolAddress);
+		require(pool.poolManager() != 0x0);
+		emit UpdatePool(newPoolAddr);
+		return true;
+	}
+
+	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
 			oldValue = priceTolInBP;
@@ -212,12 +244,36 @@ contract Oracle {
 		emit SetValue(idx, oldValue, newValue);
 		return true;
 	}
+	// end of operator function
 
 	// start of internal utility functions
-
-
 	function getNowTimestamp() internal view returns (uint) {
 		return now;
+	}
+
+	function getSystemPrices() 
+		public 
+		view 
+		returns (
+			address firstAddr, 
+			uint firstPx, 
+			uint firstTs, 
+			address secondAddr, 
+			uint secondPx, 
+			uint secondTs,
+			address lastAddr,
+			uint lastPx,
+			uint lastTs) 
+	{
+		firstAddr = firstPrice.source;
+		firstPx = firstPrice.priceInWei;
+		firstTs = firstPrice.timeInSecond;
+		secondAddr = secondPrice.source;
+		secondPx = secondPrice.priceInWei;
+		secondTs = secondPrice.timeInSecond;
+		lastAddr = lastPrice.source;
+		lastPx = lastPrice.priceInWei;
+		lastTs = lastPrice.timeInSecond;
 	}
 	// end of internal utility functions
 }

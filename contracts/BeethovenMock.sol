@@ -1,18 +1,12 @@
 pragma solidity ^0.4.24;
 
-import "./Custodian.sol";
+import { Beethoven } from "./Beethoven.sol";
 
-contract CustodianMock is Custodian {
+contract CustodianMock is Beethoven {
 
 	uint public timestamp = now;
 
 	constructor(
-		address feeAddress, 
-		address duoAddress,
-		address pf1,
-		address pf2,
-		address pf3,
-		address pm,
 		uint alpha,
 		uint r,
 		uint hp,
@@ -22,14 +16,12 @@ contract CustodianMock is Custodian {
 		uint p,
 		// uint memberThreshold,
 		// uint gasThreshold,
-		uint coolDown
-	) Custodian (
-		feeAddress, 
-		duoAddress,
-		pf1,
-		pf2,
-		pf3,
-		pm,
+		uint optCoolDown,
+		uint pxFetchCoolDown,
+		uint iteGasTh,
+		uint ethDuoRate,
+		uint preResetWaitBlk
+	) Beethoven (
 		alpha,
 		r,
 		hp,
@@ -39,7 +31,11 @@ contract CustodianMock is Custodian {
 		p,
 		// memberThreshold,
 		// gasThreshold,
-		coolDown
+		optCoolDown,
+		pxFetchCoolDown,
+		iteGasTh,
+		ethDuoRate,
+		preResetWaitBlk
 	) public {
 	}
 
@@ -59,15 +55,15 @@ contract CustodianMock is Custodian {
 		return existingUsers[addr];
 	}
 
-	function getAddrStatus(address addr) public view returns (uint) {
-		return addrStatus[addr];
-	}
+	// function getAddrStatus(address addr) public view returns (uint) {
+	// 	return addrStatus[addr];
+	// }
 
-	function getNextAddrIndex() internal view returns (uint) {
-		return 0;
-	}
+	// function getNextAddrIndex() internal view returns (uint) {
+	// 	return 0;
+	// }
 
-	function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
-		return getMedian(a, b, c);
-	}
+	// function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
+	// 	return getMedian(a, b, c);
+	// }
 }

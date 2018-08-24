@@ -23,12 +23,17 @@ contract Pool is IPool {
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant BP_DENOMINATOR = 10000;
 	
-	uint public adminCoolDown = 1 hours;
-	uint public lastAdminTime;
+	uint public operatorCoolDown = 1 hours;
+	uint public lastOperationTime;
 	bool public started;
 
 	modifier only(address addr) {
 		require(msg.sender == addr);
+		_;
+	}
+
+	modifier inAddrPool() {
+		require(addrStatus[msg.sender] == 1);
 		_;
 	}
 
@@ -40,9 +45,9 @@ contract Pool is IPool {
 	modifier inUpdateWindow() {
 		uint currentTime = getNowTimestamp();
 		if (started)
-			require(currentTime - lastAdminTime > adminCoolDown);
+			require(currentTime - lastOperationTime > operatorCoolDown);
 		_;
-		lastAdminTime = currentTime;
+		lastOperationTime = currentTime;
 	}
 
 	// admin events
@@ -52,13 +57,16 @@ contract Pool is IPool {
 	event AddCustodian(address newCustodianAddr, address newPoolManager);
 	event AddOtherContract(address newContractAddr, address newPoolManager);
 	
-	constructor() public 
+	constructor(
+		uint optCoolDown
+	) public 
 	{
 		for (uint i = 0; i < addrPool.length; i++) {
 			addrStatus[addrPool[i]] = 1;
 		}
 		poolManager = msg.sender;
 		addrStatus[poolManager] = 2;
+		operatorCoolDown = optCoolDown;
 	}
 
 	function startPool() public only(poolManager) returns (bool) {
@@ -67,6 +75,8 @@ contract Pool is IPool {
 		return true;
 	}
 
+
+	// start of operation function
 	function addCustodian(address custodianAddr) public only(poolManager) inUpdateWindow() returns (bool success) {
 		require(!existingCustodians[custodianAddr]);
 		uint custodianLength = custodianPool.length;
@@ -167,14 +177,11 @@ contract Pool is IPool {
 			return prevHashNumber % addrPool.length;
 		}
 	}
+	// end of operation function
 
-	// end of admin functions
 	// start of internal utility functions
-
-
 	function getNowTimestamp() internal view returns (uint) {
 		return now;
 	}
-
 	// end of internal utility functions
 }
