@@ -1,41 +1,21 @@
 pragma solidity ^0.4.24;
+import { IPool } from "../interfaces/IPool.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
 import { Custodian } from "./Custodian.sol";
-import { Managed } from "./Managed.sol";
-import { DUO } from "./DUO.sol";
-import { IOracle } from "./IOracle.sol";
-import { SafeMath } from "./SafeMath.sol";
-import { IPool } from "./IPool.sol";
+import { Managed } from "../common/Managed.sol";
+
 
 contract Beethoven is Custodian, Managed {
-	using SafeMath for uint;
-	enum State {
-		Inception,
-		Trading,
-		PreReset,
+	enum ResetState {
 		UpwardReset,
 		DownwardReset,
 		PeriodicReset
 	}
 
-	DUO duoToken;
+	IERC20 duoToken;
 	IOracle oracle;
-	
-	
-	address feeCollector;
-	address oracleAddress;
-	
-
-	uint constant MIN_BALANCE = 10000000000000000;
-
-	// below 4 data are returned in getSystemPrices
-	uint public lastPriceInWei;
-	uint public lastPriceTimeInSecond;
-	uint public resetPriceInWei;
-	uint public resetPriceTimeInSecond;
-	// below 19 states are returned in getSystemStates
-	State state;
-	uint navAInWei;
-	uint navBInWei; 
+	ResetState resetState;
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
 	uint feeAccumulatedInWei;
@@ -43,18 +23,8 @@ contract Beethoven is Custodian, Managed {
 	uint limitPeriodicInWei; 
 	uint limitUpperInWei; 
 	uint limitLowerInWei;
-	uint createCommInBP;
-	uint redeemCommInBP;
-	uint period;
 	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 800;
-	uint preResetWaitingBlocks = 10;
-	uint numOfPrices;
-	uint nextResetAddrIndex;
-	uint priceFetchCoolDown = 3000;
-	
-	// cycle state variables
-	uint lastPreResetBlockNo = 0;
 
 	// reset intermediate values
 	uint bAdj;
@@ -63,24 +33,9 @@ contract Beethoven is Custodian, Managed {
 	uint newBFromAPerA;
 	uint newBFromBPerB;
 
-	modifier inState(State _state) {
-		require(state == _state);
-		_;
-	}
-
 	// state events
-	event StartTrading(uint navAInWei, uint navBInWei);
-	event StartPreReset();
-	event StartReset(uint nextIndex, uint total);
-	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
-	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
-	event TotalSupply(uint totalSupplyA, uint totalSupplyB);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 
-	// token events
-	event Transfer(address indexed from, address indexed to, uint value, uint index);
-	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
-	
 	// admin events
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
@@ -139,7 +94,7 @@ contract Beethoven is Custodian, Managed {
 	{	
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
-		duoToken = DUO(duoAddress);
+		duoToken = IERC20(duoAddress);
 		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
@@ -256,7 +211,6 @@ contract Beethoven is Custodian, Managed {
 	function fetchPrice() public inState(State.Trading) returns (bool) {
 		uint currentTime = getNowTimestamp();
 		require(currentTime > lastPriceTimeInSecond.add(priceFetchCoolDown));
-		oracle = IOracle(oracleAddress);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
 		require(timeInSecond > lastPriceTimeInSecond && timeInSecond <= currentTime);
 		lastPriceInWei = priceInWei;
@@ -309,7 +263,8 @@ contract Beethoven is Custodian, Managed {
 			uint newBFromA;
 			uint newAFromA;
 			if (navBInWei >= limitUpperInWei) {
-				state = State.UpwardReset;
+				state = State.Reset;
+				resetState = ResetState.UpwardReset;
 				betaInWei = WEI_DENOMINATOR;
 				uint excessAInWei = navAInWei.sub(WEI_DENOMINATOR);
 				uint excessBInWei = navBInWei.sub(WEI_DENOMINATOR);
@@ -347,7 +302,8 @@ contract Beethoven is Custodian, Managed {
 						.div(WEI_DENOMINATOR)
 				);
 			} else if(navBInWei <= limitLowerInWei) {
-				state = State.DownwardReset;
+				state = State.Reset;
+				resetState = ResetState.DownwardReset;
 				betaInWei = WEI_DENOMINATOR;
 				newBFromAPerA = navAInWei.sub(navBInWei).mul(betaInWei).div(bAdj);
 				// below are not used and set to 0
@@ -360,7 +316,8 @@ contract Beethoven is Custodian, Managed {
 				totalSupplyA = totalSupplyA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
 				totalSupplyB = totalSupplyB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
 			} else { // navAInWei >= limitPeriodicInWei
-				state = State.PeriodicReset;
+				state = State.Reset;
+				resetState = ResetState.PeriodicReset;
 				uint num = alphaInBP
 					.add(BP_DENOMINATOR)
 					.mul(lastPriceInWei);
@@ -396,8 +353,7 @@ contract Beethoven is Custodian, Managed {
 		return true;
 	}
 
-	function startReset() public returns (bool success) {
-		require(state == State.UpwardReset || state == State.DownwardReset || state == State.PeriodicReset);
+	function startReset() public inState(State.Reset) returns (bool success) {
 		uint currentBalanceA;
 		uint currentBalanceB;
 		uint newBalanceA;
@@ -410,13 +366,13 @@ contract Beethoven is Custodian, Managed {
 			currentAddress = users[localResetAddrIndex];
 			currentBalanceA = balanceOf[0][currentAddress];
 			currentBalanceB = balanceOf[1][currentAddress];
-			if (state == State.DownwardReset) {
+			if (resetState == ResetState.DownwardReset) {
 				newBFromA = currentBalanceA.mul(newBFromAPerA).div(WEI_DENOMINATOR);
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
 				newBalanceA = currentBalanceA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
 				newBalanceB = currentBalanceB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
 			}
-			else if (state == State.UpwardReset) {
+			else if (resetState == ResetState.UpwardReset) {
 				newBalanceA = currentBalanceA
 					.add(currentBalanceA
 						.mul(newAFromAPerA)
@@ -444,7 +400,7 @@ contract Beethoven is Custodian, Managed {
 		}
 
 		if (localResetAddrIndex >= users.length) {
-			if (state != State.PeriodicReset) {
+			if (resetState != ResetState.PeriodicReset) {
 				resetPriceInWei = lastPriceInWei;
 				resetPriceTimeInSecond = lastPriceTimeInSecond;
 				navBInWei = WEI_DENOMINATOR;
@@ -463,109 +419,6 @@ contract Beethoven is Custodian, Managed {
 		}
 	}
 	// end of reset function
-
-	// start of public functions
-	function getSystemAddresses() public view returns (address[6] sysAddr) {
-		sysAddr[0] = operator;
-		sysAddr[1] = feeCollector;
-		sysAddr[2] = aTokenAddress;
-		sysAddr[3] = bTokenAddress;
-		sysAddr[4] = oracleAddress;
-		sysAddr[5] = poolAddress;
-	}
-
-	function getSystemStates() public view returns (uint[23] sysState) {
-		sysState[0] = uint(state);
-		sysState[1] = navAInWei;
-		sysState[2] = navBInWei; 
-		sysState[3] = totalSupplyA;
-		sysState[4] = totalSupplyB; 
-		sysState[5] = address(this).balance;
-		sysState[6] = alphaInBP;
-		sysState[7] = betaInWei;
-		sysState[8] = feeAccumulatedInWei;
-		sysState[9] = periodCouponInWei; 
-		sysState[10] = limitPeriodicInWei; 
-		sysState[11] = limitUpperInWei; 
-		sysState[12] = limitLowerInWei;
-		sysState[13] = createCommInBP;
-		sysState[14] = redeemCommInBP;
-		sysState[15] = period;
-		sysState[16] = iterationGasThreshold;
-		sysState[17] = ethDuoFeeRatio;
-		sysState[18] = preResetWaitingBlocks;
-		sysState[19] = nextResetAddrIndex;
-		sysState[20] = lastOperationTime;
-		sysState[21] = operationCoolDown;
-		sysState[22] = users.length;
-		
-	}
-	// end of public functions
-
-	// start of token functions
-	function transferInternal(uint index, address from, address to, uint tokens) 
-		internal 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		// Prevent transfer to 0x0 address. Use burn() instead
-		require(to != 0x0);
-		// Check if the sender has enough
-		require(balanceOf[index][from] >= tokens);
-
-		// Save this for an assertion in the future
-		uint previousBalances = balanceOf[index][from].add(balanceOf[index][to]);
-		// Subtract from the sender
-		balanceOf[index][from] = balanceOf[index][from].sub(tokens);
-		// Add the same to the recipient
-		balanceOf[index][to] = balanceOf[index][to].add(tokens);
-	
-		// Asserts are used to use static analysis to find bugs in your code. They should never fail
-		assert(balanceOf[index][from].add(balanceOf[index][to]) == previousBalances);
-		emit Transfer(from, to, tokens, index);
-		checkUser(from, balanceOf[index][from], balanceOf[1 - index][from]);
-		checkUser(to, balanceOf[index][to], balanceOf[1 - index][to]);
-		return true;
-	}
-
-	function determineAddress(uint index, address from) internal view returns (address) {
-		return index == 0 && msg.sender == aTokenAddress || 
-			index == 1 && msg.sender == bTokenAddress 
-			? from : msg.sender;
-	}
-
-	function transfer(uint index, address from, address to, uint tokens)
-		public
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		return transferInternal(index, determineAddress(index, from), to, tokens);
-	}
-
-	function transferFrom(uint index, address spender, address from, address to, uint tokens) 
-		public 
-		inState(State.Trading)
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		address spenderToUse = determineAddress(index, spender);
-		require(tokens <= allowance[index][from][spenderToUse]);	 // Check allowance
-		allowance[index][from][spenderToUse] = allowance[index][from][spenderToUse].sub(tokens);
-		return transferInternal(index, from, to, tokens);
-	}
-
-	function approve(uint index, address sender, address spender, uint tokens) 
-		public 
-		returns (bool success) 
-	{
-		require(index == 0 || index == 1);
-		address senderToUse = determineAddress(index, sender);
-		allowance[index][senderToUse][spender] = tokens;
-		emit Approval(senderToUse, spender, tokens, index);
-		return true;
-	}
-	// end of token functions
 
 	// start of operator functions
 	function collectFee(uint amountInWei) 
@@ -608,13 +461,6 @@ contract Beethoven is Custodian, Managed {
 		return true;
 	}
 
-	function updateOperator() public inUpdateWindow() returns (bool) {
-		address updater = msg.sender;
-		operator = pool.provideAddress(updater);
-		emit UpdateOperator(updater, operator);
-		return true;
-	}
-
 	function updateFeeCollector() public inUpdateWindow() returns (bool) {
 		address updater = msg.sender;
 		feeCollector = pool.provideAddress(updater);
@@ -629,27 +475,5 @@ contract Beethoven is Custodian, Managed {
 		emit UpdateOracle(newOracleAddr);
 		return true;
 	}
-	// end of operator functions
-
-	// start of internal utility functions
-	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
-		uint userIdx = existingUsers[user];
-		if ( userIdx > 0) {
-			if (balanceA < MIN_BALANCE && balanceB < MIN_BALANCE) {
-				uint lastIdx = users.length;
-				address lastUser = users[lastIdx - 1];
-				if (userIdx < lastIdx) {
-					users[userIdx - 1] = lastUser;
-					existingUsers[lastUser] = userIdx;
-				}
-				delete users[lastIdx - 1];
-				existingUsers[user] = 0;
-				users.length--;					
-			}
-		} else if (balanceA >= MIN_BALANCE || balanceB >= MIN_BALANCE) {
-			users.push(user);
-			existingUsers[user] = users.length;
-		}
-	}
-	// end of internal utility functions
+	// end of operator functions	
 }

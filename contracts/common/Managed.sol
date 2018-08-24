@@ -1,9 +1,7 @@
 pragma solidity ^0.4.24;
-import { IPool } from "./IPool.sol";
+import { IPool } from "../interfaces/IPool.sol";
 
 contract Managed {
-
-
 	IPool pool;
 	address poolAddress;
 	address operator;

@@ -1,9 +1,10 @@
 pragma solidity ^0.4.24;
-import { SafeMath } from "./SafeMath.sol";
-import { Managed } from "./Managed.sol";
-import { IPool } from "./IPool.sol";
+import { SafeMath } from "../common/SafeMath.sol";
+import { Managed } from "../common/Managed.sol";
+import { IPool } from "../interfaces/IPool.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
 
-contract Oracle is Managed {
+contract Brandon is Managed, IOracle {
 	using SafeMath for uint;
 
 	struct Price {

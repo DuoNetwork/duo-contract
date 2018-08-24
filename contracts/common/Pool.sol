@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
-import { ICustodian } from "./ICustodian.sol";
-import { IPool } from "./IPool.sol";
+import { ICustodian } from "../interfaces//ICustodian.sol";
+import { IPool } from "../interfaces//IPool.sol";
 
 contract Pool is IPool {
 	address public poolManager;

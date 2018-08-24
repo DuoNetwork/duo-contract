@@ -1,12 +1,13 @@
 pragma solidity ^0.4.24;
-import { Custodian } from "./Custodian.sol";
+import { ICustodian } from "../interfaces/ICustodian.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
 
-contract TokenA {
+contract TokenA is IERC20 {
 	// Public variables of the token
 	string public name;
 	string public symbol;
 	uint8 public decimals = 18;
-	Custodian custodianContract;
+	ICustodian custodianContract;
 
 	/**
 	 * Constrctor function
@@ -21,21 +22,21 @@ contract TokenA {
 	{
 		name = tokenName;								   // Set the name for display purposes
 		symbol = tokenSymbol;							   // Set the symbol for display purposes
-		custodianContract = Custodian(custodianAddr);
+		custodianContract = ICustodian(custodianAddr);
 	}
 
 	event Transfer(address indexed from, address indexed to, uint tokens);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 	
-	function totalSupply() public view returns(uint) {
+	function totalSupply() public returns(uint) {
 		return custodianContract.totalSupplyA();
 	}
 	
-	function balanceOf(address addr) public view returns(uint balance) {
+	function balanceOf(address addr) public returns(uint balance) {
 		return custodianContract.balanceOf(0, addr);
 	}
 
-	function allowance(address user, address spender) public view returns(uint value) {
+	function allowance(address user, address spender) public returns(uint value) {
 		return custodianContract.allowance(0, user,spender);
 	}
 
