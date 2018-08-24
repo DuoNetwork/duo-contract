@@ -1,8 +1,9 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "./SafeMath.sol";
+import { Managed } from "./Managed.sol";
 import { IPool } from "./IPool.sol";
 
-contract Oracle {
+contract Oracle is Managed {
 	using SafeMath for uint;
 
 	struct Price {
@@ -11,14 +12,9 @@ contract Oracle {
 		address source;
 	}
 
-	IPool pool;
-	address public poolAddress;
-	address public operator;
 	address public priceFeed1; 
 	address public priceFeed2; 
 	address public priceFeed3;
-
-	uint constant BP_DENOMINATOR = 10000;
 
 	Price public firstPrice;
 	Price public secondPrice;
@@ -28,41 +24,26 @@ contract Oracle {
 	uint public priceFeedTimeTol = 1 minutes;
 	uint public priceUpdateCoolDown;
 	uint public numOfPrices = 0;
-	uint lastOperationTime;
-	uint operationCoolDown;
 	bool public started = false;
 
-	modifier only(address addr) {
-		require(msg.sender == addr);
-		_;
-	}
 
 	modifier isPriceFeed() {
 		require(msg.sender == priceFeed1 || msg.sender == priceFeed2 || msg.sender == priceFeed3);
 		_;
 	}
 
-	modifier inUpdateWindow() {
-		uint currentTime = getNowTimestamp();
-		require(currentTime - lastOperationTime > operationCoolDown);
-		_;
-		lastOperationTime = currentTime;
-	}
-
 	// state events
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender);
 	event SetValue(uint index, uint oldValue, uint newValue);
-	event UpdatePool(address newPoolAddress);
 	event UpdatePriceFeed(address updater, address newPriceFeed);
-	event UpdateOperator(address updater, address newOperator);
-	
+
 	constructor(
 		address opt,
 		address pf1,
 		address pf2,
 		address pf3,
-		uint coolDown,
+		uint pxCoolDown,
 		uint optColDown) 
 		public 
 	{
@@ -70,7 +51,7 @@ contract Oracle {
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
-		priceUpdateCoolDown = coolDown;
+		priceUpdateCoolDown = pxCoolDown;
 		operationCoolDown = optColDown;
 	}
 
@@ -208,21 +189,6 @@ contract Oracle {
 		return true;
 	}
 
-	function updateOperator() inUpdateWindow() public returns (bool) {
-		address updater = msg.sender;
-		operator = pool.provideAddress(updater);
-		emit UpdateOperator(updater, operator);
-		return true;
-	}
-
-	function updatePool(address newPoolAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
-		poolAddress = newPoolAddr;
-		pool = IPool(poolAddress);
-		require(pool.poolManager() != 0x0);
-		emit UpdatePool(newPoolAddr);
-		return true;
-	}
-
 	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
@@ -246,34 +212,4 @@ contract Oracle {
 	}
 	// end of operator function
 
-	// start of internal utility functions
-	function getNowTimestamp() internal view returns (uint) {
-		return now;
-	}
-
-	function getSystemPrices() 
-		public 
-		view 
-		returns (
-			address firstAddr, 
-			uint firstPx, 
-			uint firstTs, 
-			address secondAddr, 
-			uint secondPx, 
-			uint secondTs,
-			address lastAddr,
-			uint lastPx,
-			uint lastTs) 
-	{
-		firstAddr = firstPrice.source;
-		firstPx = firstPrice.priceInWei;
-		firstTs = firstPrice.timeInSecond;
-		secondAddr = secondPrice.source;
-		secondPx = secondPrice.priceInWei;
-		secondTs = secondPrice.timeInSecond;
-		lastAddr = lastPrice.source;
-		lastPx = lastPrice.priceInWei;
-		lastTs = lastPrice.timeInSecond;
-	}
-	// end of internal utility functions
 }

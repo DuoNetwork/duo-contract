@@ -1,11 +1,12 @@
 pragma solidity ^0.4.24;
-import { Base } from "./Base.sol";
+import { Custodian } from "./Custodian.sol";
+import { Managed } from "./Managed.sol";
 import { DUO } from "./DUO.sol";
 import { IOracle } from "./IOracle.sol";
-import { IPool } from "./IPool.sol";
 import { SafeMath } from "./SafeMath.sol";
+import { IPool } from "./IPool.sol";
 
-contract Beethoven is Base {
+contract Beethoven is Custodian, Managed {
 	using SafeMath for uint;
 	enum State {
 		Inception,
@@ -16,18 +17,13 @@ contract Beethoven is Base {
 		PeriodicReset
 	}
 
-	uint public totalSupplyA;
-	uint public totalSupplyB;
-
 	DUO duoToken;
 	IOracle oracle;
-	IPool pool;
-	address aTokenAddress;
-	address bTokenAddress;
-	address operator;
+	
+	
 	address feeCollector;
 	address oracleAddress;
-	address poolAddress;
+	
 
 	uint constant MIN_BALANCE = 10000000000000000;
 
@@ -53,8 +49,8 @@ contract Beethoven is Base {
 	uint iterationGasThreshold = 65000;
 	uint ethDuoFeeRatio = 800;
 	uint preResetWaitingBlocks = 10;
-	uint numOfPrices = 0;
-	uint nextResetAddrIndex = 0;
+	uint numOfPrices;
+	uint nextResetAddrIndex;
 	uint priceFetchCoolDown = 3000;
 	
 	// cycle state variables
@@ -88,7 +84,9 @@ contract Beethoven is Base {
 	// admin events
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
-	event UpdateOperator(address updater, address newOperator);
+	event UpdateOracle(address newOracleAddress);
+	event UpdateFeeCollector(address updater, address newFeeCollector);
+	
 	
 	constructor(
 		uint alpha,
@@ -614,6 +612,21 @@ contract Beethoven is Base {
 		address updater = msg.sender;
 		operator = pool.provideAddress(updater);
 		emit UpdateOperator(updater, operator);
+		return true;
+	}
+
+	function updateFeeCollector() public inUpdateWindow() returns (bool) {
+		address updater = msg.sender;
+		feeCollector = pool.provideAddress(updater);
+		emit UpdateFeeCollector(updater, feeCollector);
+		return true;
+	}
+
+	function updateOracle(address newOracleAddr) only(operator) inUpdateWindow() public returns (bool) {
+		oracleAddress = newOracleAddr;
+		oracle = IOracle(oracleAddress);
+		require(oracle.started());
+		emit UpdateOracle(newOracleAddr);
 		return true;
 	}
 	// end of operator functions
