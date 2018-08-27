@@ -4,7 +4,7 @@ import { Managed } from "../common/Managed.sol";
 import { IPool } from "../interfaces/IPool.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 
-contract Brandon is Managed, IOracle {
+contract Magi is Managed {
 	using SafeMath for uint;
 
 	struct Price {
@@ -45,7 +45,8 @@ contract Brandon is Managed, IOracle {
 		address pf2,
 		address pf3,
 		uint pxCoolDown,
-		uint optColDown) 
+		uint optCoolDown
+		) 
 		public 
 	{
 		operator = opt;
@@ -53,7 +54,7 @@ contract Brandon is Managed, IOracle {
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
 		priceUpdateCoolDown = pxCoolDown;
-		operationCoolDown = optColDown;
+		operationCoolDown = optCoolDown;
 	}
 
 	function startOracle(

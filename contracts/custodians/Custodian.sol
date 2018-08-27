@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
 import { ICustodian } from "../interfaces/ICustodian.sol";
 
-contract Custodian is ICustodian {
+contract Custodian {
 	using SafeMath for uint;
 	enum State {
 		Inception,

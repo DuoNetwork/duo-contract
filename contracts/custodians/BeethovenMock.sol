@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 import { Beethoven } from "./Beethoven.sol";
 
-contract CustodianMock is Beethoven {
+contract BeethovenMock is Beethoven {
 
 	uint public timestamp = now;
 

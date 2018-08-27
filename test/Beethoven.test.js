@@ -1,13 +1,16 @@
-const Custodian = artifacts.require('./CustodianMock.sol');
-const DUO = artifacts.require('./DUO.sol');
+const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock.sol');
+const Pool = artifacts.require('../contracts/common/Pool.sol');
+const Magi = artifacts.require('../contracts/oracles/Magi.sol');
+const DUO = artifacts.require('../contracts/tokens/DUO.sol');
 const Web3 = require('web3');
 // import Web3 from 'web3';
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
-const CustodianInit = InitParas['Custodian'];
+const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const PoolInit = InitParas['Pool'];
+const MagiInit = InitParas['Magi'];
 
 // Event
 const START_PRE_RESET = 'StartPreReset';
@@ -40,46 +43,6 @@ const IDX_PRICEFEED_2 = 3;
 const IDX_PRICEFEED_3 = 4;
 const IDX_POOL_MANAGER = 5;
 
-const IDX_STATE = 0;
-const IDX_NAV_A = 1;
-const IDX_NAV_B = 2;
-// const IDX_TOTAL_SUPPLY_A = 3;
-// const IDX_TOTAL_SUPPLY_B = 4;
-// const IDX_ALPHA_IN_WEI = 5;
-const IDX_BETA_IN_WEI = 7;
-const IDX_FEE_IN_WEI = 8;
-// const IDX_COUPON_RATE = 8;
-// const IDX_PERIODICAL_INWEI = 9;
-// const IDX_LIMIT_UPPER = 10;
-// const IDX_LIMIT_LOWER = 11;
-const IDX_CREATE_COMM_RATE = 13;
-const IDX_PERIOD = 14;
-const IDX_ITERATION_GAS_TH = 15;
-const IDX_ETH_DUO_RATIO = 16;
-const IDX_PRE_RESET_WAITING_BLK = 17;
-const IDX_PRICE_TOL = 18;
-const IDX_PF_TOL = 19;
-const IDX_PF_TIME_TOL = 20;
-const IDX_PRICE_UPDATE_COOLDOWN = 21;
-// const IDX_NUM_OF_PX = 16;
-const IDX_NEXT_RESET_ADDR_IDX = 23;
-const IDX_USER_SIZE = 26;
-const IDX_POOL_SIZE = 27;
-const IDX_REDEEM_COMM_RATE = 28;
-
-// system prices
-// const IDX_FIRST_ADDR = 0;
-const IDX_FIRST_PX = 1;
-const IDX_FIRST_TS = 2;
-// const IDX_SECOND_ADDR = 3;
-const IDX_SECOND_PX = 4;
-const IDX_SECOND_TS = 5;
-// const IDX_RESET_ADDR = 6;
-const IDX_RESET_PX = 7;
-const IDX_RESET_TS = 8;
-// const IDX_LAST_ADDR = 9;
-const IDX_LAST_PX = 10;
-const IDX_LAST_TS = 11;
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 const VM_INVALID_OP_CODE_MSG = 'VM Exception while processing transaction: invalid opcode';
@@ -105,9 +68,11 @@ const isEqual = (a, b, log = false) => {
 	}
 };
 
-contract('Custodian', accounts => {
-	let custodianContract;
+contract('Beethoven', accounts => {
+	let beethovenContract;
 	let duoContract;
+	let poolContract;
+	let magiContract;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -133,105 +98,116 @@ contract('Custodian', accounts => {
 			}
 		);
 
-		custodianContract = await Custodian.new(
-			fc,
-			duoContract.address,
-			pf1,
-			pf2,
-			pf3,
-			pm,
-			alphaInBP ? alphaInBP : CustodianInit.alphaInBP,
-			web3.utils.toWei(CustodianInit.couponRate),
-			web3.utils.toWei(CustodianInit.hp),
-			web3.utils.toWei(CustodianInit.hu),
-			web3.utils.toWei(CustodianInit.hd),
-			CustodianInit.commissionRateInBP,
-			CustodianInit.period,
-			CustodianInit.coolDown,
+		beethovenContract = await Beethoven.new(
+			alphaInBP ? alphaInBP : BeethovenInit.alphaInBP,
+			web3.utils.toWei(BeethovenInit.couponRate),
+			web3.utils.toWei(BeethovenInit.hp),
+			web3.utils.toWei(BeethovenInit.hu),
+			web3.utils.toWei(BeethovenInit.hd),
+			BeethovenInit.commissionRateInBP,
+			BeethovenInit.period,
+			BeethovenInit.optCoolDown,
+			BeethovenInit.pxFetchCoolDown,
+			BeethovenInit.iteGasTh,
+			BeethovenInit.ethDuoRate,
+			BeethovenInit.preResetWaitBlk,
 			{
 				from: creator
 			}
 		);
+
+		poolContract = await Pool.new(
+			BeethovenInit.optCoolDown
+		);
+
+		magiContract = await Magi.new(
+			creator,
+			pf1,
+			pf2,
+			pf3,
+			MagiInit.pxCoolDown,
+			MagiInit.optColDown
+		);
 	};
 
 	const assertState = async state => {
-		let sysStates = await custodianContract.getSystemStates.call();
+		let sysStates = await beethovenContract.getSystemStates.call();
 		assert.equal(sysStates[IDX_STATE].valueOf(), state, 'state is wrong');
 	};
 
-	describe('constructor', () => {
+	describe.only('constructor', () => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let state = sysStates[IDX_STATE];
 			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
 		it('feeCollector should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(
 				sysAddress[IDX_FEE_COLLECTOR].valueOf(),
 				fc,
 				'feeCollector specified incorrect'
 			);
-			let addrStatus = await custodianContract.getAddrStatus.call(fc);
+			let addrStatus = await beethovenContract.getAddrStatus.call(fc);
 			assert.isTrue(addrStatus.toNumber() === 2, 'fc not marked as used');
 		});
 
 		it('priceFeed1 should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(
 				sysAddress[IDX_PRICEFEED_1].valueOf(),
 				pf1,
 				'priceFeed1 specified incorrect'
 			);
-			let addrStatus = await custodianContract.getAddrStatus.call(pf1);
+			let addrStatus = await beethovenContract.getAddrStatus.call(pf1);
 			assert.isTrue(addrStatus.toNumber() === 2, 'pf1 not marked as used');
 		});
 
 		it('priceFeed2 should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(
 				sysAddress[IDX_PRICEFEED_2].valueOf(),
 				pf2,
 				'priceFeed2 specified incorrect'
 			);
-			let addrStatus = await custodianContract.getAddrStatus.call(pf2);
+			let addrStatus = await beethovenContract.getAddrStatus.call(pf2);
 			assert.isTrue(addrStatus.toNumber() === 2, 'pf2 not marked as used');
 		});
 
 		it('priceFeed3 should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(
 				sysAddress[IDX_PRICEFEED_3].valueOf(),
 				pf3,
 				'priceFeed3 specified incorrect'
 			);
-			let addrStatus = await custodianContract.getAddrStatus.call(pf3);
+			let addrStatus = await beethovenContract.getAddrStatus.call(pf3);
 			assert.isTrue(addrStatus.toNumber() === 2, 'pf3 not marked as used');
 		});
 
 		it('admin should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(sysAddress[IDX_ADMIN].valueOf(), creator, 'admin specified incorrect');
-			let addrStatus = await custodianContract.getAddrStatus.call(creator);
+			let addrStatus = await beethovenContract.getAddrStatus.call(creator);
 			assert.isTrue(addrStatus.toNumber() === 2, 'admin not marked as used');
 		});
 
 		it('poolManager should equal specified value', async () => {
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			assert.equal(
 				sysAddress[IDX_POOL_MANAGER].valueOf(),
 				pm,
 				'poolManager specified incorrect'
 			);
-			let addrStatus = await custodianContract.getAddrStatus.call(pm);
+			let addrStatus = await beethovenContract.getAddrStatus.call(pm);
 			assert.isTrue(addrStatus.toNumber() === 2, 'pf3 not marked as used');
 		});
 
 		it('priceTolInBP should equal 500', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_PRICE_TOL].valueOf(),
 				500,
@@ -240,37 +216,37 @@ contract('Custodian', accounts => {
 		});
 
 		it('period should equal specified value', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_PERIOD].valueOf(),
-				CustodianInit.period,
+				BeethovenInit.period,
 				'period specified incorrect'
 			);
 		});
 
 		it('priceUpdateCoolDown should equal specified value', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_PRICE_UPDATE_COOLDOWN].valueOf(),
-				CustodianInit.coolDown,
+				BeethovenInit.coolDown,
 				'priceUpdateCoolDown specified incorrect'
 			);
 		});
 
 		it('createCommInBP should equal specified value', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_CREATE_COMM_RATE].valueOf(),
-				CustodianInit.commissionRateInBP,
+				BeethovenInit.commissionRateInBP,
 				'createCommInBP specified incorrect'
 			);
 		});
 
 		it('redeemCommInBP should equal specified value', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_REDEEM_COMM_RATE].valueOf(),
-				CustodianInit.commissionRateInBP,
+				BeethovenInit.commissionRateInBP,
 				'redeemCommInBP specified incorrect'
 			);
 		});
@@ -280,7 +256,7 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(
 				sysStates[IDX_STATE].valueOf(),
 				STATE_INCEPT_RESET,
@@ -289,7 +265,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should start contract', async () => {
-			let success = await custodianContract.startContract.call(
+			let success = await beethovenContract.startContract.call(
 				web3.utils.toWei('507'),
 				1524105709,
 				A_ADDR,
@@ -297,7 +273,7 @@ contract('Custodian', accounts => {
 				{ from: pf1 }
 			);
 			assert.isTrue(success, 'not able to start contract');
-			let tx = await custodianContract.startContract(
+			let tx = await beethovenContract.startContract(
 				web3.utils.toWei('507'),
 				1524105709,
 				A_ADDR,
@@ -321,7 +297,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
-			let systPrices = await custodianContract.getSystemPrices.call();
+			let systPrices = await beethovenContract.getSystemPrices.call();
 			let lastPrice = systPrices[IDX_LAST_PX];
 			let lastPriceTx = systPrices[IDX_LAST_TS];
 			assert.equal(
@@ -350,7 +326,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('state should be trading', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			assert.equal(sysStates[IDX_STATE].valueOf(), STATE_TRADING, 'state is not trading');
 		});
 	});
@@ -359,22 +335,22 @@ contract('Custodian', accounts => {
 		let initEthPrice = 582;
 		let amtEth = 1;
 		let tokenValueB =
-			((1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) * initEthPrice) /
-			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		let tokenValueA = (CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
+			((1 - BeethovenInit.commissionRateInBP / BP_DENOMINATOR) * initEthPrice) /
+			(1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+		let tokenValueA = (BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 
-		let tokenValueBPayFeeDUO = initEthPrice / (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+		let tokenValueBPayFeeDUO = initEthPrice / (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
 		let tokenValueAPayFeeDUO =
-			(CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
+			(BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
 		let accumulatedFeeAfterWithdrawal;
 		let preDUO = 1000000;
 		let feeOfDUOinWei =
-			((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) * ethDuoFeeRatio;
+			((amtEth * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR) * ethDuoFeeRatio;
 		let totalSupplyA, totalSupplyB;
 
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(initEthPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -384,20 +360,20 @@ contract('Custodian', accounts => {
 				}
 			);
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
-			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {
+			await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
 				from: alice
 			});
 		});
 
 		it('should create token A and B payFee with eth', async () => {
-			let success = await custodianContract.create.call(true, {
+			let success = await beethovenContract.create.call(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
 			// first check return value with call()
 			assert.isTrue(success, 'not able to create');
 			// then send transaction to check effects
-			let tx = await custodianContract.create(true, {
+			let tx = await beethovenContract.create(true, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
@@ -419,18 +395,18 @@ contract('Custodian', accounts => {
 					) &&
 					isEqual(
 						tx.logs[0].args.ethAmtInWei.toNumber() / WEI_DENOMINATOR,
-						amtEth * (1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR)
+						amtEth * (1 - BeethovenInit.commissionRateInBP / BP_DENOMINATOR)
 					) &&
 					isEqual(
 						tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR,
-						(amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR
+						(amtEth * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR
 					) &&
 					isEqual(tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR, 0),
 				'incorrect event arguments emitted'
 			);
 
-			// let totalSupplyA = await custodianContract.totalSupplyA.call();
-			// let totalSupplyB = await custodianContract.totalSupplyB.call();
+			// let totalSupplyA = await beethovenContract.totalSupplyA.call();
+			// let totalSupplyB = await beethovenContract.totalSupplyB.call();
 			totalSupplyA = tokenValueA;
 			totalSupplyB = tokenValueB;
 			assert.isTrue(
@@ -444,8 +420,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeAccumulated should be updated', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
-			let fee = (1 * CustodianInit.commissionRateInBP) / BP_DENOMINATOR;
+			let sysStates = await beethovenContract.getSystemStates.call();
+			let fee = (1 * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR;
 			assert.isTrue(
 				isEqual(sysStates[IDX_FEE_IN_WEI].valueOf() / WEI_DENOMINATOR, fee),
 				'feeAccumulated not updated correctly'
@@ -453,12 +429,12 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update user list if required', async () => {
-			let userIdx = await custodianContract.getExistingUser.call(alice);
+			let userIdx = await beethovenContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 1, 'new user is not updated');
 		});
 
 		it('should update balance of A correctly', async () => {
-			let balanceA = await custodianContract.balanceOf.call(0, alice);
+			let balanceA = await beethovenContract.balanceOf.call(0, alice);
 			assert.isTrue(
 				isEqual(balanceA.toNumber() / WEI_DENOMINATOR, tokenValueA),
 				'balance A not updated correctly'
@@ -466,7 +442,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let balanceB = await custodianContract.balanceOf.call(1, alice);
+			let balanceB = await beethovenContract.balanceOf.call(1, alice);
 			assert.isTrue(
 				isEqual(balanceB.toNumber() / WEI_DENOMINATOR, tokenValueB),
 				'balance B not updated correctly'
@@ -474,14 +450,14 @@ contract('Custodian', accounts => {
 		});
 
 		it('should create token A and B payFee with DUO', async () => {
-			let success = await custodianContract.create.call(false, {
+			let success = await beethovenContract.create.call(false, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
 			// // first check return value with call()
 			assert.isTrue(success, 'not able to create');
 			// then send transaction to check effects
-			let tx = await custodianContract.create(false, {
+			let tx = await beethovenContract.create(false, {
 				from: alice,
 				value: web3.utils.toWei(amtEth + '')
 			});
@@ -508,7 +484,7 @@ contract('Custodian', accounts => {
 					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, 0) &&
 					isEqual(
 						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
-						((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) *
+						((amtEth * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR) *
 							ethDuoFeeRatio
 					),
 				'incorrect event arguments emitted'
@@ -532,7 +508,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update burned DUO correctly', async () => {
-			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
+			let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
 			assert.isTrue(
 				burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
 				'burned DUO not updated correctly'
@@ -541,7 +517,7 @@ contract('Custodian', accounts => {
 
 		it('should not create token A and B payFee with insufficient DUO allowed', async () => {
 			try {
-				await custodianContract.create(false, {
+				await beethovenContract.create(false, {
 					from: bob,
 					value: web3.utils.toWei('1')
 				});
@@ -552,17 +528,17 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not be added into userList with small creation amt', async () => {
-			await custodianContract.create(true, {
+			await beethovenContract.create(true, {
 				from: charles,
 				value: web3.utils.toWei('0.00003')
 			});
-			let userIdx = await custodianContract.getExistingUser.call(charles);
+			let userIdx = await beethovenContract.getExistingUser.call(charles);
 			assert.isTrue(userIdx.toNumber() === 0, 'new user is included in userList');
 		});
 
 		it('should only collect fee less than allowed', async () => {
 			try {
-				await custodianContract.collectFee.call(web3.utils.toWei('1'), { from: fc });
+				await beethovenContract.collectFee.call(web3.utils.toWei('1'), { from: fc });
 				assert.isTrue(false, 'can collect fee more than allowed');
 			} catch (err) {
 				assert.equal(err.message, VM_INVALID_OP_CODE_MSG, 'can collect fee more than allowed');
@@ -570,14 +546,14 @@ contract('Custodian', accounts => {
 		});
 
 		it('should collect fee', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			accumulatedFeeAfterWithdrawal =
 				sysStates[IDX_FEE_IN_WEI].toNumber() - web3.utils.toWei('0.0001');
-			let success = await custodianContract.collectFee.call(web3.utils.toWei('0.0001'), {
+			let success = await beethovenContract.collectFee.call(web3.utils.toWei('0.0001'), {
 				from: fc
 			});
 			assert.isTrue(success);
-			let tx = await custodianContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
+			let tx = await beethovenContract.collectFee(web3.utils.toWei('0.0001'), { from: fc });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === COLLECT_FEE,
 				'worng event emitted'
@@ -592,7 +568,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should fee pending withdrawal amount should be updated correctly', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let currentFee = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
 				isEqual(
@@ -608,18 +584,18 @@ contract('Custodian', accounts => {
 		let prevBalanceA, prevBalanceB, prevFeeAccumulated;
 		let amtA = 28;
 		let amtB = 29;
-		let adjAmtA = (amtA * BP_DENOMINATOR) / CustodianInit.alphaInBP;
+		let adjAmtA = (amtA * BP_DENOMINATOR) / BeethovenInit.alphaInBP;
 		let deductAmtB = Math.min(adjAmtA, amtB);
-		let deductAmtA = (deductAmtB * CustodianInit.alphaInBP) / BP_DENOMINATOR;
+		let deductAmtA = (deductAmtB * BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 		let amtEth = (deductAmtA + deductAmtB) / ethInitPrice;
-		let fee = (amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR;
+		let fee = (amtEth * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR;
 		let preDUO = 1000000;
 		let feeInDUO = fee * ethDuoFeeRatio;
 		let totalSupplyA, totalSupplyB;
 
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -630,23 +606,23 @@ contract('Custodian', accounts => {
 			);
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei(preDUO + ''), { from: creator });
-			await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
-			prevBalanceA = await custodianContract.balanceOf.call(0, alice);
-			prevBalanceB = await custodianContract.balanceOf.call(1, alice);
-			let sysStates = await custodianContract.getSystemStates.call();
+			await beethovenContract.create(true, { from: alice, value: web3.utils.toWei('1') });
+			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
+			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
+			let sysStates = await beethovenContract.getSystemStates.call();
 			prevFeeAccumulated = sysStates[IDX_FEE_IN_WEI];
-			await duoContract.approve(custodianContract.address, web3.utils.toWei('1000000'), {
+			await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
 				from: alice
 			});
-			totalSupplyA = await custodianContract.totalSupplyA.call();
+			totalSupplyA = await beethovenContract.totalSupplyA.call();
 			totalSupplyA = totalSupplyA.toNumber() / WEI_DENOMINATOR;
-			totalSupplyB = await custodianContract.totalSupplyB.call();
+			totalSupplyB = await beethovenContract.totalSupplyB.call();
 			totalSupplyB = totalSupplyB.toNumber() / WEI_DENOMINATOR;
 		});
 
 		it('should only redeem token value less than balance', async () => {
 			try {
-				await custodianContract.redeem(
+				await beethovenContract.redeem(
 					web3.utils.toWei('2800'),
 					web3.utils.toWei('2900'),
 					true,
@@ -661,14 +637,14 @@ contract('Custodian', accounts => {
 		});
 
 		it('should redeem token A and B fee paying with eth', async () => {
-			let success = await custodianContract.redeem.call(
+			let success = await beethovenContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				true,
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			let tx = await custodianContract.redeem(
+			let tx = await beethovenContract.redeem(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				true,
@@ -701,7 +677,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('feeAccumulated should be updated', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let feeAccumulated = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
 				isEqual(feeAccumulated.minus(prevFeeAccumulated).toNumber() / WEI_DENOMINATOR, fee),
@@ -710,7 +686,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of A correctly', async () => {
-			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
+			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			// console.log(currentBalanceA.toNumber() / WEI_DENOMINATOR);
 			assert.isTrue(
 				isEqual(
@@ -722,7 +698,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update balance of B correctly', async () => {
-			let currentBalanceB = await custodianContract.balanceOf.call(1, alice);
+			let currentBalanceB = await beethovenContract.balanceOf.call(1, alice);
 			assert.isTrue(
 				isEqual(
 					currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
@@ -733,21 +709,21 @@ contract('Custodian', accounts => {
 		});
 
 		it('should be in user list', async () => {
-			let userIdx = await custodianContract.getExistingUser.call(alice);
+			let userIdx = await beethovenContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
-			let userSize = await custodianContract.getSystemStates.call();
+			let userSize = await beethovenContract.getSystemStates.call();
 			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 1, 'user size not updated correctly');
 		});
 
 		it('should redeem token A and B fee paying with DUO token', async () => {
-			let success = await custodianContract.redeem.call(
+			let success = await beethovenContract.redeem.call(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				false,
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			let tx = await custodianContract.redeem(
+			let tx = await beethovenContract.redeem(
 				web3.utils.toWei(amtA + ''),
 				web3.utils.toWei(amtB + ''),
 				false,
@@ -769,7 +745,7 @@ contract('Custodian', accounts => {
 					isEqual(tx.logs[0].args.ethFeeInWei.toNumber() / WEI_DENOMINATOR, 0) &&
 					isEqual(
 						tx.logs[0].args.duoFeeInWei.toNumber() / WEI_DENOMINATOR,
-						((amtEth * CustodianInit.commissionRateInBP) / BP_DENOMINATOR) *
+						((amtEth * BeethovenInit.commissionRateInBP) / BP_DENOMINATOR) *
 							ethDuoFeeRatio
 					),
 				'incorrect event arguments emitted'
@@ -789,7 +765,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should update burned DUO correctly', async () => {
-			let burntDUOamt = await duoContract.balanceOf.call(custodianContract.address);
+			let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
 			assert.isTrue(
 				isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO),
 				'burned DUO not updated correctly'
@@ -797,20 +773,20 @@ contract('Custodian', accounts => {
 		});
 
 		it('should be in user list', async () => {
-			let userIdx = await custodianContract.getExistingUser.call(alice);
+			let userIdx = await beethovenContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
-			let userSize = await custodianContract.getSystemStates.call();
+			let userSize = await beethovenContract.getSystemStates.call();
 			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 1, 'user size not updated correctly');
 		});
 
 		it('should be removed from user list if all tokens are redeemed', async () => {
-			let currentBalanceA = await custodianContract.balanceOf.call(0, alice);
-			let currentBalanceB = await custodianContract.balanceOf.call(1, alice);
+			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
+			let currentBalanceB = await beethovenContract.balanceOf.call(1, alice);
 
-			await custodianContract.redeem(currentBalanceA, currentBalanceB, true, { from: alice });
-			let userIdx = await custodianContract.getExistingUser.call(alice);
+			await beethovenContract.redeem(currentBalanceA, currentBalanceB, true, { from: alice });
+			let userIdx = await beethovenContract.getExistingUser.call(alice);
 			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
-			let userSize = await custodianContract.getSystemStates.call();
+			let userSize = await beethovenContract.getSystemStates.call();
 			assert.equal(userSize[IDX_USER_SIZE].toNumber(), 0, 'user size not updated correctly');
 		});
 	});
@@ -818,7 +794,7 @@ contract('Custodian', accounts => {
 	describe('nav calculation', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -830,14 +806,14 @@ contract('Custodian', accounts => {
 		});
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
-			let numOfPeriods = Math.floor((time - resetTime) / CustodianInit.period);
+			let numOfPeriods = Math.floor((time - resetTime) / BeethovenInit.period);
 			let navParent =
-				(price / resetPrice / beta) * (1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
+				(price / resetPrice / beta) * (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
 
-			let navA = 1 + numOfPeriods * Number(CustodianInit.couponRate);
-			let navAAdj = (navA * CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let navA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
+			let navAAdj = (navA * BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 			if (navParent <= navAAdj)
-				return [(navParent * BP_DENOMINATOR) / CustodianInit.alphaInBP, 0];
+				return [(navParent * BP_DENOMINATOR) / BeethovenInit.alphaInBP, 0];
 			else return [navA, navParent - navAAdj];
 		}
 
@@ -854,7 +830,7 @@ contract('Custodian', accounts => {
 				resetPriceTimeSeconds,
 				beta
 			);
-			return custodianContract.calculateNav
+			return beethovenContract.calculateNav
 				.call(
 					lastPriceInWei,
 					lastPriceTimeSeconds,
@@ -900,7 +876,7 @@ contract('Custodian', accounts => {
 	describe('calculate median', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -912,37 +888,37 @@ contract('Custodian', accounts => {
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(400, 500, 600, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(500, 600, 400, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(600, 400, 500, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(600, 600, 500, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(500, 600, 600, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
 		});
 
 		it('should calculate median', () => {
-			return custodianContract.getMedianPublic
+			return beethovenContract.getMedianPublic
 				.call(600, 500, 600, { from: alice })
 				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
 		});
@@ -958,9 +934,9 @@ contract('Custodian', accounts => {
 			const blockNumber = await web3.eth.getBlockNumber();
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
-				blockTime - Number(CustodianInit.period) * 10,
+				blockTime - Number(BeethovenInit.period) * 10,
 				A_ADDR,
 				B_ADDR,
 				{
@@ -971,7 +947,7 @@ contract('Custodian', accounts => {
 
 		it('non pf address cannot call commitPrice method', async () => {
 			try {
-				await custodianContract.commitPrice.call(web3.utils.toWei('400'), blockTime, {
+				await beethovenContract.commitPrice.call(web3.utils.toWei('400'), blockTime, {
 					from: alice
 				});
 				assert.isTrue(false, 'non pf address can commit price');
@@ -981,9 +957,9 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept first price arrived if it is not too far away', async () => {
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
-			let success = await custodianContract.commitPrice.call(
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
+			let success = await beethovenContract.commitPrice.call(
 				web3.utils.toWei('580'),
 				firstPeriod.toNumber(),
 				{
@@ -991,7 +967,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			assert.isTrue(success);
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('580'),
 				firstPeriod.toNumber(),
 				{
@@ -1019,9 +995,9 @@ contract('Custodian', accounts => {
 		});
 
 		it('should not accept first price arrived if it is too far away', async () => {
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
-			let tx = await custodianContract.commitPrice(
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber(),
 				{
@@ -1039,7 +1015,7 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.index.toNumber() === 0,
 				'incorrect event arguments emitted'
 			);
-			let sysPrices = await custodianContract.getSystemPrices.call();
+			let sysPrices = await beethovenContract.getSystemPrices.call();
 			let px = sysPrices[IDX_FIRST_PX];
 			let ts = sysPrices[IDX_FIRST_TS];
 			assert.isTrue(
@@ -1051,7 +1027,7 @@ contract('Custodian', accounts => {
 
 		it('should reject price from the same sender within cool down', async () => {
 			try {
-				await custodianContract.commitPrice(
+				await beethovenContract.commitPrice(
 					web3.utils.toWei('570'),
 					firstPeriod.toNumber(),
 					{
@@ -1066,11 +1042,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept second price arrived if second price timed out and sent by the same address as first price', async () => {
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			secondPeriod = await custodianContract.timestamp.call();
+			secondPeriod = await beethovenContract.timestamp.call();
 
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('550'),
 				secondPeriod.toNumber(),
 				{
@@ -1099,17 +1075,17 @@ contract('Custodian', accounts => {
 
 		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
 			// first price
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			firstPeriod = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+			firstPeriod = await beethovenContract.timestamp.call();
+			await beethovenContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
 				from: pf1
 			});
 
 			// second price
-			await custodianContract.skipCooldown(1);
-			secondPeriod = await custodianContract.timestamp.call();
-			let tx = await custodianContract.commitPrice(
+			await beethovenContract.skipCooldown(1);
+			secondPeriod = await beethovenContract.timestamp.call();
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('550'),
 				secondPeriod.toNumber(),
 				{
@@ -1134,9 +1110,9 @@ contract('Custodian', accounts => {
 
 		it('should accept first price arrived if second price is close to it and within cool down', async () => {
 			// first price
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('550'),
 				firstPeriod.toNumber() - 10,
 				{
@@ -1144,7 +1120,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// second price
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('555'),
 				firstPeriod.toNumber() - 5,
 				{
@@ -1169,9 +1145,9 @@ contract('Custodian', accounts => {
 
 		it('should wait for third price if first and second do not agree', async () => {
 			// first price
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber() - 300,
 				{
@@ -1179,7 +1155,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// second price
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('700'),
 				firstPeriod.toNumber() - 280,
 				{
@@ -1201,7 +1177,7 @@ contract('Custodian', accounts => {
 					tx.logs[0].args.index.toNumber() === 1,
 				'incorrect event arguments emitted'
 			);
-			let sysPrices = await custodianContract.getSystemPrices.call();
+			let sysPrices = await beethovenContract.getSystemPrices.call();
 			let px = sysPrices[IDX_SECOND_PX];
 			let ts = sysPrices[IDX_SECOND_TS];
 			assert.isTrue(
@@ -1214,7 +1190,7 @@ contract('Custodian', accounts => {
 		it('should reject price from first sender within cool down', async () => {
 			// third price
 			try {
-				await custodianContract.commitPrice(
+				await beethovenContract.commitPrice(
 					web3.utils.toWei('500'),
 					firstPeriod.toNumber(),
 					{
@@ -1231,7 +1207,7 @@ contract('Custodian', accounts => {
 		it('should reject price from second sender within cool down', async () => {
 			// third price
 			try {
-				await custodianContract.commitPrice(
+				await beethovenContract.commitPrice(
 					web3.utils.toWei('500'),
 					firstPeriod.toNumber(),
 					{
@@ -1245,7 +1221,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept first price arrived if third price timed out and within cool down', async () => {
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber(),
 				{
@@ -1270,10 +1246,10 @@ contract('Custodian', accounts => {
 
 		it('should accept median price if third price does not time out', async () => {
 			// first price
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
 
-			await custodianContract.commitPrice(
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('550'),
 				firstPeriod.toNumber() - 300,
 				{
@@ -1281,7 +1257,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// second price
-			await custodianContract.commitPrice(
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('400'),
 				firstPeriod.toNumber() - 280,
 				{
@@ -1289,7 +1265,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// //third price
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('540'),
 				firstPeriod.toNumber() - 260,
 				{
@@ -1313,11 +1289,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept third price arrived if it is from first or second sender and is after cool down', async () => {
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			firstPeriod = await custodianContract.timestamp.call();
+			firstPeriod = await beethovenContract.timestamp.call();
 
-			await custodianContract.commitPrice(
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber() - 300,
 				{
@@ -1325,7 +1301,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// second price
-			await custodianContract.commitPrice(
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('400'),
 				firstPeriod.toNumber() - 280,
 				{
@@ -1333,10 +1309,10 @@ contract('Custodian', accounts => {
 				}
 			);
 			// //third price
-			await custodianContract.skipCooldown(1);
-			secondPeriod = await custodianContract.timestamp.call();
+			await beethovenContract.skipCooldown(1);
+			secondPeriod = await beethovenContract.timestamp.call();
 
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('520'),
 				secondPeriod.toNumber(),
 				{
@@ -1364,9 +1340,9 @@ contract('Custodian', accounts => {
 		});
 
 		it('should accept second price arrived if third price is from a different sender and is after cool down', async () => {
-			await custodianContract.skipCooldown(1);
-			firstPeriod = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(
+			await beethovenContract.skipCooldown(1);
+			firstPeriod = await beethovenContract.timestamp.call();
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('580'),
 				firstPeriod.toNumber() - 200,
 				{
@@ -1374,7 +1350,7 @@ contract('Custodian', accounts => {
 				}
 			);
 			// second price
-			await custodianContract.commitPrice(
+			await beethovenContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber() - 180,
 				{
@@ -1382,10 +1358,10 @@ contract('Custodian', accounts => {
 				}
 			);
 			// // //third price
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			secondPeriod = await custodianContract.timestamp.call();
-			let tx = await custodianContract.commitPrice(
+			secondPeriod = await beethovenContract.timestamp.call();
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('520'),
 				secondPeriod.toNumber(),
 				{
@@ -1410,10 +1386,10 @@ contract('Custodian', accounts => {
 
 		it('should not allow price commit during cool down period', async () => {
 			try {
-				await custodianContract.skipCooldown(1);
+				await beethovenContract.skipCooldown(1);
 
-				firstPeriod = await custodianContract.timestamp.call();
-				await custodianContract.commitPrice(
+				firstPeriod = await beethovenContract.timestamp.call();
+				await beethovenContract.commitPrice(
 					web3.utils.toWei('400'),
 					firstPeriod.toNumber() - 800,
 					{
@@ -1427,15 +1403,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('should transit to reset state based on price accepted', async () => {
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			firstPeriod = await custodianContract.timestamp.call();
+			firstPeriod = await beethovenContract.timestamp.call();
 
-			custodianContract.commitPrice(web3.utils.toWei('888'), firstPeriod.toNumber() - 200, {
+			beethovenContract.commitPrice(web3.utils.toWei('888'), firstPeriod.toNumber() - 200, {
 				from: pf1
 			});
 			// second price
-			let tx = await custodianContract.commitPrice(
+			let tx = await beethovenContract.commitPrice(
 				web3.utils.toWei('898'),
 				firstPeriod.toNumber(),
 				{
@@ -1464,7 +1440,7 @@ contract('Custodian', accounts => {
 	describe('pre reset', () => {
 		beforeEach(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -1473,13 +1449,13 @@ contract('Custodian', accounts => {
 					from: pf1
 				}
 			);
-			await custodianContract.skipCooldown(1);
+			await beethovenContract.skipCooldown(1);
 
-			let ts = await custodianContract.timestamp.call();
-			await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+			let ts = await beethovenContract.timestamp.call();
+			await beethovenContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
 				from: pf1
 			});
-			await custodianContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
+			await beethovenContract.commitPrice(web3.utils.toWei('898'), ts.toNumber(), {
 				from: pf2
 			});
 		});
@@ -1490,9 +1466,9 @@ contract('Custodian', accounts => {
 
 		it('should not allow price commit', async () => {
 			try {
-				await custodianContract.skipCooldown(1);
-				let ts = await custodianContract.timestamp.call();
-				await custodianContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
+				await beethovenContract.skipCooldown(1);
+				let ts = await beethovenContract.timestamp.call();
+				await beethovenContract.commitPrice(web3.utils.toWei('888'), ts.toNumber() - 200, {
 					from: pf1
 				});
 				assert.isTrue(false, 'still can commit price');
@@ -1503,7 +1479,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow creation', async () => {
 			try {
-				await custodianContract.create(true, {
+				await beethovenContract.create(true, {
 					from: alice,
 					value: web3.utils.toWei('1')
 				});
@@ -1515,7 +1491,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow redemption', async () => {
 			try {
-				await custodianContract.redeem(
+				await beethovenContract.redeem(
 					web3.utils.toWei('2800'),
 					web3.utils.toWei('2900'),
 					true,
@@ -1532,7 +1508,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of A', async () => {
 			try {
-				await custodianContract.transfer(0, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
+				await beethovenContract.transfer(0, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
 					from: alice
 				});
 
@@ -1544,7 +1520,7 @@ contract('Custodian', accounts => {
 
 		it('should not allow any transfer or approve of B', async () => {
 			try {
-				await custodianContract.transfer(1, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
+				await beethovenContract.transfer(1, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
 					from: alice
 				});
 
@@ -1556,7 +1532,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set commissionRate', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(0, 1000, { from: creator });
+		// 		await beethovenContract.setValue(0, 1000, { from: creator });
 
 		// 		assert.isTrue(false, 'still can set commissionRate');
 		// 	} catch (err) {
@@ -1566,7 +1542,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set ethDuoFeeRatio', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(1, 1000, { from: creator });
+		// 		await beethovenContract.setValue(1, 1000, { from: creator });
 
 		// 		assert.isTrue(false, 'still can set ethDuoFeeRatio');
 		// 	} catch (err) {
@@ -1576,7 +1552,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set iterationGasThreshold', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(2, 1000, { from: creator });
+		// 		await beethovenContract.setValue(2, 1000, { from: creator });
 		// 		assert.isTrue(false, 'still can set iterationGasThreshold');
 		// 	} catch (err) {
 		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set iterationGasThreshold');
@@ -1585,7 +1561,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set preResetWaitingBlocks', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(3, 1000, { from: creator });
+		// 		await beethovenContract.setValue(3, 1000, { from: creator });
 		// 		assert.isTrue(false, 'still can set preResetWaitingBlocks');
 		// 	} catch (err) {
 		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set preResetWaitingBlocks');
@@ -1594,7 +1570,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set priceTolInBP', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(4, 1000, { from: creator });
+		// 		await beethovenContract.setValue(4, 1000, { from: creator });
 
 		// 		assert.isTrue(false, 'still can set priceTolInBP');
 		// 	} catch (err) {
@@ -1604,7 +1580,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set priceFeedTolInBP', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(5, 1000, { from: creator });
+		// 		await beethovenContract.setValue(5, 1000, { from: creator });
 		// 		assert.isTrue(false, 'still can set priceFeedTolInBP');
 		// 	} catch (err) {
 		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTolInBP');
@@ -1613,7 +1589,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set priceFeedTimeTol', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(6, 1000, { from: creator });
+		// 		await beethovenContract.setValue(6, 1000, { from: creator });
 		// 		assert.isTrue(false, 'still can set priceFeedTimeTol');
 		// 	} catch (err) {
 		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceFeedTimeTol');
@@ -1622,7 +1598,7 @@ contract('Custodian', accounts => {
 
 		// it('should not allow admin set priceUpdateCoolDown', async () => {
 		// 	try {
-		// 		await custodianContract.setValue(7, 1000, { from: creator });
+		// 		await beethovenContract.setValue(7, 1000, { from: creator });
 		// 		assert.isTrue(false, 'still can set priceUpdateCoolDown');
 		// 	} catch (err) {
 		// 		assert.equal(err.message, VM_REVERT_MSG, 'still set priceUpdateCoolDown');
@@ -1630,10 +1606,10 @@ contract('Custodian', accounts => {
 		// });
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
-			for (let i = 0; i < 9; i++) await custodianContract.startPreReset();
+			for (let i = 0; i < 9; i++) await beethovenContract.startPreReset();
 			await assertState(STATE_PRE_RESET);
 
-			let tx = await custodianContract.startPreReset();
+			let tx = await beethovenContract.startPreReset();
 			assert.isTrue(
 				tx.logs.length === 2 &&
 					tx.logs[1].event === START_RESET &&
@@ -1647,7 +1623,7 @@ contract('Custodian', accounts => {
 
 	describe('resets', () => {
 		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, beta, alphaInBP = 0) {
-			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let alpha = (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 			let excessA = navA - 1;
 			let excessB = navB - 1;
 			//if (excessB >= excessBForA) {
@@ -1675,7 +1651,7 @@ contract('Custodian', accounts => {
 			beta,
 			alphaInBP = 0
 		) {
-			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let alpha = (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 			let newBFromA = ((currentNavA - currentNavB) / (1 + alpha)) * beta;
 			let newAFromA = newBFromA * alpha;
 
@@ -1692,7 +1668,7 @@ contract('Custodian', accounts => {
 			beta,
 			alphaInBP = 0
 		) {
-			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let alpha = (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 			let newBFromA = ((currentNavA - 1) / (1 + alpha)) * beta;
 			let newAFromA = newBFromA * alpha;
 
@@ -1702,7 +1678,7 @@ contract('Custodian', accounts => {
 		}
 
 		function assertABalanceForAddress(addr, expected) {
-			return custodianContract.balanceOf.call(0, addr).then(currentBalanceA => {
+			return beethovenContract.balanceOf.call(0, addr).then(currentBalanceA => {
 				assert.isTrue(
 					isEqual(currentBalanceA.valueOf() / WEI_DENOMINATOR, expected),
 					'BalanceA not updated correctly'
@@ -1711,7 +1687,7 @@ contract('Custodian', accounts => {
 		}
 
 		function assertBBalanceForAddress(addr, expected) {
-			return custodianContract.balanceOf
+			return beethovenContract.balanceOf
 				.call(1, addr)
 				.then(currentBalanceB =>
 					assert.isTrue(
@@ -1722,7 +1698,7 @@ contract('Custodian', accounts => {
 		}
 
 		function updateBeta(prevBeta, lastPrice, lastResetPrice, currentNavA, alphaInBP = 0) {
-			let alpha = (alphaInBP || CustodianInit.alphaInBP) / BP_DENOMINATOR;
+			let alpha = (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
 			return (
 				((1 + alpha) * lastPrice) /
 				((1 + alpha) * lastPrice - lastResetPrice * alpha * prevBeta * (currentNavA - 1))
@@ -1750,12 +1726,12 @@ contract('Custodian', accounts => {
 			let prevBeta, beta;
 
 			let skipNum = isPeriodicReset
-				? Math.ceil((Number(CustodianInit.hp) - 1) / Number(CustodianInit.couponRate)) + 1
+				? Math.ceil((Number(BeethovenInit.hp) - 1) / Number(BeethovenInit.couponRate)) + 1
 				: 1;
 
 			before(async () => {
 				await initContracts(alphaInBP);
-				await custodianContract.startContract(
+				await beethovenContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
 					1524105709,
 					A_ADDR,
@@ -1767,65 +1743,65 @@ contract('Custodian', accounts => {
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(charles, web3.utils.toWei('100'), { from: creator });
-				await custodianContract.create(true, {
+				await beethovenContract.create(true, {
 					from: alice,
 					value: web3.utils.toWei('1')
 				});
-				await custodianContract.create(true, {
+				await beethovenContract.create(true, {
 					from: bob,
 					value: web3.utils.toWei('1.2')
 				});
-				await custodianContract.create(true, {
+				await beethovenContract.create(true, {
 					from: charles,
 					value: web3.utils.toWei('1.5')
 				});
 
 				if (transferABRequired) {
-					let aliceA = await custodianContract.balanceOf.call(0, alice);
+					let aliceA = await beethovenContract.balanceOf.call(0, alice);
 
-					custodianContract.transfer(0, DUMMY_ADDR, bob, aliceA.valueOf(), {
+					beethovenContract.transfer(0, DUMMY_ADDR, bob, aliceA.valueOf(), {
 						from: alice
 					});
-					await custodianContract.balanceOf.call(1, bob).then(bobB => {
-						custodianContract.transfer(1, DUMMY_ADDR, alice, bobB.valueOf(), {
+					await beethovenContract.balanceOf.call(1, bob).then(bobB => {
+						beethovenContract.transfer(1, DUMMY_ADDR, alice, bobB.valueOf(), {
 							from: bob
 						});
 					});
 
-					await custodianContract.balanceOf.call(1, charles).then(charlesB => {
-						custodianContract.transfer(1, DUMMY_ADDR, alice, charlesB.valueOf(), {
+					await beethovenContract.balanceOf.call(1, charles).then(charlesB => {
+						beethovenContract.transfer(1, DUMMY_ADDR, alice, charlesB.valueOf(), {
 							from: charles
 						});
 					});
 				}
 
-				await custodianContract.balanceOf
+				await beethovenContract.balanceOf
 					.call(0, alice)
 					.then(aliceA => (prevBalanceAalice = aliceA.toNumber() / WEI_DENOMINATOR));
-				let aliceB = await custodianContract.balanceOf.call(1, alice);
+				let aliceB = await beethovenContract.balanceOf.call(1, alice);
 
 				prevBalanceBalice = aliceB.toNumber() / WEI_DENOMINATOR;
 
-				await custodianContract.balanceOf
+				await beethovenContract.balanceOf
 					.call(0, bob)
 					.then(bobA => (prevBalanceAbob = bobA.toNumber() / WEI_DENOMINATOR));
-				let bobB = await custodianContract.balanceOf.call(1, bob);
+				let bobB = await beethovenContract.balanceOf.call(1, bob);
 				prevBalanceBbob = bobB.toNumber() / WEI_DENOMINATOR;
 
-				await custodianContract.balanceOf
+				await beethovenContract.balanceOf
 					.call(0, charles)
 					.then(
 						charlesA => (prevBalanceAcharles = charlesA.toNumber() / WEI_DENOMINATOR)
 					);
-				let charlesB = await custodianContract.balanceOf.call(1, charles);
+				let charlesB = await beethovenContract.balanceOf.call(1, charles);
 				prevBalanceBcharles = charlesB.toNumber() / WEI_DENOMINATOR;
 
-				await custodianContract.skipCooldown(skipNum);
+				await beethovenContract.skipCooldown(skipNum);
 
-				timestamp = await custodianContract.timestamp.call();
+				timestamp = await beethovenContract.timestamp.call();
 
 				if (isPeriodicReset) {
-					await custodianContract.commitPrice(
+					await beethovenContract.commitPrice(
 						web3.utils.toWei(price + ''),
 						timestamp.toNumber(),
 						{
@@ -1833,14 +1809,14 @@ contract('Custodian', accounts => {
 						}
 					);
 				} else {
-					await custodianContract.commitPrice(
+					await beethovenContract.commitPrice(
 						web3.utils.toWei(price + ''),
 						timestamp.toNumber() - 200,
 						{
 							from: pf1
 						}
 					);
-					await custodianContract.commitPrice(
+					await beethovenContract.commitPrice(
 						web3.utils.toWei(price + 1 + ''),
 						timestamp.toNumber(),
 						{
@@ -1849,7 +1825,7 @@ contract('Custodian', accounts => {
 					);
 				}
 
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				let navAinWei = sysStates[IDX_NAV_A];
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 				let navBinWei = sysStates[IDX_NAV_B];
@@ -1857,10 +1833,10 @@ contract('Custodian', accounts => {
 
 				let betaInWei = sysStates[IDX_BETA_IN_WEI];
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
-				for (let i = 0; i < 10; i++) await custodianContract.startPreReset();
-				let sysStatesAfter = await custodianContract.getSystemStates.call();
+				for (let i = 0; i < 10; i++) await beethovenContract.startPreReset();
+				let sysStatesAfter = await beethovenContract.getSystemStates.call();
 				let betaInWeiAfter = sysStatesAfter[IDX_BETA_IN_WEI];
-				// let betaInWeiAfter = await custodianContract.betaInWei.call();
+				// let betaInWeiAfter = await beethovenContract.betaInWei.call();
 				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
 			});
 
@@ -1881,13 +1857,13 @@ contract('Custodian', accounts => {
 
 			it('should in corect reset state', async () => {
 				assertState(resetState);
-				// let  = await custodianContract.state.call();
+				// let  = await beethovenContract.state.call();
 
 				// assert.equal(state.valueOf(), resetState, 'not in correct reset state');
 			});
 
 			it('should have three users', async () => {
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				let numOfUsers = sysStates[IDX_USER_SIZE];
 
 				assert.equal(numOfUsers.toNumber(), 3, 'num of users incorrect');
@@ -1917,18 +1893,18 @@ contract('Custodian', accounts => {
 			});
 
 			it('should process reset for only one user', async () => {
-				let tx = await custodianContract.startReset({ gas: resetGas });
+				let tx = await beethovenContract.startReset({ gas: resetGas });
 				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'not only one user processed'
 				);
 
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
-				let currentBalanceAalice = await custodianContract.balanceOf.call(0, alice);
-				let currentBalanceBalice = await custodianContract.balanceOf.call(1, alice);
+				let currentBalanceAalice = await beethovenContract.balanceOf.call(0, alice);
+				let currentBalanceBalice = await beethovenContract.balanceOf.call(1, alice);
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAalice,
 					prevBalanceBalice,
@@ -1961,13 +1937,13 @@ contract('Custodian', accounts => {
 				);
 				newBalanceAbob = newBalanceA;
 				newBalanceBbob = newBalanceB;
-				let tx = await custodianContract.startReset({ gas: resetGas });
+				let tx = await beethovenContract.startReset({ gas: resetGas });
 				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_RESET,
 					'reset not completed'
 				);
-				// let sysStates = await custodianContract.getSystemStates.call();
+				// let sysStates = await beethovenContract.getSystemStates.call();
 				// let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				// assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(bob, newBalanceA);
@@ -1985,13 +1961,13 @@ contract('Custodian', accounts => {
 				);
 				newBalanceAcharles = newBalanceA;
 				newBalanceBcharles = newBalanceB;
-				let tx = await custodianContract.startReset({ gas: resetGas });
+				let tx = await beethovenContract.startReset({ gas: resetGas });
 				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === START_TRADING,
 					'reset not completed'
 				);
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(charles, newBalanceA);
@@ -1999,8 +1975,8 @@ contract('Custodian', accounts => {
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
-				let totalA = await custodianContract.totalSupplyA.call();
-				let totalB = await custodianContract.totalSupplyB.call();
+				let totalA = await beethovenContract.totalSupplyA.call();
+				let totalB = await beethovenContract.totalSupplyB.call();
 				assert.isTrue(
 					isEqual(
 						totalA.toNumber() / WEI_DENOMINATOR,
@@ -2019,7 +1995,7 @@ contract('Custodian', accounts => {
 					isEqual(
 						newBalanceAbob + newBalanceAalice + newBalanceAcharles,
 						((newBalanceBbob + newBalanceBalice + +newBalanceBcharles) *
-							(alphaInBP || CustodianInit.alphaInBP)) /
+							(alphaInBP || BeethovenInit.alphaInBP)) /
 							BP_DENOMINATOR
 					),
 					'total A is not equal to total B times alpha'
@@ -2027,7 +2003,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should update nav', async () => {
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				let navA = sysStates[IDX_NAV_A];
 
 				assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
@@ -2043,7 +2019,7 @@ contract('Custodian', accounts => {
 
 			it('should update reset price', async () => {
 				if (!isPeriodicReset) {
-					let sysPrices = await custodianContract.getSystemPrices.call();
+					let sysPrices = await beethovenContract.getSystemPrices.call();
 
 					assert.equal(
 						sysPrices[IDX_RESET_PX].valueOf() / WEI_DENOMINATOR,
@@ -2149,7 +2125,7 @@ contract('Custodian', accounts => {
 		function tokenTest(index) {
 			before(async () => {
 				await initContracts();
-				await custodianContract.startContract(
+				await beethovenContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
 					1524105709,
 					A_ADDR,
@@ -2159,18 +2135,18 @@ contract('Custodian', accounts => {
 					}
 				);
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
-				await custodianContract.create(true, { from: alice, value: web3.utils.toWei('1') });
+				await beethovenContract.create(true, { from: alice, value: web3.utils.toWei('1') });
 			});
 
 			it('should show balance', async () => {
-				let balance = await custodianContract.balanceOf.call(index, alice);
+				let balance = await beethovenContract.balanceOf.call(index, alice);
 				assert.isTrue(balance.toNumber() > 0, 'balance of alice not shown');
 			});
 
 			it('alice userIdx should be updated', async () => {
-				let userIdx = await custodianContract.getExistingUser.call(alice);
+				let userIdx = await beethovenContract.getExistingUser.call(alice);
 				assert.isTrue(userIdx.toNumber() === 1, 'alice is not updated');
-				let userSize = await custodianContract.getSystemStates.call();
+				let userSize = await beethovenContract.getSystemStates.call();
 				assert.equal(
 					userSize[IDX_USER_SIZE].toNumber(),
 					1,
@@ -2179,7 +2155,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should be able to approve', async () => {
-				let success = await custodianContract.approve.call(
+				let success = await beethovenContract.approve.call(
 					index,
 					DUMMY_ADDR,
 					bob,
@@ -2191,7 +2167,7 @@ contract('Custodian', accounts => {
 
 				assert.isTrue(success, 'Not able to approve');
 
-				let tx = await custodianContract.approve(
+				let tx = await beethovenContract.approve(
 					index,
 					DUMMY_ADDR,
 					bob,
@@ -2214,7 +2190,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should show allowance', async () => {
-				let allowance = await custodianContract.allowance.call(index, alice, bob);
+				let allowance = await beethovenContract.allowance.call(index, alice, bob);
 				assert.equal(
 					allowance.toNumber() / WEI_DENOMINATOR,
 					100,
@@ -2223,12 +2199,12 @@ contract('Custodian', accounts => {
 			});
 
 			it('dummy from address should not be used for approval', async () => {
-				let dummyAllowance = await custodianContract.allowance.call(index, DUMMY_ADDR, bob);
+				let dummyAllowance = await beethovenContract.allowance.call(index, DUMMY_ADDR, bob);
 				assert.equal(dummyAllowance.toNumber(), 0, 'dummy from address is used');
 			});
 
 			it('should be able to transfer', async () => {
-				let success = await custodianContract.transfer.call(
+				let success = await beethovenContract.transfer.call(
 					index,
 					DUMMY_ADDR,
 					bob,
@@ -2239,7 +2215,7 @@ contract('Custodian', accounts => {
 				);
 
 				assert.isTrue(success, 'Not able to transfer');
-				let tx = await custodianContract.transfer(
+				let tx = await beethovenContract.transfer(
 					index,
 					DUMMY_ADDR,
 					bob,
@@ -2263,11 +2239,11 @@ contract('Custodian', accounts => {
 			});
 
 			it('bob userIdx should be updated', async () => {
-				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				let userIdxAlice = await beethovenContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
-				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				let userIdxBob = await beethovenContract.getExistingUser.call(bob);
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
-				let userSize = await custodianContract.getSystemStates.call();
+				let userSize = await beethovenContract.getSystemStates.call();
 				assert.equal(
 					userSize[IDX_USER_SIZE].toNumber(),
 					2,
@@ -2276,7 +2252,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should show balance of bob equal to 10', async () => {
-				let balance = await custodianContract.balanceOf.call(index, bob);
+				let balance = await beethovenContract.balanceOf.call(index, bob);
 				assert.isTrue(
 					balance.toNumber() === 10 * WEI_DENOMINATOR,
 					'balance of bob not shown'
@@ -2284,13 +2260,13 @@ contract('Custodian', accounts => {
 			});
 
 			it('dummy from address should not be used for transfer', async () => {
-				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
+				let balance = await beethovenContract.balanceOf.call(index, DUMMY_ADDR);
 				assert.isTrue(balance.toNumber() === 0, 'dummy from address is used');
 			});
 
 			it('should not transfer more than balance', async () => {
 				try {
-					await custodianContract.transfer.call(
+					await beethovenContract.transfer.call(
 						index,
 						DUMMY_ADDR,
 						bob,
@@ -2311,7 +2287,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should transferAFrom less than allowance', async () => {
-				let success = await custodianContract.transferFrom.call(
+				let success = await beethovenContract.transferFrom.call(
 					index,
 					DUMMY_ADDR,
 					alice,
@@ -2321,7 +2297,7 @@ contract('Custodian', accounts => {
 				);
 
 				assert.isTrue(success, 'Not able to transfer');
-				let tx = await custodianContract.transferFrom(
+				let tx = await beethovenContract.transferFrom(
 					index,
 					DUMMY_ADDR,
 					alice,
@@ -2345,13 +2321,13 @@ contract('Custodian', accounts => {
 			});
 
 			it('charles userIdx should be updated', async () => {
-				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				let userIdxAlice = await beethovenContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
-				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				let userIdxBob = await beethovenContract.getExistingUser.call(bob);
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
-				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
+				let userIdxCharles = await beethovenContract.getExistingUser.call(charles);
 				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles userIdx is not updated');
-				let userSize = await custodianContract.getSystemStates.call();
+				let userSize = await beethovenContract.getSystemStates.call();
 				assert.equal(
 					userSize[IDX_USER_SIZE].toNumber(),
 					3,
@@ -2360,13 +2336,13 @@ contract('Custodian', accounts => {
 			});
 
 			it('dummy from address should not be used for transferFrom', async () => {
-				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
+				let balance = await beethovenContract.balanceOf.call(index, DUMMY_ADDR);
 				assert.isTrue(balance.toNumber() === 0, 'dummy from address is used');
 			});
 
 			it('should not transferFrom more than allowance', async () => {
 				try {
-					await custodianContract.transferFrom.call(
+					await beethovenContract.transferFrom.call(
 						index,
 						DUMMY_ADDR,
 						alice,
@@ -2387,7 +2363,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('allowance for bob should be 50', async () => {
-				let allowance = await custodianContract.allowance.call(index, alice, bob);
+				let allowance = await beethovenContract.allowance.call(index, alice, bob);
 				assert.equal(
 					allowance.toNumber() / WEI_DENOMINATOR,
 					50,
@@ -2396,8 +2372,8 @@ contract('Custodian', accounts => {
 			});
 
 			it('check balance of charles equal 50', async () => {
-				let balance = await custodianContract.balanceOf.call(index, charles);
-				await custodianContract.transfer.call(index, alice, david, balance, {
+				let balance = await beethovenContract.balanceOf.call(index, charles);
+				await beethovenContract.transfer.call(index, alice, david, balance, {
 					from: alice
 				});
 
@@ -2409,31 +2385,31 @@ contract('Custodian', accounts => {
 			});
 
 			it('alice transfer all balance to david and update userIdx correctly', async () => {
-				let balanceA = await custodianContract.balanceOf.call(index, alice);
-				let balanceB = await custodianContract.balanceOf.call(1 - index, alice);
-				let userIdxDavid = await custodianContract.getExistingUser.call(david);
+				let balanceA = await beethovenContract.balanceOf.call(index, alice);
+				let balanceB = await beethovenContract.balanceOf.call(1 - index, alice);
+				let userIdxDavid = await beethovenContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 0, 'david is not updated');
-				await custodianContract.transfer(index, alice, david, balanceA, {
+				await beethovenContract.transfer(index, alice, david, balanceA, {
 					from: alice
 				});
-				userIdxDavid = await custodianContract.getExistingUser.call(david);
+				userIdxDavid = await beethovenContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 4, 'david is not updated');
-				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				let userIdxAlice = await beethovenContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
-				await custodianContract.transfer(1 - index, alice, david, balanceB, {
+				await beethovenContract.transfer(1 - index, alice, david, balanceB, {
 					from: alice
 				});
 
-				userIdxAlice = await custodianContract.getExistingUser.call(alice);
+				userIdxAlice = await beethovenContract.getExistingUser.call(alice);
 				assert.isTrue(userIdxAlice.toNumber() === 0, 'alice is not updated');
-				let userIdxBob = await custodianContract.getExistingUser.call(bob);
+				let userIdxBob = await beethovenContract.getExistingUser.call(bob);
 				assert.isTrue(userIdxBob.toNumber() === 2, 'bob is not updated');
-				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
+				let userIdxCharles = await beethovenContract.getExistingUser.call(charles);
 				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles is not updated');
-				userIdxDavid = await custodianContract.getExistingUser.call(david);
+				userIdxDavid = await beethovenContract.getExistingUser.call(david);
 				assert.isTrue(userIdxDavid.toNumber() === 1, 'david is not updated');
 
-				let userSize = await custodianContract.getSystemStates.call();
+				let userSize = await beethovenContract.getSystemStates.call();
 				assert.equal(
 					userSize[IDX_USER_SIZE].toNumber(),
 					3,
@@ -2454,7 +2430,7 @@ contract('Custodian', accounts => {
 	describe('only admin', () => {
 		before(async () => {
 			await initContracts();
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
 				1524105709,
 				A_ADDR,
@@ -2466,15 +2442,15 @@ contract('Custodian', accounts => {
 		});
 
 		beforeEach(async () => {
-			await custodianContract.skipCooldown(25);
+			await beethovenContract.skipCooldown(25);
 		});
 
 		it('admin should be able to set createCommission', async () => {
-			let success = await custodianContract.setValue.call(0, 100, { from: creator });
+			let success = await beethovenContract.setValue.call(0, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_CREATE_COMM_RATE].toNumber();
-			let tx = await custodianContract.setValue(0, 50, { from: creator });
+			let tx = await beethovenContract.setValue(0, 50, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2488,11 +2464,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set redeemCommission', async () => {
-			let success = await custodianContract.setValue.call(8, 200, { from: creator });
+			let success = await beethovenContract.setValue.call(8, 200, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_REDEEM_COMM_RATE].toNumber();
-			let tx = await custodianContract.setValue(8, 200, { from: creator });
+			let tx = await beethovenContract.setValue(8, 200, { from: creator });
 
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
@@ -2508,7 +2484,7 @@ contract('Custodian', accounts => {
 
 		it('should not be able to set commission higher than 10000', async () => {
 			try {
-				await custodianContract.setValue.call(0, 10001, { from: creator });
+				await beethovenContract.setValue.call(0, 10001, { from: creator });
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
@@ -2522,7 +2498,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set comm', async () => {
 			try {
-				await custodianContract.setValue.call(0, 100, { from: alice });
+				await beethovenContract.setValue.call(0, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
 				assert.equal(
@@ -2534,13 +2510,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set ethDuoRatio', async () => {
-			let success = await custodianContract.setValue.call(1, 100, {
+			let success = await beethovenContract.setValue.call(1, 100, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set ethDuoRatio');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_ETH_DUO_RATIO].toNumber();
-			let tx = await custodianContract.setValue(1, 100, { from: creator });
+			let tx = await beethovenContract.setValue(1, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2555,7 +2531,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set ethDuoRatio', async () => {
 			try {
-				await custodianContract.setValue.call(1, 100, { from: alice });
+				await beethovenContract.setValue.call(1, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change ethDuoRatio');
 			} catch (err) {
 				assert.equal(
@@ -2567,13 +2543,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set iteration gas threshold', async () => {
-			let success = await custodianContract.setValue.call(2, 100000, {
+			let success = await beethovenContract.setValue.call(2, 100000, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set gas threshhold');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_ITERATION_GAS_TH].toNumber();
-			let tx = await custodianContract.setValue(2, 100, { from: creator });
+			let tx = await beethovenContract.setValue(2, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2588,7 +2564,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set gas threshhold', async () => {
 			try {
-				await custodianContract.setValue.call(2, 100000, { from: alice });
+				await beethovenContract.setValue.call(2, 100000, { from: alice });
 				assert.isTrue(false, 'non admin can change gas threshhold');
 			} catch (err) {
 				assert.equal(
@@ -2600,13 +2576,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set pre reset waiting blocks', async () => {
-			let success = await custodianContract.setValue.call(3, 100, {
+			let success = await beethovenContract.setValue.call(3, 100, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set pre reset waiting block');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRE_RESET_WAITING_BLK].toNumber();
-			let tx = await custodianContract.setValue(3, 100, { from: creator });
+			let tx = await beethovenContract.setValue(3, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2621,7 +2597,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set pre reset waiting blocks', async () => {
 			try {
-				await custodianContract.setValue.call(3, 100, { from: alice });
+				await beethovenContract.setValue.call(3, 100, { from: alice });
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
 			} catch (err) {
@@ -2634,11 +2610,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price tolerance', async () => {
-			let success = await custodianContract.setValue.call(4, 100, { from: creator });
+			let success = await beethovenContract.setValue.call(4, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price tolerance');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRICE_TOL].toNumber();
-			let tx = await custodianContract.setValue(4, 100, { from: creator });
+			let tx = await beethovenContract.setValue(4, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2653,7 +2629,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price tolerance', async () => {
 			try {
-				await custodianContract.setValue.call(4, 100, { from: alice });
+				await beethovenContract.setValue.call(4, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price tolerance');
 			} catch (err) {
 				assert.equal(
@@ -2665,11 +2641,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price feed tolerance', async () => {
-			let success = await custodianContract.setValue.call(5, 100, { from: creator });
+			let success = await beethovenContract.setValue.call(5, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed tolerance');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PF_TOL].toNumber();
-			let tx = await custodianContract.setValue(5, 100, { from: creator });
+			let tx = await beethovenContract.setValue(5, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2684,7 +2660,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price tolerance', async () => {
 			try {
-				await custodianContract.setValue.call(5, 100, { from: alice });
+				await beethovenContract.setValue.call(5, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price feed tolerance');
 			} catch (err) {
 				assert.equal(
@@ -2696,11 +2672,11 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price feed time tolerance', async () => {
-			let success = await custodianContract.setValue.call(6, 100, { from: creator });
+			let success = await beethovenContract.setValue.call(6, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set price feed time tolerance');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PF_TIME_TOL].toNumber();
-			let tx = await custodianContract.setValue(6, 100, { from: creator });
+			let tx = await beethovenContract.setValue(6, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2715,7 +2691,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price feed time tolerance', async () => {
 			try {
-				await custodianContract.setValue.call(6, 100, { from: alice });
+				await beethovenContract.setValue.call(6, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change price feed time tolerance');
 			} catch (err) {
 				assert.equal(
@@ -2727,13 +2703,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('admin should be able to set price update coolupdate', async () => {
-			let success = await custodianContract.setValue.call(7, 10, {
+			let success = await beethovenContract.setValue.call(7, 10, {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set price update coolupdate');
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let preValue = sysStates[IDX_PRICE_UPDATE_COOLDOWN].toNumber();
-			let tx = await custodianContract.setValue(7, 100, { from: creator });
+			let tx = await beethovenContract.setValue(7, 100, { from: creator });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === SET_VALUE,
 				'wrong event emitted'
@@ -2748,7 +2724,7 @@ contract('Custodian', accounts => {
 
 		it('non admin should not be able to set price update coolupdate', async () => {
 			try {
-				await custodianContract.setValue.call(7, 10, { from: alice });
+				await beethovenContract.setValue.call(7, 10, { from: alice });
 				assert.isTrue(false, 'non admin can change price update coolupdate');
 			} catch (err) {
 				assert.equal(
@@ -2767,9 +2743,9 @@ contract('Custodian', accounts => {
 			const blockNumber = await web3.eth.getBlockNumber();
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
-				blockTime - Number(CustodianInit.period) * 30,
+				blockTime - Number(BeethovenInit.period) * 30,
 				A_ADDR,
 				B_ADDR,
 				{
@@ -2781,7 +2757,7 @@ contract('Custodian', accounts => {
 		let poolManager = pm;
 		it('non poolManager cannot add address', async () => {
 			try {
-				await custodianContract.addAddress.call(alice, bob, { from: charles });
+				await beethovenContract.addAddress.call(alice, bob, { from: charles });
 				assert.isTrue(false, 'non adder can add address');
 			} catch (err) {
 				assert.equal(
@@ -2794,7 +2770,7 @@ contract('Custodian', accounts => {
 
 		it('should not add same address', async () => {
 			try {
-				await custodianContract.addAddress.call(alice, alice, { from: poolManager });
+				await beethovenContract.addAddress.call(alice, alice, { from: poolManager });
 				assert.isTrue(false, 'can add same address');
 			} catch (err) {
 				assert.equal(
@@ -2807,7 +2783,7 @@ contract('Custodian', accounts => {
 
 		it('should not add used account', async () => {
 			try {
-				await custodianContract.addAddress(pf1, pf2, { from: poolManager });
+				await beethovenContract.addAddress(pf1, pf2, { from: poolManager });
 				assert.isTrue(false, 'can add used account');
 			} catch (err) {
 				assert.equal(
@@ -2819,13 +2795,13 @@ contract('Custodian', accounts => {
 		});
 
 		it('should add two different address', async () => {
-			let addStatus = await custodianContract.addAddress.call(
+			let addStatus = await beethovenContract.addAddress.call(
 				web3.utils.toChecksumAddress(alice),
 				web3.utils.toChecksumAddress(bob),
 				{ from: poolManager }
 			);
 			assert.isTrue(addStatus, 'cannot add address');
-			let tx = await custodianContract.addAddress(
+			let tx = await beethovenContract.addAddress(
 				web3.utils.toChecksumAddress(alice),
 				web3.utils.toChecksumAddress(bob),
 				{ from: poolManager }
@@ -2835,7 +2811,7 @@ contract('Custodian', accounts => {
 				'not exactly one event emitted'
 			);
 			let args = tx.logs[0].args;
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
 			assert.isTrue(
 				args['added1'] === alice &&
@@ -2846,14 +2822,14 @@ contract('Custodian', accounts => {
 		});
 
 		it('pool size should be 7 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			// check correct poolSize
 			assert.isTrue(poolSize === PoolInit.length + 1, 'cannot add address');
 			let poolList = [];
 			// check validatdion of address
 			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
+				let addr = await beethovenContract.addrPool.call(i);
 				assert.isTrue(
 					web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
 					' invalid address'
@@ -2868,7 +2844,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be set correctly', async () => {
-			// let timestamp = await custodianContract.timestamp.call({ from: creator });
+			// let timestamp = await beethovenContract.timestamp.call({ from: creator });
 			let adderAddr = PoolInit[0];
 			assert.isTrue(
 				web3.utils.toChecksumAddress(adderAddr) ===
@@ -2878,15 +2854,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be marked as used', async () => {
-			let addStatus = await custodianContract.getAddrStatus.call(poolManager);
+			let addStatus = await beethovenContract.getAddrStatus.call(poolManager);
 			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
 		});
 
 		it('new poolManager should be removed from the pool', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
+				let addr = await beethovenContract.addrPool.call(i);
 				assert.isTrue(
 					web3.utils.toChecksumAddress(addr) !==
 						web3.utils.toChecksumAddress(poolManager),
@@ -2897,7 +2873,7 @@ contract('Custodian', accounts => {
 
 		it('new poolManager should not add within coolDown', async () => {
 			try {
-				await custodianContract.addAddress.call(charles, david, { from: poolManager });
+				await beethovenContract.addAddress.call(charles, david, { from: poolManager });
 				assert.isTrue(false, 'can add same address');
 			} catch (err) {
 				assert.equal(
@@ -2909,8 +2885,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should only add beyond coolDown', async () => {
-			await custodianContract.skipCooldown(25);
-			let success = await custodianContract.addAddress.call(
+			await beethovenContract.skipCooldown(25);
+			let success = await beethovenContract.addAddress.call(
 				web3.utils.toChecksumAddress(charles),
 				web3.utils.toChecksumAddress(david),
 				{ from: poolManager }
@@ -2926,9 +2902,9 @@ contract('Custodian', accounts => {
 			const blockNumber = await web3.eth.getBlockNumber();
 			const block = await web3.eth.getBlock(blockNumber);
 			blockTime = block.timestamp;
-			await custodianContract.startContract(
+			await beethovenContract.startContract(
 				web3.utils.toWei(ethInitPrice + ''),
-				blockTime - Number(CustodianInit.period) * 30,
+				blockTime - Number(BeethovenInit.period) * 30,
 				A_ADDR,
 				B_ADDR,
 				{
@@ -2942,7 +2918,7 @@ contract('Custodian', accounts => {
 
 		it('non poolManager cannot remove address', async () => {
 			try {
-				await custodianContract.removeAddress.call(alice, { from: bob });
+				await beethovenContract.removeAddress.call(alice, { from: bob });
 				assert.isTrue(false, 'non poolManager can remove address');
 			} catch (err) {
 				assert.equal(
@@ -2955,7 +2931,7 @@ contract('Custodian', accounts => {
 
 		it('should not remove address not in the pool', async () => {
 			try {
-				await custodianContract.removeAddress.call(charles, { from: poolManager });
+				await beethovenContract.removeAddress.call(charles, { from: poolManager });
 				assert.isTrue(false, 'non poolManager can remove address');
 			} catch (err) {
 				assert.equal(
@@ -2967,17 +2943,17 @@ contract('Custodian', accounts => {
 		});
 
 		it('poolManager should remove address in the pool', async () => {
-			let canRemove = await custodianContract.removeAddress.call(PoolInit[0], {
+			let canRemove = await beethovenContract.removeAddress.call(PoolInit[0], {
 				from: poolManager
 			});
 			assert.isTrue(canRemove, 'poolManager cannot remove from the pool List');
-			let tx = await custodianContract.removeAddress(PoolInit[0], { from: poolManager });
+			let tx = await beethovenContract.removeAddress(PoolInit[0], { from: poolManager });
 			assert.isTrue(
 				tx.logs.length === 1 && tx.logs[0].event === REMOVE_ADDRESS,
 				'not exactly one event emitted'
 			);
 			let args = tx.logs[0].args;
-			let sysAddress = await custodianContract.getSystemAddresses.call();
+			let sysAddress = await beethovenContract.getSystemAddresses.call();
 			poolManager = sysAddress[IDX_POOL_MANAGER];
 			for (let i = 1; i < PoolInit.length; i++) {
 				let currentCandidate = PoolInit[i];
@@ -2994,14 +2970,14 @@ contract('Custodian', accounts => {
 		});
 
 		it('pool size should be 4 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			// check correct poolSize
 			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot remove address');
 			let poolList = [];
 			// check validatdion of address
 			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
+				let addr = await beethovenContract.addrPool.call(i);
 				assert.isTrue(
 					web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
 					' invalid address'
@@ -3016,15 +2992,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('removed address should be marked as used', async () => {
-			let addStatus = await custodianContract.getAddrStatus.call(PoolInit[0]);
+			let addStatus = await beethovenContract.getAddrStatus.call(PoolInit[0]);
 			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
 		});
 
 		it('removed address should be not in the poolList', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
+				let addr = await beethovenContract.addrPool.call(i);
 				assert.isTrue(
 					web3.utils.toChecksumAddress(addr) !==
 						web3.utils.toChecksumAddress(PoolInit[0]),
@@ -3043,15 +3019,15 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should be marked as used', async () => {
-			let addStatus = await custodianContract.getAddrStatus.call(poolManager);
+			let addStatus = await beethovenContract.getAddrStatus.call(poolManager);
 			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
 		});
 
 		it('new poolManager should be removed from the pool', async () => {
-			let sysStates = await custodianContract.getSystemStates.call();
+			let sysStates = await beethovenContract.getSystemStates.call();
 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 			for (let i = 0; i < poolSize; i++) {
-				let addr = await custodianContract.addrPool.call(i);
+				let addr = await beethovenContract.addrPool.call(i);
 				assert.isTrue(
 					web3.utils.toChecksumAddress(addr) !==
 						web3.utils.toChecksumAddress(poolManager),
@@ -3062,7 +3038,7 @@ contract('Custodian', accounts => {
 
 		it('new poolManager should not remove within coolDown', async () => {
 			try {
-				await custodianContract.removeAddress.call(nextCandidate, { from: poolManager });
+				await beethovenContract.removeAddress.call(nextCandidate, { from: poolManager });
 				assert.isTrue(false, 'non poolManager can remove address');
 			} catch (err) {
 				assert.equal(
@@ -3074,8 +3050,8 @@ contract('Custodian', accounts => {
 		});
 
 		it('new poolManager should only remove beyond coolDown', async () => {
-			await custodianContract.skipCooldown(25);
-			let success = await custodianContract.removeAddress.call(nextCandidate, {
+			await beethovenContract.skipCooldown(25);
+			let success = await beethovenContract.removeAddress.call(nextCandidate, {
 				from: poolManager
 			});
 			assert.isTrue(success, 'cannot add outside cooldown');
@@ -3094,26 +3070,26 @@ contract('Custodian', accounts => {
 				const blockNumber = await web3.eth.getBlockNumber();
 				const block = await web3.eth.getBlock(blockNumber);
 				blockTime = block.timestamp;
-				await custodianContract.startContract(
+				await beethovenContract.startContract(
 					web3.utils.toWei(ethInitPrice + ''),
-					blockTime - Number(CustodianInit.period) * 60,
+					blockTime - Number(BeethovenInit.period) * 60,
 					A_ADDR,
 					B_ADDR,
 					{
 						from: pf1
 					}
 				);
-				await custodianContract.addAddress(
+				await beethovenContract.addAddress(
 					web3.utils.toChecksumAddress(alice),
 					web3.utils.toChecksumAddress(bob),
 					{ from: pm }
 				);
-				await custodianContract.skipCooldown(25);
+				await beethovenContract.skipCooldown(25);
 			});
 
 			it('address not in the pool cannot assign', async () => {
 				try {
-					await custodianContract.updateAddress(currentRole, { from: charles });
+					await beethovenContract.updateAddress(currentRole, { from: charles });
 					assert.isTrue(false, 'member not in the pool can assign role');
 				} catch (err) {
 					assert.equal(
@@ -3125,13 +3101,13 @@ contract('Custodian', accounts => {
 			});
 
 			it('pool account can assign another pool account as role', async () => {
-				let tx = await custodianContract.updateAddress(currentRole, { from: alice });
+				let tx = await beethovenContract.updateAddress(currentRole, { from: alice });
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS,
 					'not exactly one event emitted'
 				);
 				let args = tx.logs[0].args;
-				let sysAddress = await custodianContract.getSystemAddresses.call({ from: alice });
+				let sysAddress = await beethovenContract.getSystemAddresses.call({ from: alice });
 				newAddr = sysAddress[roelIndex];
 
 				assert.isTrue(
@@ -3142,14 +3118,14 @@ contract('Custodian', accounts => {
 			});
 
 			it('pool size should be 5 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
-				let sysStates = await custodianContract.getSystemStates.call();
+				let sysStates = await beethovenContract.getSystemStates.call();
 				poolSize = sysStates[IDX_POOL_SIZE].toNumber();
 				// check correct poolSize
 				assert.isTrue(poolSize === PoolInit.length - 1, 'cannot add address');
 				let poolList = [];
 				// check validatdion of address
 				for (let i = 0; i < poolSize; i++) {
-					let addr = await custodianContract.addrPool.call(i);
+					let addr = await beethovenContract.addrPool.call(i);
 					assert.isTrue(
 						web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
 						' invalid address'
@@ -3164,7 +3140,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('newAddr should be marked as used', async () => {
-				let addrStatusNewPF = await custodianContract.getAddrStatus.call(newAddr);
+				let addrStatusNewPF = await beethovenContract.getAddrStatus.call(newAddr);
 				assert.isTrue(
 					addrStatusNewPF.toNumber() === 2,
 					'assigner and newPFaddr not marked as used'
@@ -3181,7 +3157,7 @@ contract('Custodian', accounts => {
 
 			it('newAddr should be removed from poolList', async () => {
 				for (let i = 0; i < poolSize; i++) {
-					let addr = await custodianContract.addrPool.call(i);
+					let addr = await beethovenContract.addrPool.call(i);
 					assert.isTrue(
 						web3.utils.toChecksumAddress(addr) !==
 							web3.utils.toChecksumAddress(newAddr),
@@ -3192,7 +3168,7 @@ contract('Custodian', accounts => {
 
 			it('should not update address within coolDonw', async () => {
 				try {
-					await custodianContract.updateAddress(newAddr, { from: bob });
+					await beethovenContract.updateAddress(newAddr, { from: bob });
 					assert.isTrue(false, 'member not in the pool can assign role');
 				} catch (err) {
 					assert.equal(
@@ -3204,14 +3180,14 @@ contract('Custodian', accounts => {
 			});
 
 			it('should only update beyond coolDown period', async () => {
-				await custodianContract.skipCooldown(25);
-				let tx = await custodianContract.updateAddress(newAddr, { from: bob });
+				await beethovenContract.skipCooldown(25);
+				let tx = await beethovenContract.updateAddress(newAddr, { from: bob });
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === UPDATE_ADDRESS,
 					'not exactly one event emitted'
 				);
 				let args = tx.logs[0].args;
-				let sysAddress = await custodianContract.getSystemAddresses.call({ from: bob });
+				let sysAddress = await beethovenContract.getSystemAddresses.call({ from: bob });
 				let newAddr2 = sysAddress[roelIndex];
 
 				assert.isTrue(
