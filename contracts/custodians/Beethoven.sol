@@ -79,7 +79,7 @@ contract Beethoven is Custodian, Managed {
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
-	function startCustodian(
+	function startBeethoven(
 		address aAddr,
 		address bAddr,
 		address duoAddress,
