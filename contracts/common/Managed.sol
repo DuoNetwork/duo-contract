@@ -3,10 +3,10 @@ import { IPool } from "../interfaces/IPool.sol";
 
 contract Managed {
 	IPool pool;
-	address poolAddress;
-	address operator;
-	uint lastOperationTime;
-	uint operationCoolDown = 1 hours;
+	address public poolAddress;
+	address public operator;
+	uint public lastOperationTime;
+	uint public operationCoolDown = 1 hours;
 	uint constant BP_DENOMINATOR = 10000;
 
 	event UpdatePool(address newPoolAddress);
