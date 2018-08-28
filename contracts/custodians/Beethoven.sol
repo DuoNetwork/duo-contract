@@ -16,15 +16,15 @@ contract Beethoven is Custodian, Managed {
 	IERC20 duoToken;
 	IOracle oracle;
 	ResetState resetState;
-	uint alphaInBP;
-	uint betaInWei = WEI_DENOMINATOR;
-	uint feeAccumulatedInWei;
-	uint periodCouponInWei; 
-	uint limitPeriodicInWei; 
-	uint limitUpperInWei; 
-	uint limitLowerInWei;
-	uint iterationGasThreshold = 65000;
-	uint ethDuoFeeRatio = 800;
+	uint public alphaInBP;
+	uint public betaInWei = WEI_DENOMINATOR;
+	uint public feeAccumulatedInWei;
+	uint public periodCouponInWei; 
+	uint public limitPeriodicInWei; 
+	uint public limitUpperInWei; 
+	uint public limitLowerInWei;
+	uint public iterationGasThreshold = 65000;
+	uint public ethDuoFeeRatio = 800;
 
 	// reset intermediate values
 	uint bAdj;
