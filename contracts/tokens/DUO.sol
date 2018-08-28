@@ -1,7 +1,6 @@
 pragma solidity ^0.4.24;
-import { IERC20 } from "../interfaces/IERC20.sol";
 
-contract DUO is IERC20 {
+contract DUO {
 	// Public variables of the token
 	string public name;
 	string public symbol;

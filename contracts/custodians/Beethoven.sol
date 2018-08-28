@@ -1,24 +1,20 @@
 pragma solidity ^0.4.24;
 import { IPool } from "../interfaces/IPool.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
-import { Managed } from "../common/Managed.sol";
 
-
-contract Beethoven is Custodian, Managed {
+contract Beethoven is Custodian {
 	enum ResetState {
 		UpwardReset,
 		DownwardReset,
 		PeriodicReset
 	}
 
-	IERC20 duoToken;
-	IOracle oracle;
+	
 	ResetState resetState;
 	uint public alphaInBP;
 	uint public betaInWei = WEI_DENOMINATOR;
-	uint public feeAccumulatedInWei;
 	uint public periodCouponInWei; 
 	uint public limitPeriodicInWei; 
 	uint public limitUpperInWei; 
@@ -33,24 +29,18 @@ contract Beethoven is Custodian, Managed {
 	uint newBFromAPerA;
 	uint newBFromBPerB;
 
-	// state events
-	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
-
 	// admin events
 	event SetValue(uint index, uint oldValue, uint newValue);
-	event CollectFee(address addr, uint value, uint feeAccumulatedInWei);
-	event UpdateOracle(address newOracleAddress);
-	event UpdateFeeCollector(address updater, address newFeeCollector);
-	
 	
 	constructor(
+		address fc,
 		uint alpha,
 		uint r,
 		uint hp,
 		uint hu,
 		uint hd,
-		uint c,
-		uint p,
+		uint comm,
+		uint pd,
 		uint optCoolDown,
 		uint pxFetchCoolDown,
 		uint iteGasTh,
@@ -58,24 +48,21 @@ contract Beethoven is Custodian, Managed {
 		uint preResetWaitBlk
 		) 
 		public 
+		Custodian (fc,
+		comm,
+		pd,
+		preResetWaitBlk, 
+		pxFetchCoolDown,
+		msg.sender,
+		optCoolDown)
 	{
-		state = State.Inception;
-		operator = msg.sender;
 		alphaInBP = alpha;
 		periodCouponInWei = r; 
 		limitPeriodicInWei = hp; 
 		limitUpperInWei = hu; 
 		limitLowerInWei = hd;
-		createCommInBP = c;
-		redeemCommInBP = c;
-		period = p;
 		iterationGasThreshold = iteGasTh; // 65000;
 		ethDuoFeeRatio = ethDuoRate; // 800;
-		preResetWaitingBlocks = preResetWaitBlk; // 10;
-		navAInWei = WEI_DENOMINATOR;
-		navBInWei = WEI_DENOMINATOR;
-		operationCoolDown = optCoolDown;
-		priceFetchCoolDown = pxFetchCoolDown;
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
@@ -108,6 +95,7 @@ contract Beethoven is Custodian, Managed {
 		state = State.Trading;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
+		emit UpdatePool(poolAddr);
 		return true;
 	}
 
@@ -197,7 +185,7 @@ contract Beethoven is Custodian, Managed {
 	{
 		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
 		if (payFeeInEth) {
-			feeAccumulatedInWei = feeAccumulatedInWei.add(feeInWei);
+			ethFeeBalanceInWei = ethFeeBalanceInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
@@ -421,18 +409,6 @@ contract Beethoven is Custodian, Managed {
 	// end of reset function
 
 	// start of operator functions
-	function collectFee(uint amountInWei) 
-		public 
-		only(feeCollector) 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
-		feeAccumulatedInWei = feeAccumulatedInWei.sub(amountInWei);
-		feeCollector.transfer(amountInWei);
-		emit CollectFee(msg.sender, amountInWei, feeAccumulatedInWei);
-		return true;
-	}
-
 	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
@@ -458,21 +434,6 @@ contract Beethoven is Custodian, Managed {
 		}
 
 		emit SetValue(idx, oldValue, newValue);
-		return true;
-	}
-
-	function updateFeeCollector() public inUpdateWindow() returns (bool) {
-		address updater = msg.sender;
-		feeCollector = pool.provideAddress(updater);
-		emit UpdateFeeCollector(updater, feeCollector);
-		return true;
-	}
-
-	function updateOracle(address newOracleAddr) only(operator) inUpdateWindow() public returns (bool) {
-		oracleAddress = newOracleAddr;
-		oracle = IOracle(oracleAddress);
-		require(oracle.started());
-		emit UpdateOracle(newOracleAddr);
 		return true;
 	}
 	// end of operator functions	

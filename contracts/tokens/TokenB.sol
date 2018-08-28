@@ -1,8 +1,7 @@
 pragma solidity ^0.4.24;
 import { ICustodian } from "../interfaces/ICustodian.sol";
-import { IERC20 } from "../interfaces/IERC20.sol";
 
-contract TokenB is IERC20 {
+contract TokenB {
 	// Public variables of the token
 	string public name;
 	string public symbol;
@@ -41,7 +40,7 @@ contract TokenB is IERC20 {
 	}
 
 	function transfer(address to, uint value) public returns (bool success) {
-		custodianContract.transfer(1, msg.sender,to, value);
+		custodianContract.transfer(1, msg.sender, to, value);
 		emit Transfer(msg.sender, to, value);
 		return true;
 	}

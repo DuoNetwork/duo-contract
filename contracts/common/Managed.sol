@@ -6,7 +6,7 @@ contract Managed {
 	address public poolAddress;
 	address public operator;
 	uint public lastOperationTime;
-	uint public operationCoolDown = 1 hours;
+	uint public operationCoolDown;
 	uint constant BP_DENOMINATOR = 10000;
 
 	event UpdatePool(address newPoolAddress);
@@ -22,6 +22,11 @@ contract Managed {
 		require(currentTime - lastOperationTime > operationCoolDown);
 		_;
 		lastOperationTime = currentTime;
+	}
+
+	constructor(address opt, uint optCoolDown) public {
+		operator = opt;
+		operationCoolDown = optCoolDown;
 	}
 
 	function updatePool(address newPoolAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {

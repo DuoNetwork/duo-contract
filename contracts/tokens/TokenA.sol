@@ -1,8 +1,7 @@
 pragma solidity ^0.4.24;
 import { ICustodian } from "../interfaces/ICustodian.sol";
-import { IERC20 } from "../interfaces/IERC20.sol";
 
-contract TokenA is IERC20 {
+contract TokenA {
 	// Public variables of the token
 	string public name;
 	string public symbol;

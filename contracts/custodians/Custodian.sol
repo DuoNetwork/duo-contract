@@ -1,7 +1,10 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
+import { Managed } from "../common/Managed.sol";
 
-contract Custodian {
+contract Custodian is Managed {
 	using SafeMath for uint;
 	enum State {
 		Inception,
@@ -14,6 +17,8 @@ contract Custodian {
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
 	uint constant MIN_BALANCE = 10000000000000000;
 
+	IERC20 duoToken;
+	IOracle oracle;
 	State public state;
 	address public feeCollector;
 	address public oracleAddress;
@@ -26,22 +31,22 @@ contract Custodian {
 	address[] public users;
 	mapping (address => uint) existingUsers;
 
+	uint public ethFeeBalanceInWei;
 	uint public navAInWei;
 	uint public navBInWei;
 	uint public lastPriceInWei;
 	uint public lastPriceTimeInSecond;
 	uint public resetPriceInWei;
 	uint public resetPriceTimeInSecond;
-	uint createCommInBP;
-	uint redeemCommInBP;
-	uint period;
-	uint preResetWaitingBlocks = 10;
-	uint nextResetAddrIndex;
-	uint priceFetchCoolDown = 3000;
+	uint public createCommInBP;
+	uint public redeemCommInBP;
+	uint public period;
+	uint public preResetWaitingBlocks;
+	uint public priceFetchCoolDown = 3000;
 	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
-
+	uint nextResetAddrIndex;
 
 	modifier inState(State _state) {
 		require(state == _state);
@@ -51,14 +56,41 @@ contract Custodian {
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
+	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
-	event TotalSupply(uint totalSupplyA, uint totalSupplyB);
-	
+	event TotalSupply(uint totalSupplyAInWei, uint totalSupplyBInWei);
 
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
+
+	event CollectFee(address addr, uint ethFeeInWei, uint ethFeeBalanceInWei, uint duoFeeInWei, uint duoFeeBalanceInWei);
+	event UpdateOracle(address newOracleAddress);
+	event UpdateFeeCollector(address updater, address newFeeCollector);
+
+	constructor(
+		address fc,
+		uint comm,
+		uint pd,
+		uint preResetWaitBlk, 
+		uint pxFetchCoolDown,
+		address opt,
+		uint optCoolDown
+		) 
+		public
+		Managed(opt, optCoolDown) 
+	{
+		state = State.Inception;
+		feeCollector = fc;
+		createCommInBP = comm;
+		redeemCommInBP = comm;
+		period = pd;
+		preResetWaitingBlocks = preResetWaitBlk;
+		priceFetchCoolDown = pxFetchCoolDown;
+		navAInWei = WEI_DENOMINATOR;
+		navBInWei = WEI_DENOMINATOR;
+	}
 
 	function totalUsers() public view returns (uint) {
 		return users.length;
@@ -150,4 +182,42 @@ contract Custodian {
 		}
 	}
 	// end of internal utility functions
+
+	function collectEthFee(uint amountInWei) 
+		public 
+		only(feeCollector) 
+		inState(State.Trading) 
+		returns (bool success) 
+	{
+		ethFeeBalanceInWei = ethFeeBalanceInWei.sub(amountInWei);
+		feeCollector.transfer(amountInWei);
+		emit CollectFee(msg.sender, amountInWei, ethFeeBalanceInWei, 0, duoToken.balanceOf(this));
+		return true;
+	}
+
+	function collectDuoFee(uint amountInWei) 
+		public 
+		only(feeCollector) 
+		inState(State.Trading) 
+		returns (bool success) 
+	{
+		duoToken.transfer(feeCollector, amountInWei);
+		emit CollectFee(msg.sender, 0, ethFeeBalanceInWei, amountInWei, duoToken.balanceOf(this));
+		return true;
+	}
+
+	function updateOracle(address newOracleAddr) only(operator) inUpdateWindow() public returns (bool) {
+		oracleAddress = newOracleAddr;
+		oracle = IOracle(oracleAddress);
+		require(oracle.started());
+		emit UpdateOracle(newOracleAddr);
+		return true;
+	}
+
+	function updateFeeCollector() public inUpdateWindow() returns (bool) {
+		address updater = msg.sender;
+		feeCollector = pool.provideAddress(updater);
+		emit UpdateFeeCollector(updater, feeCollector);
+		return true;
+	}
 }

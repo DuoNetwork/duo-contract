@@ -2,7 +2,6 @@ pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
 import { IPool } from "../interfaces/IPool.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 
 contract Magi is Managed {
 	using SafeMath for uint;
@@ -47,14 +46,13 @@ contract Magi is Managed {
 		uint pxCoolDown,
 		uint optCoolDown
 		) 
-		public 
+		public
+		Managed(opt, optCoolDown) 
 	{
-		operator = opt;
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
 		priceUpdateCoolDown = pxCoolDown;
-		operationCoolDown = optCoolDown;
 	}
 
 	function startOracle(
@@ -73,6 +71,7 @@ contract Magi is Managed {
 		lastPrice.source = msg.sender;
 		started = true;
 		emit AcceptPrice(priceInWei, timeInSecond, msg.sender);
+		emit UpdatePool(poolAddr);
 		return true;
 	}
 

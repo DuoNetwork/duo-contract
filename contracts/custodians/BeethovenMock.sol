@@ -7,6 +7,7 @@ contract BeethovenMock is Beethoven {
 	uint public timestamp = now;
 
 	constructor(
+		address fc,
 		uint alpha,
 		uint r,
 		uint hp,
@@ -14,14 +15,13 @@ contract BeethovenMock is Beethoven {
 		uint hd,
 		uint c,
 		uint p,
-		// uint memberThreshold,
-		// uint gasThreshold,
 		uint optCoolDown,
 		uint pxFetchCoolDown,
 		uint iteGasTh,
 		uint ethDuoRate,
 		uint preResetWaitBlk
 	) Beethoven (
+		fc,
 		alpha,
 		r,
 		hp,
@@ -29,8 +29,6 @@ contract BeethovenMock is Beethoven {
 		hd,
 		c,
 		p,
-		// memberThreshold,
-		// gasThreshold,
 		optCoolDown,
 		pxFetchCoolDown,
 		iteGasTh,
