@@ -1,60 +1,54 @@
 const web3 = require('web3');
-
-const Beethoven = artifacts.require('./Beethoven.sol');
-// const IPool = artifacts.require('./IPool.sol');
-const BeethovenMock = artifacts.require('./BeethovenMock.sol');
-
 const SafeMath = artifacts.require('./SafeMath.sol');
-const Managed = artifacts.require('./Managed.sol');
-const Custodian = artifacts.require('./Custodian.sol');
+const Beethoven = artifacts.require('./Beethoven.sol');
+const BeethovenMock = artifacts.require('./BeethovenMock.sol');
+const Magi = artifacts.require('./oracles/Magi.sol');
 const DUO = artifacts.require('./DUO.sol');
 const TokenA = artifacts.require('./TokenA.sol');
 const TokenB = artifacts.require('./TokenB.sol');
-
 const InitParas = require('./contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
 const TokenBInit = InitParas['TokenB'];
+const MagiInit = InitParas['Magi'];
 
 module.exports = async (deployer, network, accounts) => {
-	let creator;
-
-	let BeethovenToDeploy = network !== 'development' ? Beethoven : BeethovenMock;
+	let creator, pf1, pf2, pf3;
 
 	if (network == 'kovan') {
 		creator = '0x00D8d0660b243452fC2f996A892D3083A903576F';
+		pf1 = '0x0022BFd6AFaD3408A1714fa8F9371ad5Ce8A0F1a';
+		// pf2 = accounts[1];
+		pf2 = '0x002002812b42601Ae5026344F0395E68527bb0F8';
+		// pf3 = accounts[2];
+		pf3 = '0x00476E55e02673B0E4D2B474071014D5a366Ed4E';
 	}
 	if (network == 'ropsten') {
 		// creator = accounts[3];
 		creator = '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E';
+		pf1 = '0x00f125c2C1b08c2516e7A7B789d617ad93Fdf4C0';
+		// pf2 = accounts[1];
+		pf2 = '0x002cac65031CEbefE8233672C33bAE9E95c6dC1C';
+		// pf3 = accounts[2];
+		pf3 = '0x0076c03e1028F92f8391029f15096026bd3bdFd2';
 	}
 	if (network == 'development') {
 		creator = accounts[0];
+		pf1 = accounts[1];
+		pf2 = accounts[2];
+		pf3 = accounts[3];
 	}
 
-	await deployer.deploy(
-		DUO,
-		web3.utils.toWei(DuoInit.initSupply),
-		DuoInit.tokenName,
-		DuoInit.tokenSymbol,
-		{
-			from: creator
-		}
-	);
+	let BeethovenToDeploy = network !== 'development' ? Beethoven : BeethovenMock;
 
+	// 42008
 	await deployer.deploy(SafeMath, {
 		from: creator
 	});
-
-	await deployer.link(SafeMath, Custodian);
-
-	await deployer.deploy(Custodian, {
-		from: creator
-	});
-
-	await deployer.deploy(Managed, { from: creator });
-
+	// 74748, 27008
+	await deployer.link(SafeMath, [BeethovenToDeploy, Magi]);
+	// 554235 for mock
 	await deployer.deploy(
 		BeethovenToDeploy,
 		BeethovenInit.alphaInBP,
@@ -71,6 +65,21 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.preResetWaitBlk,
 		{ from: creator }
 	);
+	// 2364694 for mock
+	await deployer.deploy(Magi, creator, pf1, pf2, pf3, MagiInit.pxCoolDown, MagiInit.optCoolDown, {
+		from: creator
+	});
+	// 950268
+	await deployer.deploy(
+		DUO,
+		web3.utils.toWei(DuoInit.initSupply),
+		DuoInit.tokenName,
+		DuoInit.tokenSymbol,
+		{
+			from: creator
+		}
+	);
+	// 1094050
 	await deployer.deploy(
 		TokenA,
 		TokenAInit.tokenName,
@@ -80,6 +89,7 @@ module.exports = async (deployer, network, accounts) => {
 			from: creator
 		}
 	);
+	// 1094370
 	await deployer.deploy(
 		TokenB,
 		TokenBInit.tokenName,
