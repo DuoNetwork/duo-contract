@@ -21,6 +21,7 @@ contract Custodian is Managed {
 	IOracle oracle;
 	State public state;
 	address public feeCollector;
+	address public duoTokenAddress;
 	address public oracleAddress;
 	address public aTokenAddress;
 	address public bTokenAddress;
@@ -70,6 +71,7 @@ contract Custodian is Managed {
 	event UpdateFeeCollector(address updater, address newFeeCollector);
 
 	constructor(
+		address duoTokenAddr,
 		address fc,
 		uint comm,
 		uint pd,
@@ -90,6 +92,8 @@ contract Custodian is Managed {
 		priceFetchCoolDown = pxFetchCoolDown;
 		navAInWei = WEI_DENOMINATOR;
 		navBInWei = WEI_DENOMINATOR;
+		duoTokenAddress = duoTokenAddr;
+		duoToken = IERC20(duoTokenAddr);
 	}
 
 	function totalUsers() public view returns (uint) {

@@ -33,6 +33,7 @@ contract Beethoven is Custodian {
 	event SetValue(uint index, uint oldValue, uint newValue);
 	
 	constructor(
+		address duoTokenAddr,
 		address fc,
 		uint alpha,
 		uint r,
@@ -48,7 +49,9 @@ contract Beethoven is Custodian {
 		uint preResetWaitBlk
 		) 
 		public 
-		Custodian (fc,
+		Custodian (
+		duoTokenAddr,
+		fc,
 		comm,
 		pd,
 		preResetWaitBlk, 
@@ -69,7 +72,7 @@ contract Beethoven is Custodian {
 	function startBeethoven(
 		address aAddr,
 		address bAddr,
-		address duoAddress,
+		// address duoAddress,
 		address feeAddress, 
 		address poolAddr,
 		address oracleAddr
@@ -81,7 +84,7 @@ contract Beethoven is Custodian {
 	{	
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
-		duoToken = IERC20(duoAddress);
+		// duoToken = IERC20(duoAddress);
 		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);

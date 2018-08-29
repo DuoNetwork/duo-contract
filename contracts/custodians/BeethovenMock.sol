@@ -7,6 +7,7 @@ contract BeethovenMock is Beethoven {
 	uint public timestamp = now;
 
 	constructor(
+		address duoTokenAddress,
 		address fc,
 		uint alpha,
 		uint r,
@@ -21,6 +22,7 @@ contract BeethovenMock is Beethoven {
 		uint ethDuoRate,
 		uint preResetWaitBlk
 	) Beethoven (
+		duoTokenAddress,
 		fc,
 		alpha,
 		r,
@@ -47,10 +49,6 @@ contract BeethovenMock is Beethoven {
 
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
-	}
-
-	function getExistingUser(address addr) public view returns (uint) {
-		return existingUsers[addr];
 	}
 
 	// function getAddrStatus(address addr) public view returns (uint) {
