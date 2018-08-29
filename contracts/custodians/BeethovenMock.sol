@@ -8,6 +8,7 @@ contract BeethovenMock is Beethoven {
 
 	constructor(
 		address duoTokenAddress,
+		address poolAddress,
 		address fc,
 		uint alpha,
 		uint r,
@@ -23,6 +24,7 @@ contract BeethovenMock is Beethoven {
 		uint preResetWaitBlk
 	) Beethoven (
 		duoTokenAddress,
+		poolAddress,
 		fc,
 		alpha,
 		r,

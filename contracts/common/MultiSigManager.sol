@@ -1,8 +1,7 @@
 pragma solidity ^0.4.24;
 import { ICustodian } from "../interfaces/ICustodian.sol";
-import { IPool } from "../interfaces/IPool.sol";
 
-contract Pool {
+contract MultiSigManager {
 	address public poolManager;
 
 	// address pool for allocation

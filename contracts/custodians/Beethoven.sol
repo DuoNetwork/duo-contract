@@ -1,5 +1,5 @@
 pragma solidity ^0.4.24;
-import { IPool } from "../interfaces/IPool.sol";
+import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
@@ -34,6 +34,7 @@ contract Beethoven is Custodian {
 	
 	constructor(
 		address duoTokenAddr,
+		address poolAddr,
 		address fc,
 		uint alpha,
 		uint r,
@@ -49,15 +50,17 @@ contract Beethoven is Custodian {
 		uint preResetWaitBlk
 		) 
 		public 
-		Custodian (
+		Custodian ( 
 		duoTokenAddr,
+		poolAddr,
 		fc,
 		comm,
 		pd,
 		preResetWaitBlk, 
 		pxFetchCoolDown,
 		msg.sender,
-		optCoolDown)
+		optCoolDown
+		)
 	{
 		alphaInBP = alpha;
 		periodCouponInWei = r; 
@@ -74,7 +77,7 @@ contract Beethoven is Custodian {
 		address bAddr,
 		// address duoAddress,
 		address feeAddress, 
-		address poolAddr,
+		// address poolAddr,
 		address oracleAddr
 		) 
 		public 
@@ -93,12 +96,12 @@ contract Beethoven is Custodian {
 		lastPriceTimeInSecond = timeInSecond;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
-		poolAddress = poolAddr;
-		pool = IPool(poolAddress);
+		// poolAddress = poolAddr;
+		pool = IMultiSigManager(poolAddress);
 		state = State.Trading;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
-		emit UpdatePool(poolAddr);
+		// emit UpdatePool(poolAddr);
 		return true;
 	}
 

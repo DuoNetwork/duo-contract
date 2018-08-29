@@ -6,6 +6,7 @@ contract CustodianMock is Custodian {
 
 	constructor(
 		address duoTokenAddr,
+		address poolAddr,
 		address fc,
 		uint comm,
 		uint pd,
@@ -15,6 +16,7 @@ contract CustodianMock is Custodian {
 		uint optCoolDown
 	) Custodian (
 		duoTokenAddr,
+		poolAddr,
 		fc,
 		comm,
 		pd,

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
-import { IPool } from "../interfaces/IPool.sol";
+import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract Magi is Managed {
 	using SafeMath for uint;
@@ -43,35 +43,38 @@ contract Magi is Managed {
 		address pf1,
 		address pf2,
 		address pf3,
+		address poolAddress,
 		uint pxCoolDown,
 		uint optCoolDown
 		) 
 		public
-		Managed(opt, optCoolDown) 
+		Managed(poolAddress, opt, optCoolDown) 
 	{
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
 		priceUpdateCoolDown = pxCoolDown;
+		poolAddress = poolAddress;
+		pool = IMultiSigManager(poolAddress);
+		emit UpdatePool(poolAddress);
 	}
 
 	function startOracle(
 		uint priceInWei, 
-		uint timeInSecond,
-		address poolAddr) 
+		uint timeInSecond
+	)
 		public 
 		isPriceFeed() 
 		returns (bool success) 
 	{
 		require(!started && timeInSecond <= getNowTimestamp());
-		poolAddress = poolAddr;
-		pool = IPool(poolAddress);
+		
+		
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.source = msg.sender;
 		started = true;
 		emit AcceptPrice(priceInWei, timeInSecond, msg.sender);
-		emit UpdatePool(poolAddr);
 		return true;
 	}
 

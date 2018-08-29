@@ -72,6 +72,7 @@ contract Custodian is Managed {
 
 	constructor(
 		address duoTokenAddr,
+		address poolAddress,
 		address fc,
 		uint comm,
 		uint pd,
@@ -81,7 +82,7 @@ contract Custodian is Managed {
 		uint optCoolDown
 		) 
 		public
-		Managed(opt, optCoolDown) 
+		Managed(poolAddress, opt, optCoolDown) 
 	{
 		state = State.Inception;
 		feeCollector = fc;
@@ -210,10 +211,11 @@ contract Custodian is Managed {
 		return true;
 	}
 
-	function updateOracle(address newOracleAddr) only(operator) inUpdateWindow() public returns (bool) {
+	function updateOracle(address newOracleAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
 		oracleAddress = newOracleAddr;
 		oracle = IOracle(oracleAddress);
-		require(oracle.started());
+		(uint lastPrice, uint lastPriceTime) = oracle.getLastPrice();
+		require(lastPrice > 0 && lastPriceTime > 0);
 		emit UpdateOracle(newOracleAddr);
 		return true;
 	}

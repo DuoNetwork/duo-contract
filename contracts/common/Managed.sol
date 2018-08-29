@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
-import { IPool } from "../interfaces/IPool.sol";
+import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract Managed {
-	IPool pool;
+	IMultiSigManager pool;
 	address public poolAddress;
 	address public operator;
 	uint public lastOperationTime;
@@ -24,14 +24,20 @@ contract Managed {
 		lastOperationTime = currentTime;
 	}
 
-	constructor(address opt, uint optCoolDown) public {
+	constructor(
+		address poolAddr,
+		address opt, 
+		uint optCoolDown
+	) public {
+		poolAddress = poolAddr;
+		pool = IMultiSigManager(poolAddr);
 		operator = opt;
 		operationCoolDown = optCoolDown;
 	}
 
 	function updatePool(address newPoolAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
 		poolAddress = newPoolAddr;
-		pool = IPool(poolAddress);
+		pool = IMultiSigManager(poolAddress);
 		require(pool.poolManager() != 0x0);
 		emit UpdatePool(newPoolAddr);
 		return true;
