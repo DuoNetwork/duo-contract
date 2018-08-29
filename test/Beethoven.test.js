@@ -55,7 +55,7 @@ const IDX_POOL_MANAGER = 5;
 
 // const A_ADDR = '0xa';
 // const B_ADDR = '0xb';
-// const DUMMY_ADDR = '0xc';
+
 
 // const isEqual = (a, b, log = false) => {
 // 	if (log) {

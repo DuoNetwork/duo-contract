@@ -53,9 +53,22 @@ module.exports = async (deployer, network, accounts) => {
 	});
 	// 74748, 27008
 	await deployer.link(SafeMath, [BeethovenToDeploy, Magi]);
+
+	// 950268
+	await deployer.deploy(
+		DUO,
+		web3.utils.toWei(DuoInit.initSupply),
+		DuoInit.tokenName,
+		DuoInit.tokenSymbol,
+		{
+			from: creator
+		}
+	);
+
 	// 5788827 for mock
 	await deployer.deploy(
 		BeethovenToDeploy,
+		DUO.address,
 		fc,
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
@@ -75,16 +88,7 @@ module.exports = async (deployer, network, accounts) => {
 	await deployer.deploy(Magi, creator, pf1, pf2, pf3, MagiInit.pxCoolDown, MagiInit.optCoolDown, {
 		from: creator
 	});
-	// 950268
-	await deployer.deploy(
-		DUO,
-		web3.utils.toWei(DuoInit.initSupply),
-		DuoInit.tokenName,
-		DuoInit.tokenSymbol,
-		{
-			from: creator
-		}
-	);
+	
 	// 1094050
 	await deployer.deploy(
 		TokenA,
