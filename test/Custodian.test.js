@@ -51,7 +51,7 @@ const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invali
 const DUMMY_ADDR = '0xc';
 
 // const isEqual = (a, b, log = false) => {
-// 	if (log) {
+// 	if (log) {m
 // 		console.log(a);
 // 		console.log(b);
 // 	}
