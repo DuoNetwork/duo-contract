@@ -43,20 +43,20 @@ contract Magi is Managed {
 		address pf1,
 		address pf2,
 		address pf3,
-		address poolAddress,
+		address roleManagerAddr,
 		uint pxCoolDown,
 		uint optCoolDown
 		) 
 		public
-		Managed(poolAddress, opt, optCoolDown) 
+		Managed(roleManagerAddress, opt, optCoolDown) 
 	{
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
 		priceFeed3 = pf3;
 		priceUpdateCoolDown = pxCoolDown;
-		poolAddress = poolAddress;
-		pool = IMultiSigManager(poolAddress);
-		emit UpdatePool(poolAddress);
+		roleManagerAddress = roleManagerAddr;
+		roleManager = IMultiSigManager(roleManagerAddr);
+		emit UpdateRoleManager(roleManagerAddress);
 	}
 
 	function startOracle(
@@ -179,7 +179,7 @@ contract Magi is Managed {
 	// start of operator function
 	function updatePriceFeed(uint index) inUpdateWindow() public returns (bool) {
 		address updater = msg.sender;
-		address newAddr = pool.provideAddress(updater);
+		address newAddr = roleManager.provideAddress(updater, 0);
 		if(index == 0) {
 			priceFeed1 = newAddr;
 		} else if(index == 1){

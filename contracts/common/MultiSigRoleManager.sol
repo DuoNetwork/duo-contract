@@ -338,7 +338,7 @@ contract MultiSigRoleManager {
 		removeFromPool(0, index);
 	}
 
-	 /// @dev removeFromPool Function.
+	/// @dev removeFromPool Function.
 	/// @param poolIndex the pool to request from removal.
 	/// @param idx the index of address to remove
 	function removeFromPoolByAddr(uint poolIndex, address addr) internal {

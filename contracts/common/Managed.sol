@@ -2,14 +2,14 @@ pragma solidity ^0.4.24;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract Managed {
-	IMultiSigManager pool;
-	address public poolAddress;
+	IMultiSigManager roleManager;
+	address public roleManagerAddress;
 	address public operator;
 	uint public lastOperationTime;
 	uint public operationCoolDown;
 	uint constant BP_DENOMINATOR = 10000;
 
-	event UpdatePool(address newPoolAddress);
+	event UpdateRoleManager(address newManagerAddress);
 	event UpdateOperator(address updater, address newOperator);
 
 	modifier only(address addr) {
@@ -25,21 +25,25 @@ contract Managed {
 	}
 
 	constructor(
-		address poolAddr,
+		address roleManagerAddr,
 		address opt, 
 		uint optCoolDown
 	) public {
-		poolAddress = poolAddr;
-		pool = IMultiSigManager(poolAddr);
+		roleManagerAddress = roleManagerAddr;
+		roleManager = IMultiSigManager(roleManagerAddr);
 		operator = opt;
 		operationCoolDown = optCoolDown;
 	}
 
-	function updatePool(address newPoolAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
-		poolAddress = newPoolAddr;
-		pool = IMultiSigManager(poolAddress);
-		require(pool.poolManager() != 0x0);
-		emit UpdatePool(newPoolAddr);
+	function updateRoleManager(address newManagerAddr) 
+		inUpdateWindow() 
+		public 
+	returns (bool) {
+		require(roleManager.passedContract(newManagerAddr));
+		roleManagerAddress = newManagerAddr;
+		roleManager = IMultiSigManager(roleManagerAddress);
+		require(roleManager.moderator() != 0x0);
+		emit UpdateRoleManager(newManagerAddr);
 		return true;
 	}
 
