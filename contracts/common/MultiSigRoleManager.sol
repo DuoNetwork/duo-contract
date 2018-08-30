@@ -113,7 +113,13 @@ contract MultiSigRoleManager {
 	event RemoveAddress(uint poolIndex, address addr, address newPoolManager);
 	event AddCustodian(address newCustodianAddr, address newPoolManager);
 	event AddOtherContract(address newContractAddr, address newPoolManager);
-	
+	event StartContractVoting(address proposer, address newContractAddr);
+	event TerminateContractVoting(address terminator, address currentCandidate);
+	event StartModeratorVoting(address proposer);
+	event TerminateByTimeStamp(address candidate);
+	event Vote(address voter, address candidate, bool voteFor, uint votedFor, uint votedAgainst);
+	event CompleteVoting(bool isContractVoting, address newAddress);
+
 	/*
      * Constructor
      */
@@ -147,6 +153,7 @@ contract MultiSigRoleManager {
 		votingStage = VotingStage.Contract;
 		replaceModerator();
 		startVoting();
+		emit StartContractVoting(moderator, addr);
 		return true;
 	}
 
@@ -158,6 +165,7 @@ contract MultiSigRoleManager {
 	returns (bool) {
 		votingStage = VotingStage.NotStarted;
 		replaceModerator();
+		emit TerminateContractVoting(moderator, candidate);
 		return true;
 	}
 
@@ -166,6 +174,7 @@ contract MultiSigRoleManager {
 		uint nowTimestamp = getNowTimestamp();
 		if (nowTimestamp > voteStartTimestamp && nowTimestamp - voteStartTimestamp > VOTE_TIME_OUT) {
 			votingStage = VotingStage.NotStarted;
+			emit TerminateByTimeStamp(candidate);
 			return true;
 		} else
 			return false;
@@ -178,6 +187,7 @@ contract MultiSigRoleManager {
 		votingStage = VotingStage.Moderator;
 		removeFromPoolByAddr(0, candidate);
 		startVoting();
+		emit StartModeratorVoting(candidate);
 		return true;
 	}
 
@@ -191,11 +201,16 @@ contract MultiSigRoleManager {
 			votedAgainst += 1;
 		voted[voter] = true;
 		uint threshold = addrPool[0].length / 2;
+		emit Vote(voter, candidate, voteFor, votedFor, votedAgainst);
 		if (votedFor > threshold || votedAgainst > threshold) {
-			if (votingStage == VotingStage.Contract) 
+			if (votingStage == VotingStage.Contract) {
 				passedContract[candidate] = true;
-			else 
+				emit CompleteVoting(true, candidate);
+			}
+			else {
+				emit CompleteVoting(false, candidate);
 				moderator = candidate;
+			}
 			votingStage = VotingStage.NotStarted;
 		}
 		return true;
