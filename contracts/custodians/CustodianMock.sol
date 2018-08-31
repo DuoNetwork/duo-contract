@@ -3,6 +3,7 @@ pragma solidity ^0.4.24;
 import { Custodian } from "./Custodian.sol";
 
 contract CustodianMock is Custodian {
+	uint public timestamp = now;
 
 	constructor(
 		address duoTokenAddr,
@@ -44,6 +45,10 @@ contract CustodianMock is Custodian {
 		checkUser(addr, balanceOf[0][addr], balanceOf[1][addr]);
 	}
 
+	function addUsers(address addr) public {
+		users.push(addr);
+	}
+
 	function getExistingUser(address addr) public view returns (uint) {
 		return existingUsers[addr];
 	}
@@ -52,6 +57,18 @@ contract CustodianMock is Custodian {
 		ethFeeBalanceInWei += amtInWei;
 		// address(this).transfer(amtInWei);
 		return true;
+	}
+
+	function setTimestamp(uint ts) public {
+		timestamp = ts;
+	}
+
+	function skipCooldown(uint numOfPeriods) public {
+		timestamp = timestamp + (operationCoolDown * numOfPeriods);
+	}
+
+	function getNowTimestamp() internal view returns (uint) {
+		return timestamp;
 	}
 
 }

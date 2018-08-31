@@ -3,8 +3,10 @@ const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
 const BeethovenMock = artifacts.require('./BeethovenMock.sol');
 const Magi = artifacts.require('./oracles/Magi.sol');
-const Pool = artifacts.require('./Pool.sol');
+const RoleManager = artifacts.require('./MultiSigRoleManager.sol');
+const RoleManagerMock = artifacts.require('./MultiSigRoleManagerMock.sol');
 const DUO = artifacts.require('./DUO.sol');
+const DuoMock = artifacts.require('./DuoMock.sol');
 const TokenA = artifacts.require('./TokenA.sol');
 const TokenB = artifacts.require('./TokenB.sol');
 const InitParas = require('./contractInitParas.json');
@@ -13,7 +15,7 @@ const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
 const TokenBInit = InitParas['TokenB'];
 const MagiInit = InitParas['Magi'];
-const PoolInit = InitParas['Pool'];
+const RoleManagerInit = InitParas['RoleManager'];
 
 module.exports = async (deployer, network, accounts) => {
 	let creator, pf1, pf2, pf3, fc;
@@ -46,6 +48,8 @@ module.exports = async (deployer, network, accounts) => {
 	}
 
 	let BeethovenToDeploy = network !== 'development' ? Beethoven : BeethovenMock;
+	let DuoToDeploy = network !== 'development' ? DUO : DuoMock;
+	let RoleManagerToDeploy = network !== 'development' ? RoleManager : RoleManagerMock;
 
 	// 42008
 	await deployer.deploy(SafeMath, {
@@ -56,7 +60,7 @@ module.exports = async (deployer, network, accounts) => {
 
 	// 950268
 	await deployer.deploy(
-		DUO,
+		DuoToDeploy,
 		web3.utils.toWei(DuoInit.initSupply),
 		DuoInit.tokenName,
 		DuoInit.tokenSymbol,
@@ -65,10 +69,16 @@ module.exports = async (deployer, network, accounts) => {
 		}
 	);
 
+	// 2611094
+	await deployer.deploy(RoleManagerToDeploy, RoleManagerInit.optCoolDown, {
+		from: creator
+	});
+
 	// 5788827 for mock
 	await deployer.deploy(
 		BeethovenToDeploy,
-		DUO.address,
+		DuoToDeploy.address,
+		RoleManagerToDeploy.address,
 		fc,
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
@@ -85,10 +95,20 @@ module.exports = async (deployer, network, accounts) => {
 		{ from: creator }
 	);
 	// 2359562 for mock
-	await deployer.deploy(Magi, creator, pf1, pf2, pf3, MagiInit.pxCoolDown, MagiInit.optCoolDown, {
-		from: creator
-	});
-	
+	await deployer.deploy(
+		Magi,
+		creator,
+		pf1,
+		pf2,
+		pf3,
+		RoleManagerToDeploy.address,
+		MagiInit.pxCoolDown,
+		MagiInit.optCoolDown,
+		{
+			from: creator
+		}
+	);
+
 	// 1094050
 	await deployer.deploy(
 		TokenA,
@@ -107,8 +127,4 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenToDeploy.address,
 		{ from: creator }
 	);
-	// 2611094
-	await deployer.deploy(Pool, PoolInit.optCoolDown, {
-		from: creator
-	});
 };

@@ -19,7 +19,7 @@ contract Managed {
 
 	modifier inUpdateWindow() {
 		uint currentTime = getNowTimestamp();
-		require(currentTime - lastOperationTime > operationCoolDown);
+		require(currentTime - lastOperationTime >= operationCoolDown);
 		_;
 		lastOperationTime = currentTime;
 	}

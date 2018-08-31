@@ -4,8 +4,17 @@ import { IERC20 } from "../interfaces/IERC20.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Managed } from "../common/Managed.sol";
 
+/// @title Custodian - every derivative contract should has basic custodian properties
+/// @author duo.network
 contract Custodian is Managed {
 	using SafeMath for uint;
+
+	/*
+     * Constants
+     */
+	uint constant decimals = 18;
+	uint constant WEI_DENOMINATOR = 1000000000000000000;
+	uint constant MIN_BALANCE = 10000000000000000;
 	enum State {
 		Inception,
 		Trading,
@@ -13,10 +22,9 @@ contract Custodian is Managed {
 		Reset
 	}
 
-	uint constant decimals = 18;
-	uint constant WEI_DENOMINATOR = 1000000000000000000;
-	uint constant MIN_BALANCE = 10000000000000000;
-
+	/*
+     * Storage
+     */
 	IERC20 duoToken;
 	IOracle oracle;
 	State public state;
@@ -31,7 +39,6 @@ contract Custodian is Managed {
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
 	mapping (address => uint) existingUsers;
-
 	uint public ethFeeBalanceInWei;
 	uint public navAInWei;
 	uint public navBInWei;
@@ -49,11 +56,17 @@ contract Custodian is Managed {
 	uint lastPreResetBlockNo = 0;
 	uint nextResetAddrIndex;
 
+	/*
+     *  Modifiers
+     */
 	modifier inState(State _state) {
 		require(state == _state);
 		_;
 	}
 
+	/*
+     *  Events
+     */
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
@@ -61,18 +74,30 @@ contract Custodian is Managed {
 	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
 	event TotalSupply(uint totalSupplyAInWei, uint totalSupplyBInWei);
-
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
-
+	// operation events
 	event CollectFee(address addr, uint ethFeeInWei, uint ethFeeBalanceInWei, uint duoFeeInWei, uint duoFeeBalanceInWei);
 	event UpdateOracle(address newOracleAddress);
 	event UpdateFeeCollector(address updater, address newFeeCollector);
 
+	/*
+     *  Constructor
+     */
+	/// @dev Contract constructor sets operation cool down and set address pool status.
+	///	@param duoTokenAddr duotoken address
+	///	@param roleManagerAddr roleManagerContract Address
+	///	@param fc feeCollector address
+	///	@param comm commission rate
+	///	@param pd period
+	///	@param preResetWaitBlk, 
+	///	@param pxFetchCoolDown,
+	///	@param opt operator
+	///	@param optCoolDown operation cooldown
 	constructor(
 		address duoTokenAddr,
-		address poolAddress,
+		address roleManagerAddr,
 		address fc,
 		uint comm,
 		uint pd,
@@ -82,7 +107,7 @@ contract Custodian is Managed {
 		uint optCoolDown
 		) 
 		public
-		Managed(poolAddress, opt, optCoolDown) 
+		Managed(roleManagerAddr, opt, optCoolDown) 
 	{
 		state = State.Inception;
 		feeCollector = fc;
@@ -97,11 +122,23 @@ contract Custodian is Managed {
 		duoToken = IERC20(duoTokenAddr);
 	}
 
+	/*
+     * Public functions
+     */
+
+	/// @dev return totalUsers in the system.
 	function totalUsers() public view returns (uint) {
 		return users.length;
 	}
 
-	// start of token functions
+	/*
+     * ERC token functions
+     */
+	/// @dev transferInternal function.
+	/// @param index 
+	/// @param from  
+	/// @param to    
+	/// @param tokens
 	function transferInternal(uint index, address from, address to, uint tokens) 
 		internal 
 		inState(State.Trading)
@@ -166,6 +203,9 @@ contract Custodian is Managed {
 	}
 	// end of token functions
 
+	/*
+     * Internal Functions
+     */
 	// start of internal utility functions
 	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
 		uint userIdx = existingUsers[user];
@@ -188,6 +228,9 @@ contract Custodian is Managed {
 	}
 	// end of internal utility functions
 
+	/*
+     * Operation Functions
+     */
 	function collectEthFee(uint amountInWei) 
 		public 
 		only(feeCollector) 
@@ -211,7 +254,12 @@ contract Custodian is Managed {
 		return true;
 	}
 
-	function updateOracle(address newOracleAddr) only(pool.poolManager()) inUpdateWindow() public returns (bool) {
+	function updateOracle(address newOracleAddr) 
+		only(roleManager.moderator())
+		inUpdateWindow() 
+		public 
+	returns (bool) {
+		require(roleManager.passedContract(newOracleAddr));
 		oracleAddress = newOracleAddr;
 		oracle = IOracle(oracleAddress);
 		(uint lastPrice, uint lastPriceTime) = oracle.getLastPrice();
@@ -220,9 +268,12 @@ contract Custodian is Managed {
 		return true;
 	}
 
-	function updateFeeCollector() public inUpdateWindow() returns (bool) {
+	function updateFeeCollector() 
+		public 
+		inUpdateWindow() 
+	returns (bool) {
 		address updater = msg.sender;
-		feeCollector = pool.provideAddress(updater);
+		feeCollector = roleManager.provideAddress(updater, 0);
 		emit UpdateFeeCollector(updater, feeCollector);
 		return true;
 	}

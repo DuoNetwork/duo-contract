@@ -34,7 +34,7 @@ contract Beethoven is Custodian {
 	
 	constructor(
 		address duoTokenAddr,
-		address poolAddr,
+		address roleManagerAddr,
 		address fc,
 		uint alpha,
 		uint r,
@@ -52,7 +52,7 @@ contract Beethoven is Custodian {
 		public 
 		Custodian ( 
 		duoTokenAddr,
-		poolAddr,
+		roleManagerAddr,
 		fc,
 		comm,
 		pd,
@@ -77,7 +77,7 @@ contract Beethoven is Custodian {
 		address bAddr,
 		// address duoAddress,
 		address feeAddress, 
-		// address poolAddr,
+		// address roleManagerAddr,
 		address oracleAddr
 		) 
 		public 
@@ -96,12 +96,12 @@ contract Beethoven is Custodian {
 		lastPriceTimeInSecond = timeInSecond;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
-		// poolAddress = poolAddr;
-		pool = IMultiSigManager(poolAddress);
+		// roleManagerAddress = roleManagerAddr;
+		roleManager = IMultiSigManager(roleManagerAddress);
 		state = State.Trading;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
-		// emit UpdatePool(poolAddr);
+		// emit UpdateroleManager(roleManagerAddr);
 		return true;
 	}
 

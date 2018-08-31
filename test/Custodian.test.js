@@ -1,78 +1,43 @@
 const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-// const Managed = artifacts.requrie('../contracts/common/Managed.sol');
-// const Pool = artifacts.require('../contracts/common/Pool.sol');
-// const SafeMath = artifacts.require('../contracts/common/SafeMath.sol');
-// const Magi = artifacts.require('../contracts/oracles/Magi.sol');
+const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
-// import Web3 from 'web3';
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
-// const PoolInit = InitParas['Pool'];
-// const MagiInit = InitParas['Magi'];
+const RoleManagerInit = InitParas['RoleManager'];
+const MagiInit = InitParas['Magi'];
 
 // Event
-// const START_PRE_RESET = 'StartPreReset';
-// const START_RESET = 'StartReset';
-// const START_TRADING = 'StartTrading';
-// const CREATE = 'Create';
-// const REDEEM = 'Redeem';
-const TOTAL_SUPPLY = 'TotalSupply';
-// const COMMIT_PRICE = 'CommitPrice';
-// const ACCEPT_PRICE = 'AcceptPrice';
 const TRANSFER = 'Transfer';
 const APPROVAL = 'Approval';
-// const ADD_ADDRESS = 'AddAddress';
-// const UPDATE_ADDRESS = 'UpdateAddress';
-// const REMOVE_ADDRESS = 'RemoveAddress';
-// const SET_VALUE = 'SetValue';
+const UPDATE_ORACLE = 'UpdateOracle';
 const COLLECT_FEE = 'CollectFee';
 
 const STATE_INCEPT_RESET = '0';
 const STATE_TRADING = '1';
-const STATE_PRE_RESET = '2';
-const STATE_UPWARD_RESET = '3';
-const STATE_DOWNWARD_RESET = '4';
-const STATE_PERIODIC_RESET = '5';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-const VM_INVALID_OP_CODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-// const EPSILON = 1e-10;
-// const ethInitPrice = 582;
-// const ethDuoFeeRatio = 800;
-
-// const A_ADDR = '0xa';
-// const B_ADDR = '0xb';
 const DUMMY_ADDR = '0xc';
 
-// const isEqual = (a, b, log = false) => {
-// 	if (log) {m
-// 		console.log(a);
-// 		console.log(b);
-// 	}
-// 	if (Math.abs(Number(b)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
-// 		return Math.abs(Number(a) - Number(b)) / Number(b) <= EPSILON;
-// 	} else {
-// 		return Math.abs(Number(a) - Number(b)) <= EPSILON;
-// 	}
-// };
 
 contract('Custodian', accounts => {
-	let custodianContract, duoContract;
+	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
 	const fc = accounts[1];
-
-	const alice = accounts[2];
-
-	const bob = accounts[3];
-	const charles = accounts[4];
-	const david = accounts[5];
+	const pf1 = accounts[2];
+	const pf2 = accounts[3];
+	const pf3 = accounts[4];
+	const alice = accounts[5];
+	const bob = accounts[6];
+	const charles = accounts[7];
+	const david = accounts[8];
 
 	const initContracts = async () => {
 		duoContract = await DUO.new(
@@ -84,8 +49,13 @@ contract('Custodian', accounts => {
 			}
 		);
 
+		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
+			from: creator
+		});
+
 		custodianContract = await Custodian.new(
 			duoContract.address,
+			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,
 			BeethovenInit.pd,
@@ -96,6 +66,16 @@ contract('Custodian', accounts => {
 			{
 				from: creator
 			}
+		);
+
+		oracleContract = await Magi.new(
+			creator,
+			pf1,
+			pf2,
+			pf3,
+			roleManagerContract.address,
+			MagiInit.pxFetchCoolDown,
+			MagiInit.optCoolDown
 		);
 	};
 
@@ -613,7 +593,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('operator', () => {
+	describe('updateOracle', () => {
 		let newOracleAddr = '0x1111';
 		before(async () => {
 			await initContracts();
@@ -625,12 +605,82 @@ contract('Custodian', accounts => {
 				await custodianContract.updateOracle.call(newOracleAddr, { from: alice });
 				assert.isTrue(false, 'non operator can update address');
 			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_REVERT_MSG,
-					'transaction not reverted'
-				);
+				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
 			}
+		});
+
+		it('operator cannot update non passed contract', async () => {
+			try {
+				await custodianContract.updateOracle.call(oracleContract.address, {
+					from: creator
+				});
+				assert.isTrue(false, 'can update non passed contract');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('operator cannot update oracle whose lastPrice is not set', async () => {
+			try {
+				await roleManagerContract.setPassedContract(oracleContract.address);
+				assert.isTrue(
+					await roleManagerContract.setPassedContract.call(oracleContract.address),
+					'cannot set passedContract'
+				);
+				await custodianContract.updateOracle.call(oracleContract.address, {
+					from: creator
+				});
+
+				assert.isTrue(false, 'can update non passed contract');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('operator can update Oracle', async () => {
+			await roleManagerContract.setPassedContract(oracleContract.address);
+			assert.isTrue(
+				await roleManagerContract.setPassedContract.call(oracleContract.address),
+				'cannot set passedContract'
+			);
+			await oracleContract.setLastPrice(100, 100, pf1);
+			let tx = await custodianContract.updateOracle(oracleContract.address, {
+				from: creator
+			});
+
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === UPDATE_ORACLE,
+				'incorrect event emitted'
+			);
+			assert.isTrue(
+				tx.logs[0].args.newOracleAddress.valueOf() === oracleContract.address,
+				'worng fee parameter'
+			);
+		});
+	});
+
+	describe('updateFeeCollector', () => {
+		before(async () => {
+			await initContracts();
+			await custodianContract.setState(1);
+		});
+
+		it('non allowed cold updator cannot update fc', async () => {
+			try {
+				await custodianContract.updateFeeCollector.call({ from: alice });
+				assert.isTrue(false, 'non operator can update address');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('cold updator can update fc', async () => {
+			await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
+			await roleManagerContract.skipCooldown(1);
+			await custodianContract.skipCooldown(1);
+			let updator = '0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0';
+			let status = await custodianContract.updateFeeCollector.call({ from: updator });
+			assert.isTrue(status, 'not be able to update');
 		});
 	});
 });

@@ -32,7 +32,11 @@ contract MultiSigRoleManager {
 			0xB0f396d1fba9a5C699695B69337635Fad6547B13,
 			0x290FC07db2BF4b385987059E919B78898941102e,
 			0x06C59e1aD2299EA99631850291021eda772715eb,
-			0xd34d743B5bfDF21e0D8829f0eEA52cC493628610
+			0xd34d743B5bfDF21e0D8829f0eEA52cC493628610,
+			0x2B6D101F5e6b4a577e7d053C168AF2AFc883EB9c,
+			0x0A4b6c73CA03762bdA89292A498d231837997F56,
+			0xb2518E8d6F0601696F1BA3a826951bc3Cf6d7ef8,
+			0x48da82056f5c6A1276258dDcd97E4C89640DD9e2
 		],
 		[
 			0xF4463762f1F00E91Bd58619dB6C9EAC470182886,
@@ -40,7 +44,11 @@ contract MultiSigRoleManager {
 			0xEbaBD24F323dCE0B94E094A43b698ED1F43A618D,
 			0x4871c7A6bD3545762c4b1b9edefE40Cf3901DC67,
 			0x7640CeD84F07FAF1C1b972Ea4bb7caCBa0bC7D1f,
-			0xbC71F5Fb6434b18ED98FBbEdd4FE34658775ccC9
+			0xbC71F5Fb6434b18ED98FBbEdd4FE34658775ccC9,
+			0x534758D6F76C7f8994f31fc921353B0c568B1f3a,
+			0x7Ac3E29C0b18c8D93121ab15742228cBaF333Ff0,
+			0x889615F5acFc9627e3D6508d835a0C7CaC3d2BC4,
+			0x2db57203e8B6df80A15ba5df41e236a20C6Baeb8
 		]
 	];
 	// 0 is new address
@@ -108,11 +116,11 @@ contract MultiSigRoleManager {
 	/*
      *  Events
      */
-	event AddAddress(uint poolIndex, address added1, address added2, address newPoolManager);
+	event AddAddress(uint poolIndex, address added1, address added2, address newRoleManager);
 	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
-	event RemoveAddress(uint poolIndex, address addr, address newPoolManager);
-	event AddCustodian(address newCustodianAddr, address newPoolManager);
-	event AddOtherContract(address newContractAddr, address newPoolManager);
+	event RemoveAddress(uint poolIndex, address addr, address newRoleManager);
+	event AddCustodian(address newCustodianAddr, address newRoleManager);
+	event AddOtherContract(address newContractAddr, address newRoleManager);
 	event StartContractVoting(address proposer, address newContractAddr);
 	event TerminateContractVoting(address terminator, address currentCandidate);
 	event StartModeratorVoting(address proposer);
@@ -181,7 +189,6 @@ contract MultiSigRoleManager {
 	}
 
 	/// @dev proposeNewModerator function.
-	/// @param addr new moderator address proposed.
 	function startModeratorVoting() public inColdAddrPool() returns (bool) {
 		candidate = msg.sender;
 		votingStage = VotingStage.Moderator;
@@ -192,7 +199,6 @@ contract MultiSigRoleManager {
 	}
 
 	/// @dev proposeNewModerator function.
-	/// @param addr new moderator address proposed.
 	function vote(bool voteFor) public allowedToVote() returns (bool) {
 		address voter = msg.sender;
 		if (voteFor)
@@ -237,8 +243,8 @@ contract MultiSigRoleManager {
 	returns (bool success) {
 		require(!existingCustodians[custodianAddr]);
 		ICustodian custodian = ICustodian(custodianAddr);
-		require(custodian.totalUser() >= 0);
-		custodian.users(0);
+		require(custodian.totalUsers() >= 0);
+		// custodian.users(0);
 		uint custodianLength = custodianPool.length;
 		if (custodianLength > 0) 
 			replaceModerator();
@@ -247,7 +253,6 @@ contract MultiSigRoleManager {
 			moderator = addrPool[0][index];
 			removeFromPool(0, index);
 		}
-		
 		existingCustodians[custodianAddr] = true;
 		custodianPool.push(custodianAddr);
 		emit AddCustodian(custodianAddr, moderator);
@@ -263,7 +268,6 @@ contract MultiSigRoleManager {
 		only(moderator) 
 		inUpdateWindow() 
 	returns (bool success) {
-		uint custodianLength = custodianPool.length;
 		require(!existingOtherContracts[contractAddr]);		
 		existingOtherContracts[contractAddr] = true;
 		otherContractPool.push(contractAddr);
@@ -301,8 +305,12 @@ contract MultiSigRoleManager {
 	/// @dev provide address to other contracts, such as custodian, oracle and others.
 	/// @param origin the origin who makes request
 	/// @param poolIndex the pool to request address from.
-	function provideAddress(address origin, uint poolIndex) public isValidRequestor(origin) inUpdateWindow() returns (address) {
-		require(addrPool[poolIndex].length > MIN_POOL_SIZE && poolIndex < 2);
+	function provideAddress(address origin, uint poolIndex) 
+		public 
+		isValidRequestor(origin) 
+		inUpdateWindow() 
+	returns (address) {
+		require(addrPool[poolIndex].length > MIN_POOL_SIZE && poolIndex < 2 && custodianPool.length > 0);
 		removeFromPoolByAddr(0, origin);
 		address requestor = msg.sender;
 		uint index = 0;
@@ -340,7 +348,7 @@ contract MultiSigRoleManager {
 
 	/// @dev removeFromPool Function.
 	/// @param poolIndex the pool to request from removal.
-	/// @param idx the index of address to remove
+	/// @param addr the address to remove
 	function removeFromPoolByAddr(uint poolIndex, address addr) internal {
 	 	address[] memory subPool = addrPool[poolIndex];
 		for (uint i = 0; i < subPool.length; i++) {
@@ -369,7 +377,7 @@ contract MultiSigRoleManager {
 	function getNextAddrIndex(uint poolIndex, address custodianAddr) internal returns (uint) {
 		uint prevHashNumber = uint256(keccak256(abi.encodePacked(blockhash(block.number - 1))));
 		ICustodian custodian = ICustodian(custodianAddr);
-		uint userLength = custodian.totalUser();
+		uint userLength = custodian.totalUsers();
 		if(userLength > 255) {
 			address randomUserAddress = custodian.users(prevHashNumber % userLength);
 			return uint256(keccak256(abi.encodePacked(randomUserAddress))) % addrPool[poolIndex].length;

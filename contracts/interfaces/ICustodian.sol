@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 interface ICustodian {
 	function users(uint) external returns(address);
-	function totalUser() external returns (uint);
+	function totalUsers() external returns (uint);
 	function totalSupplyA() external returns (uint);
 	function totalSupplyB() external returns (uint);
 	function balanceOf(uint, address) external returns (uint);

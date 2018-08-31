@@ -26,7 +26,7 @@
 		"tokenName": "Test TokenB",
 		"tokenSymbol": "TKB"
 	},
-	"Pool": {
+	"RoleManager": {
 		"optCoolDown": 86400
 	},
 
