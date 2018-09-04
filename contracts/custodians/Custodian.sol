@@ -91,8 +91,8 @@ contract Custodian is Managed {
 	///	@param fc feeCollector address
 	///	@param comm commission rate
 	///	@param pd period
-	///	@param preResetWaitBlk, 
-	///	@param pxFetchCoolDown,
+	///	@param preResetWaitBlk pre reset waiting block numbers
+	///	@param pxFetchCoolDown price fetching cool down
 	///	@param opt operator
 	///	@param optCoolDown operation cooldown
 	constructor(
@@ -135,10 +135,10 @@ contract Custodian is Managed {
      * ERC token functions
      */
 	/// @dev transferInternal function.
-	/// @param index 
-	/// @param from  
-	/// @param to    
-	/// @param tokens
+	/// @param index 0 is classA , 1 is class B
+	/// @param from  from address
+	/// @param to   to address
+	/// @param tokens num of tokens transferred
 	function transferInternal(uint index, address from, address to, uint tokens) 
 		internal 
 		inState(State.Trading)

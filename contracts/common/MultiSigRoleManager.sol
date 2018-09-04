@@ -21,7 +21,7 @@ contract MultiSigRoleManager {
 	/*
      * Storage
      */
-	VotingStage votingStage;
+	VotingStage public votingStage;
 	address public moderator;
 	// 0 is cold
 	// 1 is hot
@@ -108,25 +108,26 @@ contract MultiSigRoleManager {
 	}
 
 	modifier allowedToVote() {
-		address voter = msg.sender;
-		require(!voted[voter] && addrStatus[voter] == 1);
+		address voterAddr = msg.sender;
+		require(!voted[voterAddr] && addrStatus[voterAddr] == 1);
 		_;
 	}
 
 	/*
      *  Events
      */
-	event AddAddress(uint poolIndex, address added1, address added2, address newRoleManager);
+	event AddAddress(uint poolIndex, address added1, address added2, address newModerator);
 	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
-	event RemoveAddress(uint poolIndex, address addr, address newRoleManager);
-	event AddCustodian(address newCustodianAddr, address newRoleManager);
-	event AddOtherContract(address newContractAddr, address newRoleManager);
+	event RemoveAddress(uint poolIndex, address addr, address newModerator);
+	event AddCustodian(address newCustodianAddr, address newModerator);
+	event AddOtherContract(address newContractAddr, address newModerator);
 	event StartContractVoting(address proposer, address newContractAddr);
 	event TerminateContractVoting(address terminator, address currentCandidate);
 	event StartModeratorVoting(address proposer);
 	event TerminateByTimeStamp(address candidate);
 	event Vote(address voter, address candidate, bool voteFor, uint votedFor, uint votedAgainst);
 	event CompleteVoting(bool isContractVoting, address newAddress);
+	event ReplaceModerator(address preModerator, address currentModerator);
 
 	/*
      * Constructor
@@ -137,11 +138,11 @@ contract MultiSigRoleManager {
 	{	
 		votingStage = VotingStage.NotStarted;
 		moderator = msg.sender;
+		addrStatus[moderator] = 3;
 		for (uint i = 0; i < addrPool[0].length; i++) 
 			addrStatus[addrPool[0][i]] = 1;
 		for (i = 0; i < addrPool[1].length; i++) 
 			addrStatus[addrPool[1][i]] = 2;
-		addrStatus[moderator] = 3;
 		operatorCoolDown = optCoolDown;
 	}
 
@@ -172,11 +173,12 @@ contract MultiSigRoleManager {
 		inVotingStage(VotingStage.Contract) 
 	returns (bool) {
 		votingStage = VotingStage.NotStarted;
-		replaceModerator();
 		emit TerminateContractVoting(moderator, candidate);
+		replaceModerator();
 		return true;
 	}
 
+	/// @dev terminateVoting voting if timeout
 	function terminateByTimeout() public returns (bool) {
 		require(votingStage != VotingStage.NotStarted);
 		uint nowTimestamp = getNowTimestamp();
@@ -199,7 +201,10 @@ contract MultiSigRoleManager {
 	}
 
 	/// @dev proposeNewModerator function.
-	function vote(bool voteFor) public allowedToVote() returns (bool) {
+	function vote(bool voteFor) 
+		public 
+		allowedToVote() 
+	returns (bool) {
 		address voter = msg.sender;
 		if (voteFor)
 			votedFor += 1;
@@ -255,6 +260,7 @@ contract MultiSigRoleManager {
 		}
 		existingCustodians[custodianAddr] = true;
 		custodianPool.push(custodianAddr);
+		addrStatus[custodianAddr] = 3;
 		emit AddCustodian(custodianAddr, moderator);
 		return true;
 	}
@@ -271,6 +277,7 @@ contract MultiSigRoleManager {
 		require(!existingOtherContracts[contractAddr]);		
 		existingOtherContracts[contractAddr] = true;
 		otherContractPool.push(contractAddr);
+		addrStatus[contractAddr] = 3;
 		replaceModerator();
 		emit AddOtherContract(contractAddr, moderator);
 		return true;
@@ -342,7 +349,9 @@ contract MultiSigRoleManager {
 	function replaceModerator() internal {
 		require(custodianPool.length > 0);
 		uint index = getNextAddrIndex(0, custodianPool[custodianPool.length - 1]);
+		address preModerator = moderator;
 		moderator = addrPool[0][index];
+		emit ReplaceModerator(preModerator, moderator);
 		removeFromPool(0, index);
 	}
 
