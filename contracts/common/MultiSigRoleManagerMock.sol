@@ -30,14 +30,19 @@ contract MultiSigRoleManagerMock is MultiSigRoleManager {
 		return timestamp;
 	}
 
-	function getPoolSize(uint index) public view returns (uint) {
-		return addrPool[index].length;
-	}
+	// function getPoolSize(uint index) public view returns (uint) {
+	// 	return addrPool[index].length;
+	// }
 
 	function setVotingStage(uint index) public returns (bool) {
 		if(index == 0) votingStage = VotingStage.NotStarted;
 		else if(index == 1) votingStage = VotingStage.Moderator;
 		else if(index == 2) votingStage = VotingStage.Contract;
+		return true;
+	}
+
+	function setLastOperationTime() public returns(bool) {
+		lastOperationTime = getNowTimestamp();
 		return true;
 	}
 

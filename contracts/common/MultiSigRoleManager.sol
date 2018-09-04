@@ -97,7 +97,7 @@ contract MultiSigRoleManager {
 	modifier inUpdateWindow() {
 		uint currentTime = getNowTimestamp();
 		if (started)
-			require(currentTime - lastOperationTime > operatorCoolDown);
+			require(currentTime - lastOperationTime >= operatorCoolDown);
 		_;
 		lastOperationTime = currentTime;
 	}
@@ -124,7 +124,7 @@ contract MultiSigRoleManager {
 	event StartContractVoting(address proposer, address newContractAddr);
 	event TerminateContractVoting(address terminator, address currentCandidate);
 	event StartModeratorVoting(address proposer);
-	event TerminateByTimeStamp(address candidate);
+	event TerminateByTimeOut(address candidate);
 	event Vote(address voter, address candidate, bool voteFor, uint votedFor, uint votedAgainst);
 	event CompleteVoting(bool isContractVoting, address newAddress);
 	event ReplaceModerator(address preModerator, address currentModerator);
@@ -184,7 +184,7 @@ contract MultiSigRoleManager {
 		uint nowTimestamp = getNowTimestamp();
 		if (nowTimestamp > voteStartTimestamp && nowTimestamp - voteStartTimestamp > VOTE_TIME_OUT) {
 			votingStage = VotingStage.NotStarted;
-			emit TerminateByTimeStamp(candidate);
+			emit TerminateByTimeOut(candidate);
 			return true;
 		} else
 			return false;
@@ -207,7 +207,7 @@ contract MultiSigRoleManager {
 	returns (bool) {
 		address voter = msg.sender;
 		if (voteFor)
-			votedFor += 1;
+			votedFor = votedFor + 1;
 		else
 			votedAgainst += 1;
 		voted[voter] = true;
@@ -255,7 +255,9 @@ contract MultiSigRoleManager {
 			replaceModerator();
 		else {
 			uint index = getNextAddrIndex(0, custodianAddr);
+			address preModerator = moderator;
 			moderator = addrPool[0][index];
+			emit ReplaceModerator(preModerator, moderator);
 			removeFromPool(0, index);
 		}
 		existingCustodians[custodianAddr] = true;
@@ -287,7 +289,11 @@ contract MultiSigRoleManager {
 	/// @param addr1 the first address
 	/// @param addr2 the second address.
 	/// @param poolIndex indicate adding to hot or cold.
-	function addAddress(address addr1, address addr2, uint poolIndex) public only(moderator) inUpdateWindow() returns (bool success) {
+	function addAddress(address addr1, address addr2, uint poolIndex) 
+		public 
+		only(moderator) 
+		inUpdateWindow() 
+	returns (bool success) {
 		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2 && poolIndex < 2);
 		replaceModerator();
 		addrPool[poolIndex].push(addr1);
@@ -397,5 +403,10 @@ contract MultiSigRoleManager {
 	/// @dev get Ethereum blockchain current timestamp
 	function getNowTimestamp() internal view returns (uint) {
 		return now;
+	}
+
+	/// @dev get Pool Size
+	function getPoolSize() public view returns (uint, uint) {
+		return (addrPool[0].length, addrPool[1].length);
 	}
 }
