@@ -1,6 +1,7 @@
 pragma solidity ^0.4.24;
 
 import { Magi } from "./Magi.sol";
+import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract MagiMock is Magi {
 
@@ -30,5 +31,15 @@ contract MagiMock is Magi {
 		lastPrice.timeInSecond = time;
 		lastPrice.source = sender;
 		return true;
+	}
+
+	
+	function setRoleManager(address rm) public returns(bool){
+		roleManagerAddress = rm;
+		return true;
+	}
+
+	function triggerProvideAddr(uint poolIndex) public returns (address) {
+		return IMultiSigManager(roleManagerAddress).provideAddress(msg.sender, poolIndex);
 	}
 }

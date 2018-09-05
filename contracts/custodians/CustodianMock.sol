@@ -1,9 +1,11 @@
 pragma solidity ^0.4.24;
 
 import { Custodian } from "./Custodian.sol";
+import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract CustodianMock is Custodian {
 	uint public timestamp = now;
+	address public roleManagerAddr;
 
 	constructor(
 		address duoTokenAddr,
@@ -69,6 +71,15 @@ contract CustodianMock is Custodian {
 
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
+	}
+
+	function setRoleManager(address rm) public returns(bool){
+		roleManagerAddr = rm;
+		return true;
+	}
+
+	function triggerProvideAddr(uint poolIndex) public returns (address) {
+		return IMultiSigManager(roleManagerAddr).provideAddress(msg.sender, poolIndex);
 	}
 
 }

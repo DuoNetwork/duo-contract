@@ -127,6 +127,7 @@ contract MultiSigRoleManager {
      */
 	event AddAddress(uint poolIndex, address added1, address added2, address newModerator);
 	event RemoveAddress(uint poolIndex, address addr, address newModerator);
+	// event RemoveFromPool(uint poolIndex, address addr);
 	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
 	event AddCustodian(address newCustodianAddr, address newModerator);
 	event AddOtherContract(address newContractAddr, address newModerator);
@@ -335,7 +336,7 @@ contract MultiSigRoleManager {
 	function provideAddress(address origin, uint poolIndex) 
 		public 
 		isValidRequestor(origin) 
-		inUpdateWindow() 
+		// inUpdateWindow() 
 	returns (address) {
 		require(addrPool[poolIndex].length > MIN_POOL_SIZE 
 			&& poolIndex < 2 
@@ -399,6 +400,7 @@ contract MultiSigRoleManager {
 		if (idx < subPool.length - 1)
 			addrPool[poolIndex][idx] = addrPool[poolIndex][subPool.length-1];
 		delete addrPool[poolIndex][subPool.length - 1];
+		// emit RemoveFromPool(poolIndex, addrPool[poolIndex][idx]);
 		addrPool[poolIndex].length--;
 	}
 

@@ -2,9 +2,11 @@ pragma solidity ^0.4.24;
 
 import { MultiSigRoleManager } from "./MultiSigRoleManager.sol";
 
+
 contract MultiSigRoleManagerMock is MultiSigRoleManager {
 
 	uint public timestamp = now;
+	uint public MIN_POOL_SIZE = 5;
 
 	constructor(
 		uint optCoolDown
@@ -48,14 +50,20 @@ contract MultiSigRoleManagerMock is MultiSigRoleManager {
 
 	function setModerator(address addr) public returns(bool) {
 		moderator = addr;
-		addrStatus[addr] = USED_STATUS;
+		addrStatus[addr] = 3;
 		return true;
 	}
 
 	function setPool(uint i, uint j, address addr) public returns(bool) {
 		addrPool[i][j] = addr;
-		addrStatus[addr] = i + 1;
+		addrStatus[addr] = 1;
 		voted[addr] = false;
 		return true; 
 	}
+
+	function setMinPoolSize(uint size) public returns (uint) {
+		MIN_POOL_SIZE = size;
+		return MIN_POOL_SIZE;
+	}
+
 }

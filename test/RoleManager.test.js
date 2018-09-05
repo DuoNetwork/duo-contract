@@ -9,8 +9,7 @@ const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
-const ColdPool = InitParas['ColdPool'];
-const HotPool = InitParas['HotPool'];
+const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 
 // Event
@@ -21,13 +20,14 @@ const EVENT_REPLACE_MODERATOR = 'ReplaceModerator';
 const EVENT_ADD_CUSTODIAN = 'AddCustodian';
 const EVENT_ADD_OTHER_CONTRACT = 'AddOtherContract';
 const EVENT_ADD_ADDRESS = 'AddAddress';
+const EVENT_REMOVE_ADDRESS = 'RemoveAddress';
 
 const STATE_VOTING_NOT_STARTED = '0';
 const STATE_VOTING_MODERATOR = '1';
 const STATE_VOTING_CONTRACT = '2';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-// const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
+const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
 // const DUMMY_ADDR = '0xc';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
@@ -100,6 +100,48 @@ contract('Custodian', accounts => {
 		);
 	};
 
+	const START_CONTRACT_VOTING = async custodianContract => {
+		// console.log('start contract voting');
+		await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
+		await roleManagerContract.skipCooldown(1);
+		await roleManagerContract.setModerator(newModerator);
+		newCustodianContract = await initCustodian();
+		await roleManagerContract.setPassedContract(newCustodianContract.address);
+		return await roleManagerContract.startContractVoting(newCustodianContract.address, {
+			from: newModerator
+		});
+	};
+
+	const START_MODERATOR_VOTING = async () => {
+		await roleManagerContract.setPool(0, 0, alice);
+		let tx = await roleManagerContract.startModeratorVoting({ from: alice });
+		return tx;
+	};
+
+	const SET_POOLS = async (index, addr) => {
+		for (let i = 0; i < addr.length; i++) {
+			await roleManagerContract.setPool(index, i, addr[i]);
+		}
+	};
+
+	const VOTE = async (voters, voteFor) => {
+		assert.isTrue(voters.length <= voteFor.length, 'length not equal');
+		for (let i = 0; i < voters.length; i++) {
+			//let tx =
+			await roleManagerContract.vote(voteFor[i], { from: voters[i] });
+			// console.log(tx);
+			// let votedFor = await roleManagerContract.votedFor.call();
+			// let votedAgainst = await roleManagerContract.votedAgainst.call();
+			// let votingStage = await roleManagerContract.votingStage.call();
+			// console.log(
+			// 	voters[i],
+			// 	votedFor.valueOf(),
+			// 	votedAgainst.valueOf(),
+			// 	votingStage.valueOf()
+			// );
+		}
+	};
+
 	describe('constructor', () => {
 		before(initContracts);
 
@@ -152,48 +194,6 @@ contract('Custodian', accounts => {
 			);
 		});
 	});
-
-	const START_CONTRACT_VOTING = async custodianContract => {
-		// console.log('start contract voting');
-		await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
-		await roleManagerContract.skipCooldown(1);
-		await roleManagerContract.setModerator(newModerator);
-		newCustodianContract = await initCustodian();
-		await roleManagerContract.setPassedContract(newCustodianContract.address);
-		return await roleManagerContract.startContractVoting(newCustodianContract.address, {
-			from: newModerator
-		});
-	};
-
-	const START_MODERATOR_VOTING = async () => {
-		await roleManagerContract.setPool(0, 0, alice);
-		let tx = await roleManagerContract.startModeratorVoting({ from: alice });
-		return tx;
-	};
-
-	const SET_POOLS = async (index, addr) => {
-		for (let i = 0; i < addr.length; i++) {
-			await roleManagerContract.setPool(index, i, addr[i]);
-		}
-	};
-
-	const VOTE = async (voters, voteFor) => {
-		assert.isTrue(voters.length <= voteFor.length, 'length not equal');
-		for (let i = 0; i < voters.length; i++) {
-			//let tx =
-			await roleManagerContract.vote(voteFor[i], { from: voters[i] });
-			// console.log(tx);
-			// let votedFor = await roleManagerContract.votedFor.call();
-			// let votedAgainst = await roleManagerContract.votedAgainst.call();
-			// let votingStage = await roleManagerContract.votingStage.call();
-			// console.log(
-			// 	voters[i],
-			// 	votedFor.valueOf(),
-			// 	votedAgainst.valueOf(),
-			// 	votingStage.valueOf()
-			// );
-		}
-	};
 
 	describe('start Contract voting', () => {
 		beforeEach(initContracts);
@@ -461,17 +461,33 @@ contract('Custodian', accounts => {
 			}
 		});
 
+		it('canot start by without add custodian', async () => {
+			try {
+				await roleManagerContract.startRoleManager({ from: creator });
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+			}
+		});
+
 		it('can start by moderator', async () => {
-			await roleManagerContract.startRoleManager({ from: creator });
+			await roleManagerContract.addCustodian(custodianContract.address, {
+				from: creator
+			});
+			await roleManagerContract.setModerator(newModerator);
+			await roleManagerContract.startRoleManager({ from: newModerator });
 			let started = await roleManagerContract.started.call();
 			assert.isTrue(started.valueOf(), ' not started');
 		});
 
 		it('cannot start if already started', async () => {
 			try {
-				await roleManagerContract.startRoleManager({ from: creator });
+				await roleManagerContract.addCustodian(custodianContract.address, {
+					from: creator
+				});
 				await roleManagerContract.setModerator(newModerator);
 				await roleManagerContract.startRoleManager({ from: newModerator });
+				await roleManagerContract.setModerator(newModerator2);
+				await roleManagerContract.startRoleManager({ from: newModerator2 });
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -625,11 +641,11 @@ contract('Custodian', accounts => {
 	});
 
 	describe('moderator add address', () => {
-		function ADD_ADDR(index)  {
+		function ADD_ADDR(index) {
 			before(async () => {
 				await initContracts();
 			});
-	
+
 			let moderator = creator;
 			it('non moderator cannot add address', async () => {
 				try {
@@ -643,10 +659,12 @@ contract('Custodian', accounts => {
 					);
 				}
 			});
-	
+
 			it('should not add same address', async () => {
 				try {
-					await roleManagerContract.addAddress.call(alice, alice, index, { from: moderator });
+					await roleManagerContract.addAddress.call(alice, alice, index, {
+						from: moderator
+					});
 					assert.isTrue(false, 'can add same address');
 				} catch (err) {
 					assert.equal(
@@ -656,7 +674,7 @@ contract('Custodian', accounts => {
 					);
 				}
 			});
-	
+
 			it('should not add used account', async () => {
 				try {
 					await roleManagerContract.addAddress(pf1, pf2, index, { from: moderator });
@@ -669,7 +687,7 @@ contract('Custodian', accounts => {
 					);
 				}
 			});
-	
+
 			it('should add two different address when custodian pool is empty', async () => {
 				try {
 					await roleManagerContract.addAddress.call(
@@ -686,7 +704,7 @@ contract('Custodian', accounts => {
 					);
 				}
 			});
-	
+
 			it('should notw add two different address within cool down', async () => {
 				await roleManagerContract.addCustodian(custodianContract.address, {
 					from: creator
@@ -709,7 +727,7 @@ contract('Custodian', accounts => {
 					);
 				}
 			});
-	
+
 			it('should add two different address', async () => {
 				await roleManagerContract.skipCooldown(1);
 				let tx = await roleManagerContract.addAddress(
@@ -718,7 +736,7 @@ contract('Custodian', accounts => {
 					index,
 					{ from: newModerator2 }
 				);
-	
+
 				assert.isTrue(
 					tx.logs.length === 2 &&
 						tx.logs[0].event === EVENT_REPLACE_MODERATOR &&
@@ -733,13 +751,19 @@ contract('Custodian', accounts => {
 					'event args is wrong'
 				);
 			});
-	
+
 			it('pool size should be 10 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
 				let poolSize = await roleManagerContract.getPoolSize.call();
 				// console.log(poolSize.valueOf());
 				assert.isTrue(
-					poolSize[0].valueOf() === (index === 0? ColdPool.length.toString(): (ColdPool.length - 2).toString()) &&
-						poolSize[1].valueOf() === (index === 0? HotPool.length.toString(): (HotPool.length + 2).toString()),
+					poolSize[0].valueOf() ===
+						(index === 0
+							? Pool[0].length.toString()
+							: (Pool[0].length - 2).toString()) &&
+						poolSize[1].valueOf() ===
+							(index === 0
+								? Pool[1].length.toString()
+								: (Pool[1].length + 2).toString()),
 					'pool size wrong'
 				);
 				let poolList = [];
@@ -758,12 +782,11 @@ contract('Custodian', accounts => {
 					'pool candidate contains duplicated value'
 				);
 			});
-	
+
 			it('new moderator should be marked as used', async () => {
 				let addStatus = await roleManagerContract.addrStatus.call(newModerator2);
 				assert.isTrue(addStatus.toNumber() === 3, 'new adder not marked as used');
 			});
-
 		}
 
 		describe('addAddr cold', async () => {
@@ -774,166 +797,285 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	// 	describe('poolManger remove from pool', () => {
-	// 		let blockTime;
-	// 		before(async () => {
-	// 			await initContracts();
-	// 			const blockNumber = await web3.eth.getBlockNumber();
-	// 			const block = await web3.eth.getBlock(blockNumber);
-	// 			blockTime = block.timestamp;
-	// 			await beethovenContract.startContract(
-	// 				web3.utils.toWei(ethInitPrice + ''),
-	// 				blockTime - Number(BeethovenInit.period) * 30,
-	// 				A_ADDR,
-	// 				B_ADDR,
-	// 				{
-	// 					from: pf1
-	// 				}
-	// 			);
-	// 		});
+	describe('moderator remove from pool', () => {
+		function REMOVE_ADDR(index) {
+			beforeEach(async () => {
+				await initContracts();
+			});
 
-	// 		let moderator = pm;
-	// 		let nextCandidate;
+			let moderator = creator;
 
-	// 		it('non moderator cannot remove address', async () => {
-	// 			try {
-	// 				await beethovenContract.removeAddress.call(alice, { from: bob });
-	// 				assert.isTrue(false, 'non moderator can remove address');
-	// 			} catch (err) {
-	// 				assert.equal(
-	// 					err.message,
-	// 					'VM Exception while processing transaction: revert',
-	// 					'transaction not reverted'
-	// 				);
-	// 			}
-	// 		});
+			it('non moderator cannot remove address', async () => {
+				try {
+					await roleManagerContract.removeAddress.call(Pool[index][0], 0, {
+						from: alice
+					});
+					assert.isTrue(false, 'non moderator can remove address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
 
-	// 		it('should not remove address not in the pool', async () => {
-	// 			try {
-	// 				await beethovenContract.removeAddress.call(charles, { from: moderator });
-	// 				assert.isTrue(false, 'non moderator can remove address');
-	// 			} catch (err) {
-	// 				assert.equal(
-	// 					err.message,
-	// 					'VM Exception while processing transaction: revert',
-	// 					'transaction not reverted'
-	// 				);
-	// 			}
-	// 		});
+			it('index should not be more than 1', async () => {
+				try {
+					await roleManagerContract.removeAddress.call(Pool[index][0], 2, {
+						from: moderator
+					});
+					assert.isTrue(false, 'non moderator can remove address');
+				} catch (err) {
+					assert.equal(err.message, VM_INVALID_OPCODE_MSG, 'transaction not reverted');
+				}
+			});
 
-	// 		it('moderator should remove address in the pool', async () => {
-	// 			let canRemove = await beethovenContract.removeAddress.call(PoolInit[0], {
-	// 				from: moderator
-	// 			});
-	// 			assert.isTrue(canRemove, 'moderator cannot remove from the pool List');
-	// 			let tx = await beethovenContract.removeAddress(PoolInit[0], { from: moderator });
-	// 			assert.isTrue(
-	// 				tx.logs.length === 1 && tx.logs[0].event === REMOVE_ADDRESS,
-	// 				'not exactly one event emitted'
-	// 			);
-	// 			let args = tx.logs[0].args;
-	// 			let sysAddress = await beethovenContract.getSystemAddresses.call();
-	// 			moderator = sysAddress[IDX_POOL_MANAGER];
-	// 			for (let i = 1; i < PoolInit.length; i++) {
-	// 				let currentCandidate = PoolInit[i];
-	// 				if (currentCandidate != moderator) {
-	// 					nextCandidate = currentCandidate;
-	// 					break;
-	// 				}
-	// 			}
-	// 			assert.isTrue(
-	// 				web3.utils.toChecksumAddress(args['addr']) === PoolInit[0] &&
-	// 					args['newPoolManager'] === moderator,
-	// 				'event args is wrong'
-	// 			);
-	// 		});
+			it('should not remove address not in the pool', async () => {
+				try {
+					await roleManagerContract.removeAddress.call(charles, index, {
+						from: moderator
+					});
+					assert.isTrue(false, 'non moderator can remove address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
 
-	// 		it('pool size should be 4 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
-	// 			let sysStates = await beethovenContract.getSystemStates.call();
-	// 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
-	// 			// check correct poolSize
-	// 			assert.isTrue(poolSize === PoolInit.length - 2, 'cannot remove address');
-	// 			let poolList = [];
-	// 			// check validatdion of address
-	// 			for (let i = 0; i < poolSize; i++) {
-	// 				let addr = await beethovenContract.addrPool.call(i);
-	// 				assert.isTrue(
-	// 					web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
-	// 					' invalid address'
-	// 				);
-	// 				poolList.push(addr);
-	// 			}
-	// 			// check duplication
-	// 			assert.isTrue(
-	// 				new Set(poolList).size === poolList.length,
-	// 				'pool candidate contains duplicated value'
-	// 			);
-	// 		});
+			it('should not remove if custodian pool size less than 1', async () => {
+				try {
+					await roleManagerContract.removeAddress.call(
+						web3.utils.toChecksumAddress(Pool[index][0]),
+						index,
+						{ from: moderator }
+					);
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
 
-	// 		it('removed address should be marked as used', async () => {
-	// 			let addStatus = await beethovenContract.getAddrStatus.call(PoolInit[0]);
-	// 			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
-	// 		});
+			it('should not remove if poolSize is less than threshold', async () => {
+				await roleManagerContract.addCustodian(custodianContract.address, {
+					from: moderator
+				});
+				await roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setModerator(newModerator);
+				await roleManagerContract.setMinPoolSize.call(Pool[index].length);
+				try {
+					await roleManagerContract.removeAddress.call(
+						web3.utils.toChecksumAddress(Pool[index][0]),
+						index,
+						{ from: newModerator }
+					);
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
 
-	// 		it('removed address should be not in the poolList', async () => {
-	// 			let sysStates = await beethovenContract.getSystemStates.call();
-	// 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
-	// 			for (let i = 0; i < poolSize; i++) {
-	// 				let addr = await beethovenContract.addrPool.call(i);
-	// 				assert.isTrue(
-	// 					web3.utils.toChecksumAddress(addr) !==
-	// 						web3.utils.toChecksumAddress(PoolInit[0]),
-	// 					'new adder is still in the pool'
-	// 				);
-	// 			}
-	// 		});
+			it('moderator should remove address in the pool', async () => {
+				await roleManagerContract.addCustodian(custodianContract.address, {
+					from: moderator
+				}); // consume one from coldPool
+				await roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setModerator(newModerator);
+				let tx = await roleManagerContract.removeAddress(Pool[index][0], index, {
+					from: newModerator
+				});
 
-	// 		it('new moderator should be set correctly', async () => {
-	// 			let adderAddr = PoolInit[PoolInit.length - 1];
-	// 			assert.isTrue(
-	// 				web3.utils.toChecksumAddress(adderAddr) ===
-	// 					web3.utils.toChecksumAddress(moderator),
-	// 				'adder address not updated correctly'
-	// 			);
-	// 		});
+				assert.isTrue(
+					tx.logs.length === 2 &&
+						tx.logs[0].event === EVENT_REPLACE_MODERATOR &&
+						tx.logs[1].event === EVENT_REMOVE_ADDRESS,
+					'not exactly one event emitted'
+				);
+				let args = tx.logs[1].args;
+				assert.isTrue(
+					args.poolIndex.valueOf() === index.toString() &&
+						web3.utils.toChecksumAddress(args.addr.valueOf()) ===
+							web3.utils.toChecksumAddress(Pool[index][0]) &&
+						args.newModerator != newModerator,
+					'wrong event arguments'
+				);
+				let currentModerator = web3.utils.toChecksumAddress(
+					tx.logs[0].args.currentModerator
+				);
+				let validatedPool = Pool[0].map(addr => web3.utils.toChecksumAddress(addr));
 
-	// 		it('new moderator should be marked as used', async () => {
-	// 			let addStatus = await beethovenContract.getAddrStatus.call(moderator);
-	// 			assert.isTrue(addStatus.toNumber() === 2, 'new adder not marked as used');
-	// 		});
+				assert.isTrue(validatedPool.includes(currentModerator));
+				let poolSize = await roleManagerContract.getPoolSize.call().valueOf();
+				let length = poolSize[0];
+				for (let i = 1; i < length; i++) {
+					let poolAddr = await roleManagerContract.addrPool.call(0, i);
+					assert.isTrue(web3.utils.toChecksumAddress(poolAddr) != currentModerator);
+				}
+				assert.isTrue(
+					poolSize[index].valueOf() ===
+						(Pool[index].length - (index === 0 ? 3 : 1)).toString(),
+					'cannot remove address'
+				);
 
-	// 		it('new moderator should be removed from the pool', async () => {
-	// 			let sysStates = await beethovenContract.getSystemStates.call();
-	// 			let poolSize = sysStates[IDX_POOL_SIZE].toNumber();
-	// 			for (let i = 0; i < poolSize; i++) {
-	// 				let addr = await beethovenContract.addrPool.call(i);
-	// 				assert.isTrue(
-	// 					web3.utils.toChecksumAddress(addr) !==
-	// 						web3.utils.toChecksumAddress(moderator),
-	// 					'new adder is still in the pool'
-	// 				);
-	// 			}
-	// 		});
+				let addStatus = await roleManagerContract.addrStatus.call(Pool[index][0]);
+				// console.log(addStatus.valueOf());
+				assert.isTrue(addStatus.toNumber() === 3, 'removed adder not marked as used');
 
-	// 		it('new moderator should not remove within coolDown', async () => {
-	// 			try {
-	// 				await beethovenContract.removeAddress.call(nextCandidate, { from: moderator });
-	// 				assert.isTrue(false, 'non moderator can remove address');
-	// 			} catch (err) {
-	// 				assert.equal(
-	// 					err.message,
-	// 					'VM Exception while processing transaction: revert',
-	// 					'transaction not reverted'
-	// 				);
-	// 			}
-	// 		});
+				let addStatusOfNewModerator = await roleManagerContract.addrStatus.call(
+					currentModerator
+				);
+				assert.isTrue(
+					addStatusOfNewModerator.toNumber() === 3,
+					'new adder not marked as used'
+				);
+			});
 
-	// 		it('new moderator should only remove beyond coolDown', async () => {
-	// 			await beethovenContract.skipCooldown(25);
-	// 			let success = await beethovenContract.removeAddress.call(nextCandidate, {
-	// 				from: moderator
-	// 			});
-	// 			assert.isTrue(success, 'cannot add outside cooldown');
-	// 		});
-	// 	});
+			it('new moderator should not remove within coolDown', async () => {
+				await roleManagerContract.addCustodian(custodianContract.address, {
+					from: moderator
+				}); // consume one from coldPool
+				await roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setModerator(newModerator);
+				let tx = await roleManagerContract.removeAddress(Pool[index][0], index, {
+					from: newModerator
+				});
+
+				let currentModerator = web3.utils.toChecksumAddress(
+					tx.logs[0].args.currentModerator
+				);
+				try {
+					await roleManagerContract.removeAddress.call(Pool[index][0], index, {
+						from: currentModerator
+					});
+					// assert.isTrue(false, 'non moderator can remove address');
+				} catch (err) {
+					// console.log(err.message === VM_REVERT_MSG);
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+		}
+
+		describe('remove cold pool', () => {
+			REMOVE_ADDR(0);
+		});
+
+		describe('remove hot pool', () => {
+			REMOVE_ADDR(1);
+		});
+	});
+
+	describe('provideAddress', () => {
+		function PROVIDE_ADDR(index) {
+			beforeEach(async () => {
+				await initContracts();
+			});
+
+			// let moderator = creator;
+			// let index = 0;
+			it('non contract address cannot request provideAddress', async () => {
+				try {
+					await roleManagerContract.provideAddress.call(Pool[0][0], index, {
+						from: alice
+					});
+					assert.isTrue(false, 'non adder can add address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+
+			it('non cold address cannot request provideAddress', async () => {
+				try {
+					await roleManagerContract.provideAddress.call(Pool[1][0], index, {
+						from: custodianContract.address
+					});
+					assert.isTrue(false, 'non adder can add address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+
+			it('should not provideAddr if poolSize below threshold', async () => {
+				await roleManagerContract.setMinPoolSize(10);
+				try {
+					await roleManagerContract.provideAddress.call(Pool[0][0], index, {
+						from: custodianContract.address
+					});
+					assert.isTrue(false, 'non adder can add address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+
+			it('poolIndex should be smaller than 2', async () => {
+				try {
+					await roleManagerContract.provideAddress.call(Pool[0][0], 3, {
+						from: custodianContract.address
+					});
+					assert.isTrue(false, 'non adder can add address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+
+			it('should not add with custodian pool empty', async () => {
+				try {
+					await roleManagerContract.provideAddress.call(Pool[0][0], index, {
+						from: custodianContract.address
+					});
+					assert.isTrue(false, 'non adder can add address');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				}
+			});
+
+			it('custodian contract can provideAddr', async () => {
+				await custodianContract.setRoleManager(roleManagerContract.address);
+				await roleManagerContract.addCustodian(custodianContract.address);
+				roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setPool(0, 0, alice);
+				await roleManagerContract.addrStatus.call(alice);
+				let addr = await custodianContract.triggerProvideAddr.call(index, { from: alice });
+				await custodianContract.triggerProvideAddr(index, { from: alice });
+				let statusAddr = await roleManagerContract.addrStatus.call(addr);
+				let statusAlice = await roleManagerContract.addrStatus.call(alice);
+				assert.isTrue(statusAddr.valueOf() === '3' && statusAlice.valueOf() === '3');
+
+				let validatedPool = Pool[index].map(addr => web3.utils.toChecksumAddress(addr));
+				assert.isTrue(validatedPool.includes(web3.utils.toChecksumAddress(addr)));
+
+				let poolSize = await roleManagerContract.getPoolSize.call();
+				assert.isTrue(
+					poolSize.valueOf()[index].toNumber() === 10 - (index === 0 ? 3 : 1),
+					'poolSize not updated corrctly'
+				);
+			});
+
+			it('other contract can provideAddr', async () => {
+				await oracleContract.setRoleManager(roleManagerContract.address);
+				await roleManagerContract.addCustodian(custodianContract.address);
+				roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setModerator(newModerator);
+				await roleManagerContract.addOtherContracts(oracleContract.address, {
+					from: newModerator
+				});
+				roleManagerContract.skipCooldown(1);
+				await roleManagerContract.setPool(0, 0, alice);
+				let addr = await oracleContract.triggerProvideAddr.call(index, { from: alice });
+				await oracleContract.triggerProvideAddr(index, { from: alice });
+				let statusAddr = await roleManagerContract.addrStatus.call(addr);
+				let statusAlice = await roleManagerContract.addrStatus.call(alice);
+				assert.isTrue(statusAddr.valueOf() === '3' && statusAlice.valueOf() === '3');
+
+				let validatedPool = Pool[index].map(addr => web3.utils.toChecksumAddress(addr));
+				assert.isTrue(validatedPool.includes(web3.utils.toChecksumAddress(addr)));
+
+				let poolSize = await roleManagerContract.getPoolSize.call();
+				assert.isTrue(
+					poolSize.valueOf()[index].toNumber() === 10 - (index === 0 ? 4 : 1),
+					'poolSize not updated corrctly'
+				);
+			});
+		}
+
+		describe('provideAddress cold', () => {
+			PROVIDE_ADDR(0);
+		});
+
+		describe('provideAddress hot', () => {
+			PROVIDE_ADDR(1);
+		});
+	});
 });

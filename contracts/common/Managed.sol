@@ -47,6 +47,13 @@ contract Managed {
 		return true;
 	}
 
+	function updateOperator() public inUpdateWindow() returns (bool) {	
+		address updater = msg.sender;	
+		operator = roleManager.provideAddress(updater, 0);
+		emit UpdateOperator(updater, operator);	
+		return true;	
+	}
+
 	function getNowTimestamp() internal view returns (uint) {
 		return now;
 	}
