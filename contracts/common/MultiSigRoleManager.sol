@@ -13,6 +13,12 @@ contract MultiSigRoleManager {
 	uint constant BP_DENOMINATOR = 10000;
 	uint constant MIN_POOL_SIZE = 5;
 	uint constant VOTE_TIME_OUT = 2 hours;
+	uint constant COLD_POOL_IDX = 0;
+	uint constant HOT_POOL_IDX = 1;
+	uint constant NEW_STATUS = 0;
+	uint constant IN_COLD_POOL_STATUS = 1;
+	uint constant IN_HOT_POOL_STATUS = 2;
+	uint constant USED_STATUS = 3;
 	enum VotingStage {
         NotStarted,
 		Moderator,
@@ -80,17 +86,20 @@ contract MultiSigRoleManager {
 	}
 
 	modifier inColdAddrPool() {
-		require(addrStatus[msg.sender] == 1);
+		require(addrStatus[msg.sender] == IN_COLD_POOL_STATUS);
 		_;
 	}
 
 	modifier inHotAddrPool() {
-		require(addrStatus[msg.sender] == 2);
+		require(addrStatus[msg.sender] == IN_HOT_POOL_STATUS);
 		_;
 	}
 
 	modifier isValidRequestor(address origin) {
-		require((existingCustodians[msg.sender] || existingOtherContracts[msg.sender]) && addrStatus[origin] == 1);
+		address requestorAddr = msg.sender;
+		require((existingCustodians[requestorAddr] 
+		|| existingOtherContracts[requestorAddr]) 
+		&& addrStatus[origin] == IN_COLD_POOL_STATUS);
 		_;
 	}
 
@@ -117,8 +126,8 @@ contract MultiSigRoleManager {
      *  Events
      */
 	event AddAddress(uint poolIndex, address added1, address added2, address newModerator);
-	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
 	event RemoveAddress(uint poolIndex, address addr, address newModerator);
+	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
 	event AddCustodian(address newCustodianAddr, address newModerator);
 	event AddOtherContract(address newContractAddr, address newModerator);
 	event StartContractVoting(address proposer, address newContractAddr);
@@ -138,11 +147,11 @@ contract MultiSigRoleManager {
 	{	
 		votingStage = VotingStage.NotStarted;
 		moderator = msg.sender;
-		addrStatus[moderator] = 3;
-		for (uint i = 0; i < addrPool[0].length; i++) 
-			addrStatus[addrPool[0][i]] = 1;
-		for (i = 0; i < addrPool[1].length; i++) 
-			addrStatus[addrPool[1][i]] = 2;
+		addrStatus[moderator] = USED_STATUS;
+		for (uint i = 0; i < addrPool[COLD_POOL_IDX].length; i++) 
+			addrStatus[addrPool[COLD_POOL_IDX][i]] = IN_COLD_POOL_STATUS;
+		for (i = 0; i < addrPool[HOT_POOL_IDX].length; i++) 
+			addrStatus[addrPool[HOT_POOL_IDX][i]] = IN_HOT_POOL_STATUS;
 		operatorCoolDown = optCoolDown;
 	}
 
@@ -156,9 +165,9 @@ contract MultiSigRoleManager {
 		only(moderator) 
 		inVotingStage(VotingStage.NotStarted) 
 	returns (bool) {
-		require(addrStatus[addr] == 0 );
+		require(addrStatus[addr] == NEW_STATUS);
 		candidate = addr;
-		addrStatus[addr] = 3;
+		addrStatus[addr] = USED_STATUS;
 		votingStage = VotingStage.Contract;
 		replaceModerator();
 		startVoting();
@@ -194,7 +203,7 @@ contract MultiSigRoleManager {
 	function startModeratorVoting() public inColdAddrPool() returns (bool) {
 		candidate = msg.sender;
 		votingStage = VotingStage.Moderator;
-		removeFromPoolByAddr(0, candidate);
+		removeFromPoolByAddr(COLD_POOL_IDX, candidate);
 		startVoting();
 		emit StartModeratorVoting(candidate);
 		return true;
@@ -211,7 +220,7 @@ contract MultiSigRoleManager {
 		else
 			votedAgainst += 1;
 		voted[voter] = true;
-		uint threshold = addrPool[0].length / 2;
+		uint threshold = addrPool[COLD_POOL_IDX].length / 2;
 		emit Vote(voter, candidate, voteFor, votedFor, votedAgainst);
 		if (votedFor > threshold || votedAgainst > threshold) {
 			if (votingStage == VotingStage.Contract) {
@@ -232,54 +241,50 @@ contract MultiSigRoleManager {
      */
 	/// @dev start roleManagerContract.
 	function startRoleManager() public only(moderator) returns (bool) {
-		require(!started);
+		require(!started && custodianPool.length > 0);
 		started = true;
 		return true;
 	}
 
 	/// @dev addCustodian function.
 	/// @param custodianAddr custodian address to add.
-	function addCustodian(
-		address custodianAddr
-		) 
+	function addCustodian(address custodianAddr) 
 		public 
 		only(moderator) 
 		inUpdateWindow() 
 	returns (bool success) {
-		require(!existingCustodians[custodianAddr]);
+		require(!existingCustodians[custodianAddr] && !existingOtherContracts[custodianAddr]);
 		ICustodian custodian = ICustodian(custodianAddr);
 		require(custodian.totalUsers() >= 0);
 		// custodian.users(0);
 		uint custodianLength = custodianPool.length;
 		if (custodianLength > 0) 
 			replaceModerator();
-		else {
-			uint index = getNextAddrIndex(0, custodianAddr);
+		else if (!started) {
+			uint index = getNextAddrIndex(COLD_POOL_IDX, custodianAddr);
 			address preModerator = moderator;
-			moderator = addrPool[0][index];
+			moderator = addrPool[COLD_POOL_IDX][index];
 			emit ReplaceModerator(preModerator, moderator);
-			removeFromPool(0, index);
+			removeFromPool(COLD_POOL_IDX, index);
 		}
 		existingCustodians[custodianAddr] = true;
 		custodianPool.push(custodianAddr);
-		addrStatus[custodianAddr] = 3;
+		addrStatus[custodianAddr] = USED_STATUS;
 		emit AddCustodian(custodianAddr, moderator);
 		return true;
 	}
 
 	/// @dev addOtherContracts function.
 	/// @param contractAddr other contract address to add.
-	function addOtherContracts(
-		address contractAddr
-		) 
+	function addOtherContracts(address contractAddr) 
 		public 
 		only(moderator) 
 		inUpdateWindow() 
 	returns (bool success) {
-		require(!existingOtherContracts[contractAddr]);		
+		require(!existingCustodians[contractAddr] && !existingOtherContracts[contractAddr]);		
 		existingOtherContracts[contractAddr] = true;
 		otherContractPool.push(contractAddr);
-		addrStatus[contractAddr] = 3;
+		addrStatus[contractAddr] = USED_STATUS;
 		replaceModerator();
 		emit AddOtherContract(contractAddr, moderator);
 		return true;
@@ -294,7 +299,10 @@ contract MultiSigRoleManager {
 		only(moderator) 
 		inUpdateWindow() 
 	returns (bool success) {
-		require(addrStatus[addr1] == 0 && addrStatus[addr2] == 0 && addr1 != addr2 && poolIndex < 2);
+		require(addrStatus[addr1] == NEW_STATUS 
+			&& addrStatus[addr2] == NEW_STATUS 
+			&& addr1 != addr2 
+			&& poolIndex < 2);
 		replaceModerator();
 		addrPool[poolIndex].push(addr1);
 		addrStatus[addr1] = poolIndex + 1;
@@ -307,8 +315,14 @@ contract MultiSigRoleManager {
 	/// @dev removeAddress function.
 	/// @param addr the address to remove from
 	/// @param poolIndex the pool to remove from.
-	function removeAddress(address addr, uint poolIndex) public only(moderator) inUpdateWindow() returns (bool success) {
-		require(addrPool[poolIndex].length > MIN_POOL_SIZE && addrStatus[addr] == poolIndex + 1 && poolIndex < 2);
+	function removeAddress(address addr, uint poolIndex) 
+		public 
+		only(moderator) 
+		inUpdateWindow() 
+	returns (bool success) {
+		require(addrPool[poolIndex].length > MIN_POOL_SIZE 
+			&& addrStatus[addr] == poolIndex + 1 
+			&& poolIndex < 2);
 		removeFromPoolByAddr(poolIndex, addr);
 		replaceModerator();
 		emit RemoveAddress(poolIndex, addr, moderator);
@@ -323,8 +337,10 @@ contract MultiSigRoleManager {
 		isValidRequestor(origin) 
 		inUpdateWindow() 
 	returns (address) {
-		require(addrPool[poolIndex].length > MIN_POOL_SIZE && poolIndex < 2 && custodianPool.length > 0);
-		removeFromPoolByAddr(0, origin);
+		require(addrPool[poolIndex].length > MIN_POOL_SIZE 
+			&& poolIndex < 2 
+			&& custodianPool.length > 0);
+		removeFromPoolByAddr(COLD_POOL_IDX, origin);
 		address requestor = msg.sender;
 		uint index = 0;
 		// is custodian
@@ -344,7 +360,7 @@ contract MultiSigRoleManager {
      */
 	 
 	function startVoting() internal {
-		address[] memory coldPool = addrPool[0];
+		address[] memory coldPool = addrPool[COLD_POOL_IDX];
 		for (uint i = 0; i < coldPool.length; i++) 
 			voted[coldPool[i]] = false;
 		votedFor = 0;
@@ -354,11 +370,11 @@ contract MultiSigRoleManager {
 	
 	function replaceModerator() internal {
 		require(custodianPool.length > 0);
-		uint index = getNextAddrIndex(0, custodianPool[custodianPool.length - 1]);
+		uint index = getNextAddrIndex(COLD_POOL_IDX, custodianPool[custodianPool.length - 1]);
 		address preModerator = moderator;
-		moderator = addrPool[0][index];
+		moderator = addrPool[COLD_POOL_IDX][index];
 		emit ReplaceModerator(preModerator, moderator);
-		removeFromPool(0, index);
+		removeFromPool(COLD_POOL_IDX, index);
 	}
 
 	/// @dev removeFromPool Function.
@@ -379,7 +395,7 @@ contract MultiSigRoleManager {
 	/// @param idx the index of address to remove
 	function removeFromPool(uint poolIndex, uint idx) internal {
 	 	address[] memory subPool = addrPool[poolIndex];
-		addrStatus[subPool[idx]] = 3;
+		addrStatus[subPool[idx]] = USED_STATUS;
 		if (idx < subPool.length - 1)
 			addrPool[poolIndex][idx] = addrPool[poolIndex][subPool.length-1];
 		delete addrPool[poolIndex][subPool.length - 1];
@@ -407,6 +423,6 @@ contract MultiSigRoleManager {
 
 	/// @dev get Pool Size
 	function getPoolSize() public view returns (uint, uint) {
-		return (addrPool[0].length, addrPool[1].length);
+		return (addrPool[COLD_POOL_IDX].length, addrPool[HOT_POOL_IDX].length);
 	}
 }

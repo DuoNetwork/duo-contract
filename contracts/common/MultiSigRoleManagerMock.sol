@@ -48,13 +48,13 @@ contract MultiSigRoleManagerMock is MultiSigRoleManager {
 
 	function setModerator(address addr) public returns(bool) {
 		moderator = addr;
-		addrStatus[addr] = 3;
+		addrStatus[addr] = USED_STATUS;
 		return true;
 	}
 
 	function setPool(uint i, uint j, address addr) public returns(bool) {
 		addrPool[i][j] = addr;
-		addrStatus[addr] = 1;
+		addrStatus[addr] = i + 1;
 		voted[addr] = false;
 		return true; 
 	}
