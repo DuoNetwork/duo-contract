@@ -41,13 +41,13 @@ contract('Custodian', accounts => {
 	const pf1 = accounts[2];
 	const pf2 = accounts[3];
 	const pf3 = accounts[4];
-	const alice = accounts[6];
-	const bob = accounts[7];
-	const charles = accounts[8];
-	const david = accounts[9];
-	const eric = accounts[10];
-	const frank = accounts[11];
-	const newModerator = accounts[5];
+	const alice = accounts[5];
+	const bob = accounts[6];
+	const charles = accounts[7];
+	const david = accounts[8];
+	const eric = accounts[9];
+	const frank = accounts[10];
+	const newModerator = accounts[11];
 	const newModerator2 = accounts[12];
 
 	const initContracts = async () => {
