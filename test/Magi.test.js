@@ -83,7 +83,7 @@ contract('Custodian', accounts => {
 	// const david = accounts[8];
 	// const eric = accounts[9];
 	// const frank = accounts[10];
-	// const newModerator = accounts[11];
+	const newModerator = accounts[11];
 	// const newModerator2 = accounts[12];
 
 	const initContracts = async () => {
@@ -253,7 +253,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe.only('commit price', () => {
+	describe('commit price', () => {
 		let firstPeriod;
 		let secondPeriod;
 		let blockTime;
@@ -714,4 +714,32 @@ contract('Custodian', accounts => {
 		});
 
 	});
+
+	describe.only('updatePriceFeed', () => {
+		before(initContracts);
+
+		it('non cold address cannot updatePriceFeed', async () => {
+			try{
+				await oracleContract.updatePriceFeed.call(0, {from : alice});
+			}catch(err){
+				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+			}
+			
+		});
+
+		it('should update priceFeed', async () => {
+			await roleManagerContract.addCustodian(custodianContract.address, {
+				from: creator
+			});
+			await roleManagerContract.setModerator(newModerator);
+			await roleManagerContract.skipCooldown(1);
+			await roleManagerContract.addOtherContracts(oracleContract.address, {
+				from: newModerator
+			});
+			await roleManagerContract.setPool(0,0,alice);
+			await oracleContract.updatePriceFeed.call(0, {from : alice});
+		});
+	});
+
+	
 });

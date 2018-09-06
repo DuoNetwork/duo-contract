@@ -73,7 +73,6 @@ contract Magi is Managed {
 	/*
      * Public Functions
      */
-	
 	function startOracle(
 		uint priceInWei, 
 		uint timeInSecond
@@ -170,6 +169,8 @@ contract Magi is Managed {
 		return true;
 	}
 
+	/*Internal Functions
+     */
 	function acceptPrice(uint priceInWei, uint timeInSecond, address source) internal {
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.timeInSecond = timeInSecond;
@@ -190,9 +191,13 @@ contract Magi is Managed {
 	// end of oracle
 
 	// start of operator function
-	function updatePriceFeed(uint index) inUpdateWindow() public returns (bool) {
+	function updatePriceFeed(uint index) 
+		inUpdateWindow() 
+		public 
+	returns (bool) {
+		require(index < 3);
 		address updater = msg.sender;
-		address newAddr = roleManager.provideAddress(updater, 0);
+		address newAddr = roleManager.provideAddress(updater, 1);
 		if(index == 0) {
 			priceFeed1 = newAddr;
 		} else if(index == 1){
