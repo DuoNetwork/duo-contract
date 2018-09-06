@@ -336,7 +336,7 @@ contract MultiSigRoleManager {
 	function provideAddress(address origin, uint poolIndex) 
 		public 
 		isValidRequestor(origin) 
-		// inUpdateWindow() 
+		inUpdateWindow() 
 	returns (address) {
 		require(addrPool[poolIndex].length > MIN_POOL_SIZE 
 			&& poolIndex < 2 
