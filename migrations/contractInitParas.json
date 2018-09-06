@@ -32,7 +32,7 @@
 
 	"Magi": {
 		"pxCoolDown": 3000,
-		"optColDown": 86400
+		"optCoolDown": 86400
 	},
 	"Custodian": {
 		"commissionRateInBP": 100

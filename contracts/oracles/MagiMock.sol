@@ -4,6 +4,7 @@ import { Magi } from "./Magi.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract MagiMock is Magi {
+	uint public timestamp = now;
 
 	constructor(
 		address opt,
@@ -41,5 +42,16 @@ contract MagiMock is Magi {
 
 	function triggerProvideAddr(uint poolIndex) public returns (address) {
 		return IMultiSigManager(roleManagerAddress).provideAddress(msg.sender, poolIndex);
+	}
+
+	function setTimestamp(uint ts) public {
+		timestamp = ts;
+	}
+	function getNowTimestamp() internal view returns (uint) {
+		return timestamp;
+	}
+
+	function skipCooldown(uint numOfPeriods) public {
+		timestamp = timestamp + (1 hours * numOfPeriods);
 	}
 }

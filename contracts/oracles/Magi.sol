@@ -3,22 +3,25 @@ import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
+/// @title Magi - oracle contract accepts price commit
+/// @author duo.network
 contract Magi is Managed {
 	using SafeMath for uint;
 
+	/*
+     * Storage
+     */
 	struct Price {
 		uint priceInWei;
 		uint timeInSecond;
 		address source;
 	}
-
-	address public priceFeed1; 
-	address public priceFeed2; 
-	address public priceFeed3;
-
 	Price public firstPrice;
 	Price public secondPrice;
 	Price public lastPrice;
+	address public priceFeed1; 
+	address public priceFeed2; 
+	address public priceFeed3;
 	uint public priceTolInBP = 500; 
 	uint public priceFeedTolInBP = 100;
 	uint public priceFeedTimeTol = 1 minutes;
@@ -26,18 +29,25 @@ contract Magi is Managed {
 	uint public numOfPrices = 0;
 	bool public started = false;
 
-
+	/*
+     * Modifier
+     */
 	modifier isPriceFeed() {
 		require(msg.sender == priceFeed1 || msg.sender == priceFeed2 || msg.sender == priceFeed3);
 		_;
 	}
 
-	// state events
+	/*
+     * Events
+     */
 	event CommitPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender, uint index);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, address sender);
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event UpdatePriceFeed(address updater, address newPriceFeed);
 
+	/*
+     * Constructor
+     */
 	constructor(
 		address opt,
 		address pf1,
@@ -48,7 +58,7 @@ contract Magi is Managed {
 		uint optCoolDown
 		) 
 		public
-		Managed(roleManagerAddress, opt, optCoolDown) 
+		Managed(roleManagerAddr, opt, optCoolDown) 
 	{
 		priceFeed1 = pf1;
 		priceFeed2 = pf2;
@@ -59,6 +69,11 @@ contract Magi is Managed {
 		emit UpdateRoleManager(roleManagerAddress);
 	}
 
+
+	/*
+     * Public Functions
+     */
+	
 	function startOracle(
 		uint priceInWei, 
 		uint timeInSecond
@@ -68,8 +83,6 @@ contract Magi is Managed {
 		returns (bool success) 
 	{
 		require(!started && timeInSecond <= getNowTimestamp());
-		
-		
 		lastPrice.timeInSecond = timeInSecond;
 		lastPrice.priceInWei = priceInWei;
 		lastPrice.source = msg.sender;
@@ -89,7 +102,7 @@ contract Magi is Managed {
 		isPriceFeed()
 		returns (bool success)
 	{	
-		require(started && timeInSecond <= getNowTimestamp() && timeInSecond > lastPrice.timeInSecond.add(priceUpdateCoolDown));
+		require(started && timeInSecond <= getNowTimestamp() && timeInSecond >= lastPrice.timeInSecond.add(priceUpdateCoolDown));
 		uint priceDiff;
 		if (numOfPrices == 0) {
 			priceDiff = priceInWei.diff(lastPrice.priceInWei);
