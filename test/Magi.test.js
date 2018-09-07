@@ -12,45 +12,19 @@ const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 
-const STATE_TRADING = '1';
-const STATE_PRE_RESET = '2';
-const STATE_UPWARD_RESET = '3';
-const STATE_DOWNWARD_RESET = '4';
-const STATE_PERIODIC_RESET = '5';
-
-const IDX_FIRST_PX = 1;
-const IDX_FIRST_TS = 2;
-
-const IDX_SECOND_PX = 4;
-const IDX_SECOND_TS = 5;
-// const IDX_RESET_ADDR = 6;
-const IDX_RESET_PX = 7;
-const IDX_RESET_TS = 8;
-// const IDX_LAST_ADDR = 9;
-const IDX_LAST_PX = 10;
-const IDX_LAST_TS = 11;
-
 // Event
 const EVENT_ACCEPT_PRICE = 'AcceptPrice';
 const EVENT_COMMIT_PRICE = 'CommitPrice';
-// const EVENT_TERMINATE_TIMEOUT = 'TerminateByTimeStamp';
-// const EVENT_REPLACE_MODERATOR = 'ReplaceModerator';
-// const EVENT_ADD_CUSTODIAN = 'AddCustodian';
-// const EVENT_ADD_OTHER_CONTRACT = 'AddOtherContract';
-// const EVENT_ADD_ADDRESS = 'AddAddress';
-// const EVENT_REMOVE_ADDRESS = 'RemoveAddress';
+const EVENT_UPDATE_PF = 'UpdatePriceFeed';
+const EVENT_SET_VALUE = 'SetValue';
 
-// const STATE_VOTING_NOT_STARTED = '0';
-// const STATE_VOTING_MODERATOR = '1';
-// const STATE_VOTING_CONTRACT = '2';
 
 const EPSILON = 1e-10;
 const ethInitPrice = 582;
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-// const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
-// // const DUMMY_ADDR = '0xc';
-// const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
+
+let validHotPool = Pool[1].map(addr => web3.utils.toChecksumAddress(addr));
 
 const isEqual = (a, b, log = false) => {
 	if (log) {
@@ -64,11 +38,6 @@ const isEqual = (a, b, log = false) => {
 	}
 };
 
-const assertState = async state => {
-	let sysStates = await oracleContract.getSystemStates.call();
-	assert.equal(sysStates[IDX_STATE].valueOf(), state, 'state is wrong');
-};
-
 contract('Custodian', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
@@ -78,7 +47,7 @@ contract('Custodian', accounts => {
 	const pf2 = accounts[3];
 	const pf3 = accounts[4];
 	const alice = accounts[5];
-	// const bob = accounts[6];
+	const bob = accounts[6];
 	// const charles = accounts[7];
 	// const david = accounts[8];
 	// const eric = accounts[9];
@@ -199,14 +168,14 @@ contract('Custodian', accounts => {
 
 		it('startTime should be less than blockchain time', async () => {
 			let blockTime = await oracleContract.timestamp.call();
-	
-			try{
+
+			try {
 				await oracleContract.startOracle.call(
 					web3.utils.toWei(startPrice + '', 'ether'),
 					blockTime.valueOf() + 10,
 					{ from: pf1 }
 				);
-			}catch (err) {
+			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
 		});
@@ -221,35 +190,34 @@ contract('Custodian', accounts => {
 			let started = await oracleContract.started.call();
 			let lastPrice = await oracleContract.lastPrice.call();
 			assert.isTrue(started.valueOf(), 'not started');
-			assert.isTrue(lastPrice[0].valueOf() === web3.utils.toWei(startPrice + '', 'ether') && 
-			lastPrice[1].valueOf() === blockTime.valueOf() &&
-			lastPrice[2].valueOf() === pf1,
-			'initial states not set correctly');
-
-			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ACCEPT_PRICE);
 			assert.isTrue(
-				tx.logs[0].args.priceInWei.valueOf() ===web3.utils.toWei(startPrice + '', 'ether') && 
-				tx.logs[0].args.timeInSecond.valueOf() === blockTime.valueOf() &&
-				tx.logs[0].args.sender === pf1
-			
+				lastPrice[0].valueOf() === web3.utils.toWei(startPrice + '', 'ether') &&
+					lastPrice[1].valueOf() === blockTime.valueOf() &&
+					lastPrice[2].valueOf() === pf1,
+				'initial states not set correctly'
 			);
 
-
+			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PRICE);
+			assert.isTrue(
+				tx.logs[0].args.priceInWei.valueOf() ===
+					web3.utils.toWei(startPrice + '', 'ether') &&
+					tx.logs[0].args.timeInSecond.valueOf() === blockTime.valueOf() &&
+					tx.logs[0].args.sender === pf1
+			);
 		});
 
 		it('cannot start once has been started', async () => {
 			let blockTime = await oracleContract.timestamp.call();
-			try{
+			try {
 				await oracleContract.startOracle.call(
 					web3.utils.toWei(startPrice + '', 'ether'),
 					blockTime.valueOf(),
 					{ from: pf1 }
 				);
 				assert.isTrue(false, 'not reverted');
-			}catch(err){
+			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
-
 		});
 	});
 
@@ -257,7 +225,7 @@ contract('Custodian', accounts => {
 		let firstPeriod;
 		let secondPeriod;
 		let blockTime;
-	
+
 		before(async () => {
 			await initContracts();
 			blockTime = await oracleContract.timestamp.call();
@@ -269,7 +237,7 @@ contract('Custodian', accounts => {
 				}
 			);
 		});
-	
+
 		it('non pf address cannot call commitPrice method', async () => {
 			try {
 				await oracleContract.commitPrice.call(web3.utils.toWei('400'), blockTime, {
@@ -280,7 +248,7 @@ contract('Custodian', accounts => {
 				assert.equal(err.message, VM_REVERT_MSG, '');
 			}
 		});
-	
+
 		it('should accept first price arrived if it is not too far away', async () => {
 			await oracleContract.skipCooldown(1);
 			firstPeriod = await oracleContract.timestamp.call();
@@ -314,7 +282,7 @@ contract('Custodian', accounts => {
 				'sender is not updated correctly'
 			);
 		});
-	
+
 		it('should not accept first price arrived if it is too far away', async () => {
 			await oracleContract.skipCooldown(1);
 			firstPeriod = await oracleContract.timestamp.call();
@@ -345,28 +313,24 @@ contract('Custodian', accounts => {
 				'first price is not recorded'
 			);
 		});
-	
+
 		it('should reject price from the same sender within cool down', async () => {
 			try {
-				await oracleContract.commitPrice(
-					web3.utils.toWei('570'),
-					firstPeriod.toNumber(),
-					{
-						from: pf1
-					}
-				);
-	
+				await oracleContract.commitPrice(web3.utils.toWei('570'), firstPeriod.toNumber(), {
+					from: pf1
+				});
+
 				assert.isTrue(false, 'the price is not rejected');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'the VM is not reverted');
 			}
 		});
-	
+
 		it('should accept second price arrived if second price timed out and sent by the same address as first price', async () => {
 			await oracleContract.skipCooldown(1);
-	
+
 			secondPeriod = await oracleContract.timestamp.call();
-	
+
 			let tx = await oracleContract.commitPrice(
 				web3.utils.toWei('550'),
 				secondPeriod.toNumber(),
@@ -389,17 +353,17 @@ contract('Custodian', accounts => {
 				'source is not updated correctly'
 			);
 		});
-	// });
-	
+		// });
+
 		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
-	
+
 			firstPeriod = await oracleContract.timestamp.call();
 			await oracleContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
 				from: pf1
 			});
-	
+
 			// second price
 			await oracleContract.skipCooldown(1);
 			secondPeriod = await oracleContract.timestamp.call();
@@ -425,18 +389,14 @@ contract('Custodian', accounts => {
 				'source not updated correctly'
 			);
 		});
-	
+
 		it('should accept first price arrived if second price is close to it and within cool down', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
 			firstPeriod = await oracleContract.timestamp.call();
-			await oracleContract.commitPrice(
-				web3.utils.toWei('550'),
-				firstPeriod.toNumber() - 10,
-				{
-					from: pf1
-				}
-			);
+			await oracleContract.commitPrice(web3.utils.toWei('550'), firstPeriod.toNumber() - 10, {
+				from: pf1
+			});
 			// second price
 			let tx = await oracleContract.commitPrice(
 				web3.utils.toWei('555'),
@@ -461,7 +421,7 @@ contract('Custodian', accounts => {
 				'source not updated correctly'
 			);
 		});
-	
+
 		it('should wait for third price if first and second do not agree', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
@@ -501,40 +461,32 @@ contract('Custodian', accounts => {
 				'second price is not recorded'
 			);
 		});
-	
+
 		it('should reject price from first sender within cool down', async () => {
 			// third price
 			try {
-				await oracleContract.commitPrice(
-					web3.utils.toWei('500'),
-					firstPeriod.toNumber(),
-					{
-						from: pf1
-					}
-				);
-	
+				await oracleContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+					from: pf1
+				});
+
 				assert.isTrue(false, 'third price is not rejected');
 			} catch (err) {
 				assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected');
 			}
 		});
-	
+
 		it('should reject price from second sender within cool down', async () => {
 			// third price
 			try {
-				await oracleContract.commitPrice(
-					web3.utils.toWei('500'),
-					firstPeriod.toNumber(),
-					{
-						from: pf2
-					}
-				);
+				await oracleContract.commitPrice(web3.utils.toWei('500'), firstPeriod.toNumber(), {
+					from: pf2
+				});
 				assert.isTrue(false, 'third price is not rejected');
 			} catch (err) {
 				assert.isTrue(err.message === VM_REVERT_MSG, 'third price is not rejected');
 			}
 		});
-	
+
 		it('should accept first price arrived if third price timed out and within cool down', async () => {
 			let tx = await oracleContract.commitPrice(
 				web3.utils.toWei('500'),
@@ -558,12 +510,12 @@ contract('Custodian', accounts => {
 				'source not updated correctly'
 			);
 		});
-	
+
 		it('should accept median price if third price does not time out', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
 			firstPeriod = await oracleContract.timestamp.call();
-	
+
 			await oracleContract.commitPrice(
 				web3.utils.toWei('550'),
 				firstPeriod.toNumber() - 300,
@@ -602,12 +554,12 @@ contract('Custodian', accounts => {
 				'source not updated correctly'
 			);
 		});
-	
+
 		it('should accept third price arrived if it is from first or second sender and is after cool down', async () => {
 			await oracleContract.skipCooldown(1);
-	
+
 			firstPeriod = await oracleContract.timestamp.call();
-	
+
 			await oracleContract.commitPrice(
 				web3.utils.toWei('500'),
 				firstPeriod.toNumber() - 300,
@@ -626,7 +578,7 @@ contract('Custodian', accounts => {
 			// //third price
 			await oracleContract.skipCooldown(1);
 			secondPeriod = await oracleContract.timestamp.call();
-	
+
 			let tx = await oracleContract.commitPrice(
 				web3.utils.toWei('520'),
 				secondPeriod.toNumber(),
@@ -670,7 +622,7 @@ contract('Custodian', accounts => {
 			);
 			// // //third price
 			await oracleContract.skipCooldown(1);
-	
+
 			secondPeriod = await oracleContract.timestamp.call();
 			let tx = await oracleContract.commitPrice(
 				web3.utils.toWei('520'),
@@ -694,11 +646,11 @@ contract('Custodian', accounts => {
 				'source not updated correctly'
 			);
 		});
-	
+
 		it('should not allow price commit during cool down period', async () => {
 			try {
 				await oracleContract.skipCooldown(1);
-	
+
 				firstPeriod = await oracleContract.timestamp.call();
 				await oracleContract.commitPrice(
 					web3.utils.toWei('400'),
@@ -712,34 +664,170 @@ contract('Custodian', accounts => {
 				assert.equal(err.message, VM_REVERT_MSG, 'can commit price within cooldown period');
 			}
 		});
-
 	});
 
-	describe.only('updatePriceFeed', () => {
+	describe('updatePriceFeed', () => {
 		before(initContracts);
 
-		it('non cold address cannot updatePriceFeed', async () => {
-			try{
-				await oracleContract.updatePriceFeed.call(0, {from : alice});
-			}catch(err){
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
-			}
-			
+		function UPDATE_PF(index) {
+			before(initContracts);
+			it('non cold address cannot updatePriceFeed', async () => {
+				try {
+					await oracleContract.updatePriceFeed.call(0, { from: alice });
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				}
+			});
+			it('should update priceFeed', async () => {
+				// let index = 0;
+				await roleManagerContract.addCustodian(custodianContract.address, {
+					from: creator
+				});
+				await roleManagerContract.setModerator(newModerator);
+				await roleManagerContract.skipCooldown(1);
+				await roleManagerContract.addOtherContracts(oracleContract.address, {
+					from: newModerator
+				});
+				await roleManagerContract.setPool(0, 0, alice);
+				let tx = await oracleContract.updatePriceFeed(index, { from: alice });
+
+				let newFeedAddr;
+				switch (index) {
+					case 0:
+						newFeedAddr = await oracleContract.priceFeed1.call();
+						break;
+					case 1:
+						newFeedAddr = await oracleContract.priceFeed2.call();
+						break;
+					case 2:
+						newFeedAddr = await oracleContract.priceFeed3.call();
+						break;
+					default:
+						assert.isTrue(false, 'wrong argument');
+				}
+				// console.log(addr.valueOf(), newFeedAddr.valueOf());
+				assert.isTrue(validHotPool.includes(web3.utils.toChecksumAddress(newFeedAddr)));
+				let statusOfAlice = await roleManagerContract.addrStatus.call(alice);
+				let statusOfNewAddr = await roleManagerContract.addrStatus.call(newFeedAddr);
+				assert.isTrue(
+					statusOfAlice.valueOf() === '3' && statusOfNewAddr.valueOf() === '3',
+					'status updated incorrectly'
+				);
+
+				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATE_PF);
+				assert.isTrue(
+					(tx.logs[0].args.updater =
+						alice && tx.logs[0].args.newPriceFeed === newFeedAddr.valueOf())
+				);
+			});
+
+			it('should not update priceFeed in cooldown period', async () => {
+				await roleManagerContract.setPool(0, 0, bob);
+				try {
+					await oracleContract.updatePriceFeed(index, { from: bob });
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				}
+			});
+		}
+
+		describe('updatePF1', () => {
+			UPDATE_PF(0);
 		});
 
-		it('should update priceFeed', async () => {
-			await roleManagerContract.addCustodian(custodianContract.address, {
-				from: creator
-			});
-			await roleManagerContract.setModerator(newModerator);
-			await roleManagerContract.skipCooldown(1);
-			await roleManagerContract.addOtherContracts(oracleContract.address, {
-				from: newModerator
-			});
-			await roleManagerContract.setPool(0,0,alice);
-			await oracleContract.updatePriceFeed.call(0, {from : alice});
+		describe('updatePF2', () => {
+			UPDATE_PF(1);
+		});
+		describe('updatePF3', () => {
+			UPDATE_PF(2);
 		});
 	});
 
+	describe('setValue', () => {
+		function SET_VALUE(index, value) {
+			before(initContracts);
+			it('non operator cannot setValue', async () => {
+				try {
+					await oracleContract.setValue(index,value ,  { from: alice });
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				}
+			});
 	
+			it('value should be updated correctly', async () => {
+				let oldValue;
+				let newValue;
+				let tx;
+				switch (index) {
+					case 0:
+						oldValue = await oracleContract.priceTolInBP.call();
+						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						newValue = await oracleContract.priceTolInBP.call();
+						break;
+					case 1:
+						oldValue = await oracleContract.priceFeedTolInBP.call();
+						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						newValue = await oracleContract.priceFeedTolInBP.call();
+						break;
+					case 2:
+						oldValue = await oracleContract.priceFeedTimeTol.call();
+						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						newValue = await oracleContract.priceFeedTimeTol.call();
+						break;
+					case 3:
+						oldValue = await oracleContract.priceUpdateCoolDown.call();
+						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						newValue = await oracleContract.priceUpdateCoolDown.call();
+						break;
+					default:
+						try{
+							await oracleContract.setValue(index, value ,  { from: creator });
+							assert.isTrue(false, 'wrong argument');
+						}catch(err){
+							assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+	
+						}
+						break;
+						
+				}
+				assert.isTrue(newValue.valueOf() === value + '');
+	
+				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE);
+	
+				assert.isTrue(
+					tx.logs[0].args.index.valueOf() === index + '' &&
+					tx.logs[0].args.oldValue.valueOf() === oldValue.valueOf() + '' &&
+					tx.logs[0].args.newValue.valueOf() === value + '', 'event argument wrong'
+				);
+				
+				
+			});
+	
+			it('cannot update within cool down', async () => {
+				try {
+					await oracleContract.setValue(index,value ,  { from: creator });
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				}
+			});
+		
+
+		}
+
+		describe('set priceTolInBP', () => {
+			SET_VALUE(0, 100);
+		});
+
+		describe('set priceFeedTolInBP', () => {
+			SET_VALUE(1, 200);
+		});
+
+		describe('set priceFeedTimeTol', () => {
+			SET_VALUE(2, 300);
+		});
+
+		describe('set priceUpdateCoolDown', () => {
+			SET_VALUE(3, 400);
+		});
+	});
 });
