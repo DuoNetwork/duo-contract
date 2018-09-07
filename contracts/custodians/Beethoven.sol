@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
+import { IMagi } from "../interfaces/IMagi.sol";
 import { Custodian } from "./Custodian.sol";
 
 contract Beethoven is Custodian {
@@ -90,7 +90,7 @@ contract Beethoven is Custodian {
 		// duoToken = IERC20(duoAddress);
 		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
-		oracle = IOracle(oracleAddress);
+		oracle = IMagi(oracleAddress);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;

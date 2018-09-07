@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
+import { IMagi } from "../interfaces/IMagi.sol";
 import { Managed } from "../common/Managed.sol";
 
 /// @title Custodian - every derivative contract should has basic custodian properties
@@ -26,7 +26,7 @@ contract Custodian is Managed {
      * Storage
      */
 	IERC20 duoToken;
-	IOracle oracle;
+	IMagi oracle;
 	State public state;
 	address public feeCollector;
 	address public duoTokenAddress;
@@ -261,7 +261,7 @@ contract Custodian is Managed {
 	returns (bool) {
 		require(roleManager.passedContract(newOracleAddr));
 		oracleAddress = newOracleAddr;
-		oracle = IOracle(oracleAddress);
+		oracle = IMagi(oracleAddress);
 		(uint lastPrice, uint lastPriceTime) = oracle.getLastPrice();
 		require(lastPrice > 0 && lastPriceTime > 0);
 		emit UpdateOracle(newOracleAddr);
