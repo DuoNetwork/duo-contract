@@ -18,11 +18,9 @@ const EVENT_COMMIT_PRICE = 'CommitPrice';
 const EVENT_UPDATE_PF = 'UpdatePriceFeed';
 const EVENT_SET_VALUE = 'SetValue';
 
-
 const EPSILON = 1e-10;
 const ethInitPrice = 582;
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-
 
 let validHotPool = Pool[1].map(addr => web3.utils.toChecksumAddress(addr));
 
@@ -231,7 +229,7 @@ contract('Custodian', accounts => {
 			blockTime = await oracleContract.timestamp.call();
 			await oracleContract.startOracle(
 				web3.utils.toWei(ethInitPrice + ''),
-				blockTime - Number(BeethovenInit.period) * 10,
+				blockTime - Number(BeethovenInit.pd) * 10,
 				{
 					from: pf1
 				}
@@ -666,6 +664,31 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe('getLastPrice', () => {
+		let blockTime;
+		before(async () => {
+			await initContracts();
+			blockTime = await oracleContract.timestamp.call();
+			await oracleContract.startOracle(
+				web3.utils.toWei(ethInitPrice + ''),
+				blockTime.valueOf() - Number(BeethovenInit.pd),
+				{
+					from: pf1
+				}
+			);
+		});
+
+		it('should getLastPrice', async () => {
+			let lastPrices = await oracleContract.getLastPrice.call();
+			assert.isTrue(
+				lastPrices[0].valueOf() === web3.utils.toWei(ethInitPrice + '') &&
+					lastPrices[1].valueOf() ===
+						(blockTime.valueOf() - Number(BeethovenInit.pd)).toString(),
+				'wrong price'
+			);
+		});
+	});
+
 	describe('updatePriceFeed', () => {
 		before(initContracts);
 
@@ -748,12 +771,12 @@ contract('Custodian', accounts => {
 			before(initContracts);
 			it('non operator cannot setValue', async () => {
 				try {
-					await oracleContract.setValue(index,value ,  { from: alice });
+					await oracleContract.setValue(index, value, { from: alice });
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
 			});
-	
+
 			it('value should be updated correctly', async () => {
 				let oldValue;
 				let newValue;
@@ -761,57 +784,52 @@ contract('Custodian', accounts => {
 				switch (index) {
 					case 0:
 						oldValue = await oracleContract.priceTolInBP.call();
-						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						tx = await oracleContract.setValue(index, value, { from: creator });
 						newValue = await oracleContract.priceTolInBP.call();
 						break;
 					case 1:
 						oldValue = await oracleContract.priceFeedTolInBP.call();
-						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						tx = await oracleContract.setValue(index, value, { from: creator });
 						newValue = await oracleContract.priceFeedTolInBP.call();
 						break;
 					case 2:
 						oldValue = await oracleContract.priceFeedTimeTol.call();
-						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						tx = await oracleContract.setValue(index, value, { from: creator });
 						newValue = await oracleContract.priceFeedTimeTol.call();
 						break;
 					case 3:
 						oldValue = await oracleContract.priceUpdateCoolDown.call();
-						tx = await oracleContract.setValue(index, value ,  { from: creator });
+						tx = await oracleContract.setValue(index, value, { from: creator });
 						newValue = await oracleContract.priceUpdateCoolDown.call();
 						break;
 					default:
-						try{
-							await oracleContract.setValue(index, value ,  { from: creator });
+						try {
+							await oracleContract.setValue(index, value, { from: creator });
 							assert.isTrue(false, 'wrong argument');
-						}catch(err){
+						} catch (err) {
 							assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
-	
 						}
 						break;
-						
 				}
 				assert.isTrue(newValue.valueOf() === value + '');
-	
+
 				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE);
-	
+
 				assert.isTrue(
 					tx.logs[0].args.index.valueOf() === index + '' &&
-					tx.logs[0].args.oldValue.valueOf() === oldValue.valueOf() + '' &&
-					tx.logs[0].args.newValue.valueOf() === value + '', 'event argument wrong'
+						tx.logs[0].args.oldValue.valueOf() === oldValue.valueOf() + '' &&
+						tx.logs[0].args.newValue.valueOf() === value + '',
+					'event argument wrong'
 				);
-				
-				
 			});
-	
+
 			it('cannot update within cool down', async () => {
 				try {
-					await oracleContract.setValue(index,value ,  { from: creator });
+					await oracleContract.setValue(index, value, { from: creator });
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
 			});
-		
-
 		}
 
 		describe('set priceTolInBP', () => {
