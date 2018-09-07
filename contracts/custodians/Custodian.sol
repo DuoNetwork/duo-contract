@@ -38,7 +38,7 @@ contract Custodian is Managed {
 	mapping(address => uint)[2] public balanceOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
-	mapping (address => uint) existingUsers;
+	mapping (address => uint) public existingUsers;
 	uint public ethFeeBalanceInWei;
 	uint public navAInWei;
 	uint public navBInWei;

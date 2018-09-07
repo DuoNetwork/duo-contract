@@ -4,14 +4,18 @@ import { IERC20 } from "../interfaces/IERC20.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
 
+/// @title Beethoven - dual class token contract
+/// @author duo.network
 contract Beethoven is Custodian {
+	/*
+     * Storage
+     */
 	enum ResetState {
 		UpwardReset,
 		DownwardReset,
 		PeriodicReset
 	}
 
-	
 	ResetState resetState;
 	uint public alphaInBP;
 	uint public betaInWei = WEI_DENOMINATOR;
@@ -29,9 +33,14 @@ contract Beethoven is Custodian {
 	uint newBFromAPerA;
 	uint newBFromBPerB;
 
-	// admin events
+	/*
+     * Events
+     */
 	event SetValue(uint index, uint oldValue, uint newValue);
 	
+	/*
+     * Constructor
+     */
 	constructor(
 		address duoTokenAddr,
 		address roleManagerAddr,
@@ -72,12 +81,14 @@ contract Beethoven is Custodian {
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
+
+	/*
+     * Public Functions
+     */
 	function startBeethoven(
 		address aAddr,
 		address bAddr,
-		// address duoAddress,
 		address feeAddress, 
-		// address roleManagerAddr,
 		address oracleAddr
 		) 
 		public 
@@ -92,6 +103,7 @@ contract Beethoven is Custodian {
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
+		require(priceInWei > 0 && timeInSecond > 0);
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;
 		resetPriceInWei = priceInWei;

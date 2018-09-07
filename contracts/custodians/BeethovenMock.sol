@@ -53,9 +53,9 @@ contract BeethovenMock is Beethoven {
 		return timestamp;
 	}
 
-	// function getAddrStatus(address addr) public view returns (uint) {
-	// 	return addrStatus[addr];
-	// }
+	function getBadj() public view returns (uint) {
+		return bAdj;
+	}
 
 	// function getNextAddrIndex() internal view returns (uint) {
 	// 	return 0;
