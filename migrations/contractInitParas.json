@@ -37,6 +37,9 @@
 	"Custodian": {
 		"commissionRateInBP": 100
 	},
+	"Managed": {
+		"optCoolDown": 3600
+	},
 	"Pool": [
 		[
 			"0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0",
