@@ -874,7 +874,8 @@ contract.only('Esplanade', accounts => {
 				}); // consume one from coldPool
 				await roleManagerContract.skipCooldown(1);
 				await roleManagerContract.setModerator(newModerator);
-				let tx = await roleManagerContract.removeAddress(Pool[index][0], index, {
+				let addrToRemove = await roleManagerContract.addrPool.call(index, 0);
+				let tx = await roleManagerContract.removeAddress(addrToRemove.valueOf(), index, {
 					from: newModerator
 				});
 
