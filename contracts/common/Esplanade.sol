@@ -2,9 +2,9 @@ pragma solidity ^0.4.24;
 import { ICustodian } from "../interfaces/ICustodian.sol";
 
 
-/// @title MultiSigRoleManager - coordinate multiple custodians, oracles and other contracts.
+/// @title Esplanade - coordinate multiple custodians, oracles and other contracts.
 /// @author duo.network
-contract MultiSigRoleManager {
+contract Esplanade {
 
 	/*
      * Constants
@@ -241,7 +241,7 @@ contract MultiSigRoleManager {
      * Moderator Public functions
      */
 	/// @dev start roleManagerContract.
-	function startRoleManager() public only(moderator) returns (bool) {
+	function startManager() public only(moderator) returns (bool) {
 		require(!started && custodianPool.length > 0);
 		started = true;
 		return true;

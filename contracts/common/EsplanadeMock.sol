@@ -1,16 +1,16 @@
 pragma solidity ^0.4.24;
 
-import { MultiSigRoleManager } from "./MultiSigRoleManager.sol";
+import { Esplanade } from "./Esplanade.sol";
 
 
-contract MultiSigRoleManagerMock is MultiSigRoleManager {
+contract EsplanadeMock is Esplanade {
 
 	uint public timestamp = now;
 	uint public MIN_POOL_SIZE = 5;
 
 	constructor(
 		uint optCoolDown
-	) MultiSigRoleManager (
+	) Esplanade (
 		optCoolDown
 	) public {
 	}
@@ -31,10 +31,6 @@ contract MultiSigRoleManagerMock is MultiSigRoleManager {
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
 	}
-
-	// function getPoolSize(uint index) public view returns (uint) {
-	// 	return addrPool[index].length;
-	// }
 
 	function setVotingStage(uint index) public returns (bool) {
 		if(index == 0) votingStage = VotingStage.NotStarted;

@@ -1,4 +1,4 @@
-const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
@@ -97,7 +97,7 @@ contract('TokenA', accounts => {
 			time.valueOf(),
 			pf1
 		);
-		await beethovenContract.startBeethoven(
+		await beethovenContract.startCustodian(
 			tokenAContract.address,
 			tokenBContract.address,
 			fc,

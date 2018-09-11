@@ -1,5 +1,5 @@
 const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const Esplanade = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
@@ -32,7 +32,7 @@ const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invali
 // const DUMMY_ADDR = '0xc';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
-contract('Custodian', accounts => {
+contract.only('Esplanade', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 	let newCustodianContract;
 
@@ -60,7 +60,7 @@ contract('Custodian', accounts => {
 			}
 		);
 
-		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
+		roleManagerContract = await Esplanade.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
 
@@ -450,11 +450,11 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('start startRoleManager', () => {
+	describe('start startManager', () => {
 		before(initContracts);
 		it('non moderator not allowed to start', async () => {
 			try {
-				await roleManagerContract.startRoleManager.call({ from: alice });
+				await roleManagerContract.startManager.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
@@ -463,7 +463,7 @@ contract('Custodian', accounts => {
 
 		it('canot start by without add custodian', async () => {
 			try {
-				await roleManagerContract.startRoleManager({ from: creator });
+				await roleManagerContract.startManager({ from: creator });
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -474,7 +474,7 @@ contract('Custodian', accounts => {
 				from: creator
 			});
 			await roleManagerContract.setModerator(newModerator);
-			await roleManagerContract.startRoleManager({ from: newModerator });
+			await roleManagerContract.startManager({ from: newModerator });
 			let started = await roleManagerContract.started.call();
 			assert.isTrue(started.valueOf(), ' not started');
 		});
@@ -485,9 +485,9 @@ contract('Custodian', accounts => {
 					from: creator
 				});
 				await roleManagerContract.setModerator(newModerator);
-				await roleManagerContract.startRoleManager({ from: newModerator });
+				await roleManagerContract.startManager({ from: newModerator });
 				await roleManagerContract.setModerator(newModerator2);
-				await roleManagerContract.startRoleManager({ from: newModerator2 });
+				await roleManagerContract.startManager({ from: newModerator2 });
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -710,7 +710,7 @@ contract('Custodian', accounts => {
 					from: creator
 				});
 				await roleManagerContract.setModerator(newModerator);
-				await roleManagerContract.startRoleManager({ from: newModerator });
+				await roleManagerContract.startManager({ from: newModerator });
 				await roleManagerContract.setModerator(newModerator2);
 				try {
 					await roleManagerContract.addAddress(
@@ -797,7 +797,7 @@ contract('Custodian', accounts => {
 		});
 	});
 
-	describe('moderator remove from pool', () => {
+	describe.only('moderator remove from pool', () => {
 		function REMOVE_ADDR(index) {
 			beforeEach(async () => {
 				await initContracts();

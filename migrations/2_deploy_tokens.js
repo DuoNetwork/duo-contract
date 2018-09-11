@@ -3,8 +3,8 @@ const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
 const BeethovenMock = artifacts.require('./BeethovenMock.sol');
 const Magi = artifacts.require('./oracles/Magi.sol');
-const RoleManager = artifacts.require('./MultiSigRoleManager.sol');
-const RoleManagerMock = artifacts.require('./MultiSigRoleManagerMock.sol');
+const Esplanade = artifacts.require('./Esplanade.sol');
+const EsplanadeMock = artifacts.require('./EsplanadeMock.sol');
 const DUO = artifacts.require('./DUO.sol');
 const DuoMock = artifacts.require('./DuoMock.sol');
 const TokenA = artifacts.require('./TokenA.sol');
@@ -49,7 +49,7 @@ module.exports = async (deployer, network, accounts) => {
 
 	let BeethovenToDeploy = network !== 'development' ? Beethoven : BeethovenMock;
 	let DuoToDeploy = network !== 'development' ? DUO : DuoMock;
-	let RoleManagerToDeploy = network !== 'development' ? RoleManager : RoleManagerMock;
+	let EsplanadeToDeploy = network !== 'development' ? Esplanade : EsplanadeMock;
 
 	// 42008
 	await deployer.deploy(SafeMath, {
@@ -70,7 +70,7 @@ module.exports = async (deployer, network, accounts) => {
 	);
 
 	// 2611094
-	await deployer.deploy(RoleManagerToDeploy, RoleManagerInit.optCoolDown, {
+	await deployer.deploy(EsplanadeToDeploy, RoleManagerInit.optCoolDown, {
 		from: creator
 	});
 
@@ -78,7 +78,7 @@ module.exports = async (deployer, network, accounts) => {
 	await deployer.deploy(
 		BeethovenToDeploy,
 		DuoToDeploy.address,
-		RoleManagerToDeploy.address,
+		EsplanadeToDeploy.address,
 		fc,
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
@@ -101,7 +101,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf1,
 		pf2,
 		pf3,
-		RoleManagerToDeploy.address,
+		EsplanadeToDeploy.address,
 		MagiInit.pxCoolDown,
 		MagiInit.optCoolDown,
 		{

@@ -1,5 +1,5 @@
 const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 // const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');

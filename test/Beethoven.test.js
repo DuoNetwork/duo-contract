@@ -2,7 +2,7 @@ const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock');
 // const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
 const A = artifacts.require('../contracts/tokens/TokenA.sol');
 const B = artifacts.require('../contracts/tokens/TokenB.sol');
-const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
@@ -246,7 +246,7 @@ contract('Beethoven', accounts => {
 		});
 	});
 
-	describe('startBeethoven', () => {
+	describe('startCustodian', () => {
 		before(initContracts);
 		let time;
 
@@ -257,7 +257,7 @@ contract('Beethoven', accounts => {
 
 		it('non operator cannot start', async () => {
 			try {
-				await beethovenContract.startBeethoven.call(
+				await beethovenContract.startCustodian.call(
 					aContract.address,
 					bContract.address,
 					fc,
@@ -272,7 +272,7 @@ contract('Beethoven', accounts => {
 
 		it('should not start with oracle not ready', async () => {
 			try {
-				await beethovenContract.startBeethoven.call(
+				await beethovenContract.startCustodian.call(
 					aContract.address,
 					bContract.address,
 					fc,
@@ -292,7 +292,7 @@ contract('Beethoven', accounts => {
 				pf1
 			);
 
-			let tx = await beethovenContract.startBeethoven(
+			let tx = await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -361,7 +361,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -442,7 +442,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -715,7 +715,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -958,7 +958,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -1044,7 +1044,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,
@@ -1314,7 +1314,7 @@ contract('Beethoven', accounts => {
 					time.valueOf(),
 					pf1
 				);
-				await beethovenContract.startBeethoven(
+				await beethovenContract.startCustodian(
 					aContract.address,
 					bContract.address,
 					fc,
@@ -1699,7 +1699,7 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startBeethoven(
+			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
 				fc,

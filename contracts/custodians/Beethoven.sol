@@ -85,7 +85,7 @@ contract Beethoven is Custodian {
 	/*
      * Public Functions
      */
-	function startBeethoven(
+	function startCustodian(
 		address aAddr,
 		address bAddr,
 		address feeAddress, 

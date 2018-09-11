@@ -1,5 +1,5 @@
 const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
@@ -36,7 +36,7 @@ const isEqual = (a, b, log = false) => {
 	}
 };
 
-contract('Custodian', accounts => {
+contract('Magi', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
