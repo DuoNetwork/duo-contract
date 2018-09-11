@@ -54,4 +54,9 @@ contract MagiMock is Magi {
 	function skipCooldown(uint numOfPeriods) public {
 		timestamp = timestamp + (1 hours * numOfPeriods);
 	}
+
+	
+	function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
+		return getMedian(a, b, c);
+	}
 }

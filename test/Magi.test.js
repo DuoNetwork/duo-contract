@@ -664,6 +664,55 @@ contract('Custodian', accounts => {
 		});
 	});
 
+	describe('calculate median', () => {
+		before(async () => {
+			await initContracts();
+			let currentBlockTime = await oracleContract.timestamp.call();
+			await oracleContract.startOracle(
+				web3.utils.toWei(ethInitPrice + ''),
+				currentBlockTime - Number(BeethovenInit.pd) * 10,
+				{
+					from: pf1
+				}
+			);
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(400, 500, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(500, 600, 400, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(600, 400, 500, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 500, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(600, 600, 500, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(500, 600, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
+
+		it('should calculate median', () => {
+			return oracleContract.getMedianPublic
+				.call(600, 500, 600, { from: alice })
+				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
+		});
+	});
 	describe('getLastPrice', () => {
 		let blockTime;
 		before(async () => {

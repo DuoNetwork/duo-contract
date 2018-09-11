@@ -1,26 +1,36 @@
-const TokenA = artifacts.require('./TokenA.sol');
-const DUO = artifacts.require('./DUO.sol');
-const Custodian = artifacts.require('./Custodian.sol');
-const web3 = require('web3');
+const RoleManager = artifacts.require('../contracts/common/MultiSigRoleManagerMock.sol');
+const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock');
+const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
+const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
+const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
+const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
+const Web3 = require('web3');
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
-const CustodianInit = InitParas['Custodian'];
+const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
+const RoleManagerInit = InitParas['RoleManager'];
+const MagiInit = InitParas['Magi'];
+// const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
+const TokenBInit = InitParas['TokenB'];
 const ethInitPrice = 582;
 const BP_DENOMINATOR = 10000;
 
 contract('TokenA', accounts => {
-	let tokenAContract;
+	let tokenAContract, tokenBContract;
 	let duoContract;
-	let custodianContract;
+	let beethovenContract;
+	let oracleContract;
+	let roleManagerContract;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
 	const pf2 = accounts[2];
 	const pf3 = accounts[3];
 	const fc = accounts[4];
-	const pm = accounts[5];
+	// const pm = accounts[5];
 	const alice = accounts[6]; //duoMember
 	const bob = accounts[7];
 
@@ -37,49 +47,73 @@ contract('TokenA', accounts => {
 				from: creator
 			}
 		);
-		custodianContract = await Custodian.new(
-			fc,
+
+		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
+			from: creator
+		});
+		beethovenContract = await Beethoven.new(
 			duoContract.address,
-			pf1,
-			pf2,
-			pf3,
-			pm,
-			CustodianInit.alphaInBP,
-			web3.utils.toWei(CustodianInit.couponRate),
-			web3.utils.toWei(CustodianInit.hp),
-			web3.utils.toWei(CustodianInit.hu),
-			web3.utils.toWei(CustodianInit.hd),
-			CustodianInit.commissionRateInBP,
-			CustodianInit.period,
-			CustodianInit.coolDown,
+			roleManagerContract.address,
+			fc,
+			BeethovenInit.alphaInBP,
+			web3.utils.toWei(BeethovenInit.couponRate),
+			web3.utils.toWei(BeethovenInit.hp),
+			web3.utils.toWei(BeethovenInit.hu),
+			web3.utils.toWei(BeethovenInit.hd),
+			BeethovenInit.comm,
+			BeethovenInit.pd,
+			BeethovenInit.optCoolDown,
+			BeethovenInit.pxFetchCoolDown,
+			BeethovenInit.iteGasTh,
+			BeethovenInit.ethDuoRate,
+			BeethovenInit.preResetWaitBlk,
 			{
 				from: creator
 			}
 		);
-		tokenAContract = await TokenA.new(
-			TokenAInit.tokenName,
-			TokenAInit.tokenSymbol,
-			custodianContract.address
-		);
-		await custodianContract.startContract(
-			web3.utils.toWei(ethInitPrice + ''),
-			1524105709,
-			tokenAContract.address,
-			'0xb',
+
+		tokenAContract = await TokenA.new(TokenAInit.tokenName, TokenAInit.tokenSymbol, beethovenContract.address, {
+			from: creator
+		});
+		tokenBContract = await TokenB.new(TokenBInit.tokenName, TokenBInit.tokenSymbol, beethovenContract.address, {
+			from: creator
+		});
+
+		oracleContract = await Magi.new(
+			creator,
+			pf1,
+			pf2,
+			pf3,
+			roleManagerContract.address,
+			MagiInit.pxCoolDown,
+			MagiInit.optCoolDown,
 			{
-				from: pf1
+				from: creator
 			}
 		);
+		let time = await oracleContract.timestamp.call();
+		await oracleContract.setLastPrice(
+			web3.utils.toWei(ethInitPrice + '', 'ether'),
+			time.valueOf(),
+			pf1
+		);
+		await beethovenContract.startBeethoven(
+			tokenAContract.address,
+			tokenBContract.address,
+			fc,
+			oracleContract.address,
+			{ from: creator }
+		);
 		let amtEth = 1;
-		await custodianContract.create(true, {
+		await beethovenContract.create(true, {
 			from: creator,
 			value: web3.utils.toWei(amtEth + '')
 		});
 
 		let tokenValueB =
-			((1 - CustodianInit.commissionRateInBP / BP_DENOMINATOR) * ethInitPrice) /
-			(1 + CustodianInit.alphaInBP / BP_DENOMINATOR);
-		tokenValueA = (CustodianInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
+			((1 - BeethovenInit.comm / BP_DENOMINATOR) * ethInitPrice) /
+			(1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+		tokenValueA = (BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 	});
 
 	it('total supply should be correct', async () => {

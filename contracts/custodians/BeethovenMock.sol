@@ -49,6 +49,10 @@ contract BeethovenMock is Beethoven {
 		timestamp = timestamp.add(period * numOfPeriods - 5 minutes);
 	}
 
+	function skipHour(uint numOfHour) public {
+		timestamp = timestamp.add(period * numOfHour);
+	}
+
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
 	}
@@ -57,11 +61,8 @@ contract BeethovenMock is Beethoven {
 		return bAdj;
 	}
 
-	// function getNextAddrIndex() internal view returns (uint) {
-	// 	return 0;
-	// }
+	function getNextResetAddrIndex() public view returns (uint) {
+		return nextResetAddrIndex;
+	}
 
-	// function getMedianPublic(uint a, uint b, uint c) public pure returns (uint){
-	// 	return getMedian(a, b, c);
-	// }
 }

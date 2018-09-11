@@ -427,7 +427,7 @@ contract Beethoven is Custodian {
 	// end of reset function
 
 	// start of operator functions
-	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
+	function setValue(uint idx, uint newValue) public only(operator) inState(State.Trading) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
 			require(newValue <= BP_DENOMINATOR);
@@ -455,4 +455,8 @@ contract Beethoven is Custodian {
 		return true;
 	}
 	// end of operator functions	
+
+	function getUserSize() public view returns (uint) {
+		return users.length;
+	}
 }
