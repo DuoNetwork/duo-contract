@@ -33,16 +33,13 @@ contract Custodian is Managed {
 	address public oracleAddress;
 	address public aTokenAddress;
 	address public bTokenAddress;
-	address public wethAddress;
 	uint public totalSupplyA;
 	uint public totalSupplyB;
 	mapping(address => uint)[2] public balanceOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
 	mapping (address => uint) public existingUsers;
-	uint public contractCollectAmtInWei;
-	uint public ethFeeBalanceInWei;
-	uint public collatorizedEthInWei;
+	uint public ethCollateralInWei;
 	uint public navAInWei;
 	uint public navBInWei;
 	uint public lastPriceInWei;
@@ -134,9 +131,9 @@ contract Custodian is Managed {
 		return users.length;
 	}
 
-	// function ethFeeBalanceInWei() public returns(uint) {
-	// 	return address(this).balance.sub(collatorizedEthInWei);
-	// }
+	function ethFeeBalanceInWei() public view returns(uint) {
+		return address(this).balance.sub(ethCollateralInWei);
+	}
 
 	/*
      * ERC token functions
@@ -238,15 +235,17 @@ contract Custodian is Managed {
 	/*
      * Operation Functions
      */
-	function collectEth(uint amountInWei) 
+	function collectEthFee(uint amountInWei) 
 		public 
 		only(feeCollector) 
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		contractCollectAmtInWei = contractCollectAmtInWei.sub(amountInWei);
+		uint totalBalance = address(this).balance;
+		uint feeBalance = totalBalance.sub(ethCollateralInWei).sub(amountInWei);
+		// require(feeBalance >= 0);
 		feeCollector.transfer(amountInWei);
-		emit CollectFee(msg.sender, amountInWei, ethFeeBalanceInWei, 0, duoToken.balanceOf(this));
+		emit CollectFee(msg.sender, amountInWei, feeBalance, 0, duoToken.balanceOf(this));
 		return true;
 	}
 
@@ -257,7 +256,7 @@ contract Custodian is Managed {
 		returns (bool success) 
 	{
 		duoToken.transfer(feeCollector, amountInWei);
-		emit CollectFee(msg.sender, 0, ethFeeBalanceInWei, amountInWei, duoToken.balanceOf(this));
+		emit CollectFee(msg.sender, 0, address(this).balance.sub(ethCollateralInWei), amountInWei, duoToken.balanceOf(this));
 		return true;
 	}
 

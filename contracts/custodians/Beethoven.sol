@@ -17,7 +17,6 @@ contract Beethoven is Custodian {
 	}
 
 	ResetState resetState;
-	IWETH wethToken;
 	uint public alphaInBP;
 	uint public betaInWei = WEI_DENOMINATOR;
 	uint public periodCouponInWei; 
@@ -98,8 +97,7 @@ contract Beethoven is Custodian {
 		address aAddr,
 		address bAddr,
 		address feeAddress, 
-		address oracleAddr,
-		address wethAddr
+		address oracleAddr
 		) 
 		public 
 		inState(State.Inception) 
@@ -108,8 +106,7 @@ contract Beethoven is Custodian {
 	{	
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
-		wethAddress = wethAddr;
-		wethToken = IWETH(wethAddr);
+		
 		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
@@ -119,26 +116,53 @@ contract Beethoven is Custodian {
 		lastPriceTimeInSecond = timeInSecond;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
-		// roleManagerAddress = roleManagerAddr;
 		roleManager = IMultiSigManager(roleManagerAddress);
 		state = State.Trading;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
-		// emit UpdateroleManager(roleManagerAddr);
 		return true;
 	}
 
 	/// @dev create with ETH
 	///	@param payFeeInEth pay fee in ETH or DUO token
-	function create(bool payFeeInEth, uint amount) 
+	function create(bool payFeeInEth) 
 		public 
 		payable 
 		inState(State.Trading) 
-		returns (bool success) 
+		returns (bool) 
 	{	
-		uint ethAmtInWei; 
+		return createInternal(msg.sender, msg.value, payFeeInEth);
+	}
+
+	/// @dev create with ETH
+	///	@param amount amount of WETH to create
+	///	@param payFeeInEth pay fee in ETH or DUO token
+	///	@param wethAddr wrapEth contract address
+	function createWithWETH(uint amount, bool payFeeInEth, address wethAddr)
+		public 
+		inState(State.Trading) 
+		returns (bool success) 
+	{
+		require(amount > 0 && wethAddr != 0x0);
+		IWETH wethToken = IWETH(wethAddr);
+		wethToken.transferFrom(msg.sender, address(this), amount);
+		uint wethBalance = wethToken.balanceOf(address(this));
+		require(wethBalance >= amount);
+		uint beforeEthBalance = address(this).balance;
+        wethToken.withdraw(wethBalance);
+		uint ethIncrement = address(this).balance.sub(beforeEthBalance);
+		require(ethIncrement >= wethBalance);
+		return createInternal(msg.sender, amount, payFeeInEth);
+	}
+
+	function createInternal(address sender, uint ethAmtInWei, bool payFeeInEth) 
+		internal 
+		returns(bool)
+	{
+		// uint ethAmtInWei; 
+		require(ethAmtInWei > 0);
 		uint feeInWei;
-		(ethAmtInWei, feeInWei) = deductFee(msg.value > 0 ? msg.value: amount, createCommInBP, payFeeInEth);
+		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, createCommInBP, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPriceInWei)
 						.mul(betaInWei)
@@ -151,7 +175,7 @@ contract Beethoven is Custodian {
 		);
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
-		address sender = msg.sender;
+		// address sender = msg.sender;
 		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
@@ -170,22 +194,7 @@ contract Beethoven is Custodian {
 			);
 		emit TotalSupply(totalSupplyA, totalSupplyB);	
 		return true;
-	}
 
-	/// @dev create with ETH
-	///	@param payFeeInEth pay fee in ETH or DUO token
-	///	@param amount amount of WETH to create
-	function createWithWETH(uint amount, bool payFeeInEth)
-		public 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
-		wethToken.transferFrom(msg.sender, address(this), amount);
-		uint ethBalance = wethToken.balanceOf(address(this));
-		uint deltaCollectInWei = ethBalance > 0 ? ethBalance : 0;
-		contractCollectAmtInWei = contractCollectAmtInWei.add(deltaCollectInWei);
-        wethToken.withdraw(deltaCollectInWei + amount);
-		return create(payFeeInEth, amount);
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB, bool payFeeInEth) 
@@ -236,8 +245,6 @@ contract Beethoven is Custodian {
 		require(ethAmtInWei > 0);
 		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
 		if (payFeeInEth) {
-			ethFeeBalanceInWei = ethFeeBalanceInWei.add(feeInWei);
-			contractCollectAmtInWei = contractCollectAmtInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);

@@ -7,4 +7,5 @@ interface IWETH {
 	function approve(address spender, uint value) external returns (bool success);
 	function allowance(address owner, address spender) external returns (uint);
 	function withdraw(uint value) external;
+	function deposit() external;
 }
