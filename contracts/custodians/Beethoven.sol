@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
-import { IERC20 } from "../interfaces/IERC20.sol";
+import { IWETH } from "../interfaces/IWETH.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
 
@@ -17,6 +17,7 @@ contract Beethoven is Custodian {
 	}
 
 	ResetState resetState;
+	IWETH wethToken;
 	uint public alphaInBP;
 	uint public betaInWei = WEI_DENOMINATOR;
 	uint public periodCouponInWei; 
@@ -37,6 +38,8 @@ contract Beethoven is Custodian {
      * Events
      */
 	event SetValue(uint index, uint oldValue, uint newValue);
+
+	function() public payable {}
 	
 	/*
      * Constructor
@@ -85,11 +88,18 @@ contract Beethoven is Custodian {
 	/*
      * Public Functions
      */
+	/// @dev startCustodian
+	///	@param aAddr contract address of Class A
+	///	@param bAddr contract address of Class B
+	///	@param feeAddress account address of feeCollector
+	///	@param oracleAddr contract address of Oracle
+	///	@param wethAddr contract address of WETH
 	function startCustodian(
 		address aAddr,
 		address bAddr,
 		address feeAddress, 
-		address oracleAddr
+		address oracleAddr,
+		address wethAddr
 		) 
 		public 
 		inState(State.Inception) 
@@ -98,7 +108,8 @@ contract Beethoven is Custodian {
 	{	
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
-		// duoToken = IERC20(duoAddress);
+		wethAddress = wethAddr;
+		wethToken = IWETH(wethAddr);
 		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
@@ -117,8 +128,9 @@ contract Beethoven is Custodian {
 		return true;
 	}
 
-	// start of public conversion functions
-	function create(bool payFeeInEth) 
+	/// @dev create with ETH
+	///	@param payFeeInEth pay fee in ETH or DUO token
+	function create(bool payFeeInEth, uint amount) 
 		public 
 		payable 
 		inState(State.Trading) 
@@ -126,7 +138,7 @@ contract Beethoven is Custodian {
 	{	
 		uint ethAmtInWei; 
 		uint feeInWei;
-		(ethAmtInWei, feeInWei) = deductFee(msg.value, createCommInBP, payFeeInEth);
+		(ethAmtInWei, feeInWei) = deductFee(msg.value > 0 ? msg.value: amount, createCommInBP, payFeeInEth);
 		uint numeritor = ethAmtInWei
 						.mul(resetPriceInWei)
 						.mul(betaInWei)
@@ -145,15 +157,35 @@ contract Beethoven is Custodian {
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
+		uint ethFeeInWei = payFeeInEth ? feeInWei : 0;
+		uint duoFeeInWei = payFeeInEth ? 0 : feeInWei;
+
 		emit Create(
 			sender, 
 			ethAmtInWei, 
 			tokenValueA, 
 			tokenValueB, 
-			payFeeInEth ? feeInWei : 0, 
-			payFeeInEth ? 0 : feeInWei);
+			ethFeeInWei,
+			duoFeeInWei
+			);
 		emit TotalSupply(totalSupplyA, totalSupplyB);	
 		return true;
+	}
+
+	/// @dev create with ETH
+	///	@param payFeeInEth pay fee in ETH or DUO token
+	///	@param amount amount of WETH to create
+	function createWithWETH(uint amount, bool payFeeInEth)
+		public 
+		inState(State.Trading) 
+		returns (bool success) 
+	{
+		wethToken.transferFrom(msg.sender, address(this), amount);
+		uint ethBalance = wethToken.balanceOf(address(this));
+		uint deltaCollectInWei = ethBalance > 0 ? ethBalance : 0;
+		contractCollectAmtInWei = contractCollectAmtInWei.add(deltaCollectInWei);
+        wethToken.withdraw(deltaCollectInWei + amount);
+		return create(payFeeInEth, amount);
 	}
 
 	function redeem(uint amtInWeiA, uint amtInWeiB, bool payFeeInEth) 
@@ -201,9 +233,11 @@ contract Beethoven is Custodian {
 			uint ethAmtAfterFeeInWei, 
 			uint feeInWei) 
 	{
+		require(ethAmtInWei > 0);
 		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
 		if (payFeeInEth) {
 			ethFeeBalanceInWei = ethFeeBalanceInWei.add(feeInWei);
+			contractCollectAmtInWei = contractCollectAmtInWei.add(feeInWei);
 			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 		} else {
 			feeInWei = feeInWei.mul(ethDuoFeeRatio);
