@@ -92,7 +92,6 @@ contract Beethoven is Custodian {
 	///	@param bAddr contract address of Class B
 	///	@param feeAddress account address of feeCollector
 	///	@param oracleAddr contract address of Oracle
-	///	@param wethAddr contract address of WETH
 	function startCustodian(
 		address aAddr,
 		address bAddr,
@@ -163,6 +162,7 @@ contract Beethoven is Custodian {
 		require(ethAmtInWei > 0);
 		uint feeInWei;
 		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, createCommInBP, payFeeInEth);
+		ethCollateralInWei += ethAmtInWei;
 		uint numeritor = ethAmtInWei
 						.mul(resetPriceInWei)
 						.mul(betaInWei)
@@ -222,6 +222,7 @@ contract Beethoven is Custodian {
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		sender.transfer(ethAmtInWei);
+		ethCollateralInWei = ethCollateralInWei.sub(ethAmtInWei).sub(feeInWei); 
 		emit Redeem(
 			sender, 
 			ethAmtInWei, 

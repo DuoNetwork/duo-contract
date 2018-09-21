@@ -6,6 +6,7 @@ import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 contract CustodianMock is Custodian {
 	uint public timestamp = now;
 	address public roleManagerAddr;
+	// uint public ethFeeBalanceInWei;
 
 	constructor(
 		address duoTokenAddr,
@@ -42,6 +43,8 @@ contract CustodianMock is Custodian {
 		}
 	}
 
+	function() public payable {}
+
 	function mintTokens(address addr, uint index, uint amount) public {
 		balanceOf[index][addr] += amount;
 		checkUser(addr, balanceOf[0][addr], balanceOf[1][addr]);
@@ -55,11 +58,11 @@ contract CustodianMock is Custodian {
 		return existingUsers[addr];
 	}
 
-	function addEthFeeBalance(uint amtInWei) public payable returns (bool) {
-		ethFeeBalanceInWei += amtInWei;
-		// address(this).transfer(amtInWei);
-		return true;
-	}
+	// function addEthFeeBalance(uint amtInWei) public payable returns (bool) {
+	// 	// ethFeeBalanceInWei = address(this).balance.sub(ethCollateralInWei) + amtInWei;
+	// 	address(this).balance = address(this).balance.add(amtInWei);
+	// 	return true;
+	// }
 
 	function setTimestamp(uint ts) public {
 		timestamp = ts;

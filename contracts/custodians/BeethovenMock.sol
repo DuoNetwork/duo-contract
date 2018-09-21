@@ -53,6 +53,10 @@ contract BeethovenMock is Beethoven {
 		timestamp = timestamp.add(period * numOfHour);
 	}
 
+	function setCollatarization(uint number) public {
+		ethCollateralInWei = number;
+	}
+	
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
 	}

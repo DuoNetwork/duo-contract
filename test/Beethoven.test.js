@@ -815,7 +815,6 @@ contract('Beethoven', accounts => {
 		it('feeAccumulated should be updated', async () => {
 			let feeAccumulated = await beethovenContract.ethFeeBalanceInWei.call();
 			// let feeAccumulated = sysStates[IDX_FEE_IN_WEI];
-
 			assert.isTrue(
 				isEqual(
 					web3.utils.fromWei(feeAccumulated.minus(prevFeeAccumulated).valueOf(), 'ether'),
@@ -938,10 +937,11 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should be removed from user list if all tokens are redeemed', async () => {
+			// await web3.eth.sendTransaction({from: creator, to: beethovenContract.address, value: web3.utils.toWei('10', 'ether')});
+			await beethovenContract.setCollatarization(web3.utils.toWei('1', 'ether'));
 			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			let currentBalanceB = await beethovenContract.balanceOf.call(1, alice);
-
-			await beethovenContract.redeem(currentBalanceA, currentBalanceB, true, { from: alice });
+			await beethovenContract.redeem(currentBalanceA.valueOf(), currentBalanceB.valueOf(), true, { from: alice });
 			let userIdx = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
 			let userSize = await beethovenContract.getUserSize.call();

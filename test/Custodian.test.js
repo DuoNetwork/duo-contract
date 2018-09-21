@@ -10,6 +10,7 @@ const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
+const PoolInit = InitParas['Pool'];
 
 // Event
 const TRANSFER = 'Transfer';
@@ -467,10 +468,11 @@ contract('Custodian', accounts => {
 		before(async () => {
 			await initContracts();
 			await custodianContract.setState(1);
-			await custodianContract.addEthFeeBalance(web3.utils.toWei(initEthFee, 'ether'), {
-				from: creator,
-				value: web3.utils.toWei(initEthFee, 'ether')
-			});
+			// await custodianContract.addEthFeeBalance(web3.utils.toWei(initEthFee, 'ether'), {
+			// 	from: creator,
+			// 	value: web3.utils.toWei(initEthFee, 'ether')
+			// });
+			await web3.eth.sendTransaction({from: creator, to: custodianContract.address, value: web3.utils.toWei(initEthFee, 'ether')});
 
 			await duoContract.mintTokens(
 				custodianContract.address,
@@ -478,10 +480,11 @@ contract('Custodian', accounts => {
 			);
 		});
 
-		it('balance and fee should be allowed to coolectFee', async () => {
+		it('balance and fee should be set correct', async () => {
 			let balance = await web3.eth.getBalance(custodianContract.address);
 			let ethFee = await custodianContract.ethFeeBalanceInWei.call();
 			let duoBalance = await duoContract.balanceOf(custodianContract.address);
+			// console.log(balance.valueOf(), ethFee.valueOf(), duoBalance.valueOf());
 			assert.isTrue(
 				web3.utils.fromWei(balance.valueOf(), 'ether') === initEthFee &&
 					web3.utils.fromWei(ethFee.valueOf(), 'ether') === initEthFee &&
@@ -675,10 +678,12 @@ contract('Custodian', accounts => {
 		});
 
 		it('cold updator can update fc', async () => {
-			await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
+			let tx = await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
 			await roleManagerContract.skipCooldown(1);
 			await custodianContract.skipCooldown(1);
-			let updator = '0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0';
+			let firstColdAddr = PoolInit[0][0];
+			// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
+			let updator = tx.logs[0].args.currentModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase() ? PoolInit[0][1]: firstColdAddr;
 			let status = await custodianContract.updateFeeCollector.call({ from: updator });
 			assert.isTrue(status, 'not be able to update');
 		});

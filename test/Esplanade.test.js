@@ -32,7 +32,7 @@ const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invali
 // const DUMMY_ADDR = '0xc';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
-contract.only('Esplanade', accounts => {
+contract('Esplanade', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 	let newCustodianContract;
 
@@ -797,7 +797,7 @@ contract.only('Esplanade', accounts => {
 		});
 	});
 
-	describe.only('moderator remove from pool', () => {
+	describe('moderator remove from pool', () => {
 		function REMOVE_ADDR(index) {
 			beforeEach(async () => {
 				await initContracts();
@@ -925,18 +925,35 @@ contract.only('Esplanade', accounts => {
 			});
 
 			it('new moderator should not remove within coolDown', async () => {
-				await roleManagerContract.addCustodian(custodianContract.address, {
+				let tx = await roleManagerContract.addCustodian(custodianContract.address, {
 					from: moderator
 				}); // consume one from coldPool
 				await roleManagerContract.skipCooldown(1);
 				await roleManagerContract.setModerator(newModerator);
-				let tx = await roleManagerContract.removeAddress(Pool[index][0], index, {
+
+				let addrToRemove = Pool[index][0];
+				// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
+				addrToRemove =
+					tx.logs[0].args.currentModerator.valueOf().toLowerCase() ===
+					addrToRemove.toLowerCase()
+						? Pool[index][1]
+						: addrToRemove;
+				
+				tx = await roleManagerContract.removeAddress(addrToRemove, index, {
 					from: newModerator
 				});
 
 				let currentModerator = web3.utils.toChecksumAddress(
 					tx.logs[0].args.currentModerator
 				);
+
+				addrToRemove = Pool[index][2];
+				// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
+				addrToRemove =
+					tx.logs[0].args.currentModerator.valueOf().toLowerCase() ===
+					addrToRemove.toLowerCase()
+						? Pool[index][3]
+						: addrToRemove;
 				try {
 					await roleManagerContract.removeAddress.call(Pool[index][0], index, {
 						from: currentModerator
