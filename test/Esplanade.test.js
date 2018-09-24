@@ -14,7 +14,7 @@ const MagiInit = InitParas['Magi'];
 
 // Event
 const EVENT_TERMINATE_CON_VOTING = 'TerminateContractVoting';
-const EVENT_START_MODERATOR_VOTING = 'StartModeratorVoting';
+const EVENT_startModeratorVoting = 'StartModeratorVoting';
 const EVENT_TERMINATE_TIMEOUT = 'TerminateByTimeStamp';
 const EVENT_REPLACE_MODERATOR = 'ReplaceModerator';
 const EVENT_ADD_CUSTODIAN = 'AddCustodian';
@@ -100,8 +100,7 @@ contract('Esplanade', accounts => {
 		);
 	};
 
-	const START_CONTRACT_VOTING = async custodianContract => {
-		// console.log('start contract voting');
+	const startContractVoting = async custodianContract => {
 		await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
 		await roleManagerContract.skipCooldown(1);
 		await roleManagerContract.setModerator(newModerator);
@@ -112,34 +111,22 @@ contract('Esplanade', accounts => {
 		});
 	};
 
-	const START_MODERATOR_VOTING = async () => {
+	const startModeratorVoting = async () => {
 		await roleManagerContract.setPool(0, 0, alice);
 		let tx = await roleManagerContract.startModeratorVoting({ from: alice });
 		return tx;
 	};
 
-	const SET_POOLS = async (index, addr) => {
+	const setPools = async (index, addr) => {
 		for (let i = 0; i < addr.length; i++) {
 			await roleManagerContract.setPool(index, i, addr[i]);
 		}
 	};
 
-	const VOTE = async (voters, voteFor) => {
+	const vote = async (voters, voteFor) => {
 		assert.isTrue(voters.length <= voteFor.length, 'length not equal');
-		for (let i = 0; i < voters.length; i++) {
-			//let tx =
+		for (let i = 0; i < voters.length; i++)
 			await roleManagerContract.vote(voteFor[i], { from: voters[i] });
-			// console.log(tx);
-			// let votedFor = await roleManagerContract.votedFor.call();
-			// let votedAgainst = await roleManagerContract.votedAgainst.call();
-			// let votingStage = await roleManagerContract.votingStage.call();
-			// console.log(
-			// 	voters[i],
-			// 	votedFor.valueOf(),
-			// 	votedAgainst.valueOf(),
-			// 	votingStage.valueOf()
-			// );
-		}
 	};
 
 	describe('constructor', () => {
@@ -240,7 +227,7 @@ contract('Esplanade', accounts => {
 		});
 
 		it('can proposeContract', async () => {
-			let tx = await START_CONTRACT_VOTING(custodianContract);
+			let tx = await startContractVoting(custodianContract);
 			let moderator = tx.logs[0].args.newModerator;
 			assert.isTrue(newModerator != moderator, 'moderator not changed');
 			let votedFor = await roleManagerContract.votedFor.call();
@@ -260,7 +247,7 @@ contract('Esplanade', accounts => {
 	describe('terminating Contract voting', () => {
 		beforeEach(initContracts);
 		it('non moderator cannot terminate voting', async () => {
-			await START_CONTRACT_VOTING(custodianContract);
+			await startContractVoting(custodianContract);
 			try {
 				await roleManagerContract.terminateContractVoting.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
@@ -279,7 +266,7 @@ contract('Esplanade', accounts => {
 		});
 
 		it('moderator can terminate Voting when in Contract stage', async () => {
-			await START_CONTRACT_VOTING(custodianContract);
+			await startContractVoting(custodianContract);
 			await roleManagerContract.setModerator(newModerator);
 			let tx = await roleManagerContract.terminateContractVoting({ from: newModerator });
 			let moderator = tx.logs[0].args.newModerator;
@@ -308,7 +295,7 @@ contract('Esplanade', accounts => {
 		});
 
 		it('coldPool address start moderator voting', async () => {
-			let tx = await START_MODERATOR_VOTING();
+			let tx = await startModeratorVoting();
 			// console.log(tx);
 			let candidate = await roleManagerContract.candidate.call();
 			assert.equal(candidate.valueOf(), alice, 'not equal');
@@ -318,7 +305,7 @@ contract('Esplanade', accounts => {
 			assert.equal(status.valueOf(), '3', 'not marked as used');
 			// console.log(tx.logs.length, tx.logs[0].event);
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_START_MODERATOR_VOTING,
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_startModeratorVoting,
 				'wrong event'
 			);
 			// assert.isTrue(tx.logs[0].args.proposer === alice, 'wrong event argument');
@@ -338,12 +325,12 @@ contract('Esplanade', accounts => {
 			});
 
 			it('already voted is not allowed to vote again', async () => {
-				await SET_POOLS(0, [bob, charles]);
+				await setPools(0, [bob, charles]);
 				(await isContract)
-					? START_CONTRACT_VOTING(custodianContract)
-					: START_MODERATOR_VOTING();
+					? startContractVoting(custodianContract)
+					: startModeratorVoting();
 				try {
-					await VOTE([bob, bob], [true, true]);
+					await vote([bob, bob], [true, true]);
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
@@ -351,11 +338,11 @@ contract('Esplanade', accounts => {
 
 			it('less than half votes is not allowed to complete', async () => {
 				isContract
-					? await START_CONTRACT_VOTING(custodianContract)
-					: await START_MODERATOR_VOTING();
+					? await startContractVoting(custodianContract)
+					: await startModeratorVoting();
 				let voters = [bob, charles, david, eric];
-				await SET_POOLS(0, voters);
-				await VOTE(voters, [true, true, true, true]);
+				await setPools(0, voters);
+				await vote(voters, [true, true, true, true]);
 				let votedFor = await roleManagerContract.votedFor.call();
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
@@ -372,11 +359,11 @@ contract('Esplanade', accounts => {
 
 			it('more than half votes should complete Voting', async () => {
 				isContract
-					? await START_CONTRACT_VOTING(custodianContract)
-					: await START_MODERATOR_VOTING();
+					? await startContractVoting(custodianContract)
+					: await startModeratorVoting();
 				let voters = [bob, charles, david, eric, frank];
-				await SET_POOLS(0, voters);
-				await VOTE(voters, [true, true, true, true, true]);
+				await setPools(0, voters);
+				await vote(voters, [true, true, true, true, true]);
 				let votedFor = await roleManagerContract.votedFor.call();
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
@@ -407,8 +394,8 @@ contract('Esplanade', accounts => {
 			it('cannot terminate in non start stage', async () => {
 				try {
 					isContract
-						? await START_CONTRACT_VOTING(custodianContract)
-						: await START_MODERATOR_VOTING();
+						? await startContractVoting(custodianContract)
+						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
@@ -418,8 +405,8 @@ contract('Esplanade', accounts => {
 			it('cannot terminate within timeout', async () => {
 				try {
 					isContract
-						? await START_CONTRACT_VOTING(custodianContract)
-						: await START_MODERATOR_VOTING();
+						? await startContractVoting(custodianContract)
+						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
@@ -428,8 +415,8 @@ contract('Esplanade', accounts => {
 
 			it('can terminate beyond timeout', async () => {
 				isContract
-					? await START_CONTRACT_VOTING(custodianContract)
-					: await START_MODERATOR_VOTING();
+					? await startContractVoting(custodianContract)
+					: await startModeratorVoting();
 				await roleManagerContract.skipCooldown(2);
 				let tx = await roleManagerContract.terminateByTimeout({ from: alice });
 				assert.isTrue(tx.logs.length === 1, tx.logs[0].event === EVENT_TERMINATE_TIMEOUT);
@@ -938,7 +925,7 @@ contract('Esplanade', accounts => {
 					addrToRemove.toLowerCase()
 						? Pool[index][1]
 						: addrToRemove;
-				
+
 				tx = await roleManagerContract.removeAddress(addrToRemove, index, {
 					from: newModerator
 				});

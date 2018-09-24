@@ -12,7 +12,6 @@ const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
-// const DuoInit = InitParas['DUO'];
 const TokenAInit = InitParas['TokenA'];
 const TokenBInit = InitParas['TokenB'];
 const ethInitPrice = 582;
@@ -30,9 +29,8 @@ contract('TokenA', accounts => {
 	const pf2 = accounts[2];
 	const pf3 = accounts[3];
 	const fc = accounts[4];
-	// const pm = accounts[5];
-	const alice = accounts[6]; //duoMember
-	const bob = accounts[7];
+	const alice = accounts[5];
+	const bob = accounts[6];
 
 	const WEI_DENOMINATOR = 1e18;
 
@@ -72,12 +70,22 @@ contract('TokenA', accounts => {
 			}
 		);
 
-		tokenAContract = await TokenA.new(TokenAInit.tokenName, TokenAInit.tokenSymbol, beethovenContract.address, {
-			from: creator
-		});
-		tokenBContract = await TokenB.new(TokenBInit.tokenName, TokenBInit.tokenSymbol, beethovenContract.address, {
-			from: creator
-		});
+		tokenAContract = await TokenA.new(
+			TokenAInit.tokenName,
+			TokenAInit.tokenSymbol,
+			beethovenContract.address,
+			{
+				from: creator
+			}
+		);
+		tokenBContract = await TokenB.new(
+			TokenBInit.tokenName,
+			TokenBInit.tokenSymbol,
+			beethovenContract.address,
+			{
+				from: creator
+			}
+		);
 
 		oracleContract = await Magi.new(
 			creator,

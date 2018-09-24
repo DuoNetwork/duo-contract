@@ -52,7 +52,7 @@ contract EsplanadeMock is Esplanade {
 
 	function setPool(uint i, uint j, address addr) public returns(bool) {
 		addrPool[i][j] = addr;
-		addrStatus[addr] = 1;
+		addrStatus[addr] = i + 1;
 		voted[addr] = false;
 		return true; 
 	}
