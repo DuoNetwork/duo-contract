@@ -6,7 +6,6 @@ import { Esplanade } from "./Esplanade.sol";
 contract EsplanadeMock is Esplanade {
 
 	uint public timestamp = now;
-	uint public MIN_POOL_SIZE = 5;
 
 	constructor(
 		uint optCoolDown
@@ -57,9 +56,7 @@ contract EsplanadeMock is Esplanade {
 		return true; 
 	}
 
-	function setMinPoolSize(uint size) public returns (uint) {
-		MIN_POOL_SIZE = size;
-		return MIN_POOL_SIZE;
+	function setPoolLength(uint index, uint length) public returns (bool) {
+		addrPool[index].length = length;
 	}
-
 }

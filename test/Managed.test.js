@@ -171,48 +171,47 @@ contract('Managed', accounts => {
 		before(initContracts);
 		let custodianContract;
 		it('non cold address cannot upate', async () => {
-			try{
+			try {
 				await managedContract.updateOperator();
 				assert.isTrue(false, 'non hot addr can update');
-			}catch (err) {
+			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
-			
-
 		});
 
 		it('cold address can upate', async () => {
-			await roleManagerContract.setPool(0,0,alice);
+			await roleManagerContract.setPool(0, 0, alice);
 			// try{
 			custodianContract = await initCustodian();
 			await roleManagerContract.addCustodian(custodianContract.address, {
 				from: creator
 			});
 			await roleManagerContract.skipCooldown(1);
-			let tx = await custodianContract.updateOperator({from: alice});
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event ===EVENT_UPDATEOPERATOR , 'event wrong');
-
-			assert.isTrue(tx.logs[0].args.updater === alice &&
-			tx.logs[0].args.newOperator != creator, 'wrong event argument');
+			let tx = await custodianContract.updateOperator({ from: alice });
 			assert.isTrue(
-				validColdPool.includes(web3.utils.toChecksumAddress(tx.logs[0].args.newOperator )),
-				'newOperator invalid'
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATEOPERATOR,
+				'event wrong'
 			);
 
+			assert.isTrue(
+				tx.logs[0].args.updater === alice && tx.logs[0].args.newOperator != creator,
+				'wrong event argument'
+			);
+			assert.isTrue(
+				validColdPool.includes(web3.utils.toChecksumAddress(tx.logs[0].args.newOperator)),
+				'newOperator invalid'
+			);
 		});
 
-		
 		it('colld address cannot update can upate', async () => {
-			await roleManagerContract.setPool(0,0, bob);
+			await roleManagerContract.setPool(0, 0, bob);
 			await roleManagerContract.skipCooldown(1);
-			try{
-				await custodianContract.updateOperator({from: bob});
+			try {
+				await custodianContract.updateOperator({ from: bob });
 				assert.isTrue(false, 'non hot addr can update');
-			} catch(err){
+			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
 		});
-
 	});
-	
 });

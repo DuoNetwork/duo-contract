@@ -125,19 +125,18 @@ contract Esplanade {
 	/*
      *  Events
      */
-	event AddAddress(uint poolIndex, address added1, address added2, address newModerator);
-	event RemoveAddress(uint poolIndex, address addr, address newModerator);
-	// event RemoveFromPool(uint poolIndex, address addr);
+	event AddAddress(uint poolIndex, address added1, address added2);
+	event RemoveAddress(uint poolIndex, address addr);
 	event ProvideAddress(uint poolIndex, address requestor, address origin, address addr);
-	event AddCustodian(address newCustodianAddr, address newModerator);
-	event AddOtherContract(address newContractAddr, address newModerator);
+	event AddCustodian(address newCustodianAddr);
+	event AddOtherContract(address newContractAddr);
 	event StartContractVoting(address proposer, address newContractAddr);
 	event TerminateContractVoting(address terminator, address currentCandidate);
 	event StartModeratorVoting(address proposer);
 	event TerminateByTimeOut(address candidate);
 	event Vote(address voter, address candidate, bool voteFor, uint votedFor, uint votedAgainst);
 	event CompleteVoting(bool isContractVoting, address newAddress);
-	event ReplaceModerator(address preModerator, address currentModerator);
+	event ReplaceModerator(address oldModerator, address newModerator);
 
 	/*
      * Constructor
@@ -263,15 +262,15 @@ contract Esplanade {
 			replaceModerator();
 		else if (!started) {
 			uint index = getNextAddrIndex(COLD_POOL_IDX, custodianAddr);
-			address preModerator = moderator;
+			address oldModerator = moderator;
 			moderator = addrPool[COLD_POOL_IDX][index];
-			emit ReplaceModerator(preModerator, moderator);
+			emit ReplaceModerator(oldModerator, moderator);
 			removeFromPool(COLD_POOL_IDX, index);
 		}
 		existingCustodians[custodianAddr] = true;
 		custodianPool.push(custodianAddr);
 		addrStatus[custodianAddr] = USED_STATUS;
-		emit AddCustodian(custodianAddr, moderator);
+		emit AddCustodian(custodianAddr);
 		return true;
 	}
 
@@ -287,7 +286,7 @@ contract Esplanade {
 		otherContractPool.push(contractAddr);
 		addrStatus[contractAddr] = USED_STATUS;
 		replaceModerator();
-		emit AddOtherContract(contractAddr, moderator);
+		emit AddOtherContract(contractAddr);
 		return true;
 	}
 
@@ -309,7 +308,7 @@ contract Esplanade {
 		addrStatus[addr1] = poolIndex + 1;
 		addrPool[poolIndex].push(addr2);
 		addrStatus[addr2] = poolIndex + 1;
-		emit AddAddress(poolIndex, addr1, addr2, moderator);
+		emit AddAddress(poolIndex, addr1, addr2);
 		return true;
 	}
 
@@ -326,7 +325,7 @@ contract Esplanade {
 			&& poolIndex < 2);
 		removeFromPoolByAddr(poolIndex, addr);
 		replaceModerator();
-		emit RemoveAddress(poolIndex, addr, moderator);
+		emit RemoveAddress(poolIndex, addr);
 		return true;
 	}
 
@@ -372,9 +371,9 @@ contract Esplanade {
 	function replaceModerator() internal {
 		require(custodianPool.length > 0);
 		uint index = getNextAddrIndex(COLD_POOL_IDX, custodianPool[custodianPool.length - 1]);
-		address preModerator = moderator;
+		address oldModerator = moderator;
 		moderator = addrPool[COLD_POOL_IDX][index];
-		emit ReplaceModerator(preModerator, moderator);
+		emit ReplaceModerator(oldModerator, moderator);
 		removeFromPool(COLD_POOL_IDX, index);
 	}
 
