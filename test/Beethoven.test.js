@@ -5,6 +5,7 @@ const B = artifacts.require('../contracts/tokens/TokenB.sol');
 const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
+const WETH = artifacts.require('../contracts/tokens/WETH.sol');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
@@ -81,6 +82,7 @@ contract('Beethoven', accounts => {
 	let roleManagerContract;
 	let aContract, bContract;
 	let oracleContract;
+	let wethContract;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -150,6 +152,8 @@ contract('Beethoven', accounts => {
 				from: creator
 			}
 		);
+
+		wethContract = await WETH.new();
 	};
 
 	describe('constructor', () => {
@@ -418,279 +422,364 @@ contract('Beethoven', accounts => {
 		});
 	});
 
-	describe('creation and fee withdrawal', () => {
-		let initEthPrice = 582;
-		let amtEth = 1;
-		let tokenValueB =
-			((1 - BeethovenInit.comm / BP_DENOMINATOR) * initEthPrice) /
-			(1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
-		let tokenValueA = (BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
+	describe('creation', () => {
+		function CREATE(isWithWETH){
+			let amtEth = 1;
+			let tokenValueB =
+				((1 - BeethovenInit.comm / BP_DENOMINATOR) * ethInitPrice) /
+				(1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+			let tokenValueA = (BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 
-		let tokenValueBPayFeeDUO = initEthPrice / (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
-		let tokenValueAPayFeeDUO =
-			(BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
-		let accumulatedFeeAfterWithdrawal;
-		let preDUO = 1000000;
-		let feeOfDUOinWei = ((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio;
-		let totalSupplyA, totalSupplyB;
-
-		before(async () => {
-			await initContracts();
-			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(
-				web3.utils.toWei(ethInitPrice + '', 'ether'),
-				time.valueOf(),
-				pf1
-			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				fc,
-				oracleContract.address,
-				{ from: creator }
-			);
-			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
-			await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
-				from: alice
-			});
-		});
-
-		it('should create token A and B payFee with eth', async () => {
-			let success = await beethovenContract.create.call(true, {
-				from: alice,
-				value: web3.utils.toWei(amtEth + '')
-			});
-			// first check return value with call()
-			assert.isTrue(success, 'not able to create');
-			// then send transaction to check effects
-			let tx = await beethovenContract.create(true, {
-				from: alice,
-				value: web3.utils.toWei(amtEth + '')
-			});
-			assert.isTrue(
-				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_CREATE &&
-					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
-				'incorrect event emitted'
-			);
-
-			assert.isTrue(
-				tx.logs[0].args.sender === alice &&
-					isEqual(
-						// tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR,
-						web3.utils.fromWei(tx.logs[0].args.tokenAInWei.valueOf(), 'ether'),
-						tokenValueA + ''
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.tokenBInWei.valueOf(), 'ether'),
-						tokenValueB + ''
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.ethAmtInWei.valueOf(), 'ether'),
-						amtEth * (1 - BeethovenInit.comm / BP_DENOMINATOR) + ''
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.ethFeeInWei.valueOf(), 'ether'),
-						(amtEth * BeethovenInit.comm) / BP_DENOMINATOR + ''
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.duoFeeInWei.valueOf(), 'ether'),
-						'0'
-					),
-				'incorrect event arguments emitted'
-			);
-
-			totalSupplyA = tokenValueA;
-			totalSupplyB = tokenValueB;
-			assert.isTrue(
-				isEqual(
-					web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
-					totalSupplyA + ''
-				) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
-						totalSupplyB + ''
-					),
-				'totalSupply not updated connectly'
-			);
-		});
-
-		it('feeAccumulated should be updated', async () => {
-			let ethFee = await beethovenContract.ethFeeBalanceInWei.call();
-			let fee = (1 * BeethovenInit.comm) / BP_DENOMINATOR;
-			assert.isTrue(
-				web3.utils.fromWei(ethFee.valueOf(), 'ether') === fee.toString(),
-				'feeAccumulated not updated correctly'
-			);
-		});
-
-		it('should update user list if required', async () => {
-			let userIdx = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userIdx.toNumber() === 1, 'new user is not updated');
-		});
-
-		it('should update balance of A correctly', async () => {
-			let balanceA = await beethovenContract.balanceOf.call(0, alice);
-			assert.isTrue(
-				isEqual(web3.utils.fromWei(balanceA.valueOf(), 'ether'), tokenValueA.toString()),
-				'balance A not updated correctly'
-			);
-		});
-
-		it('should update balance of B correctly', async () => {
-			let balanceB = await beethovenContract.balanceOf.call(1, alice);
-			assert.isTrue(
-				isEqual(web3.utils.fromWei(balanceB.valueOf(), 'ether'), tokenValueB.toString()),
-				'balance B not updated correctly'
-			);
-		});
-
-		it('should create token A and B payFee with DUO', async () => {
-			let success = await beethovenContract.create.call(false, {
-				from: alice,
-				value: web3.utils.toWei(amtEth + '')
-			});
-			// // first check return value with call()
-			assert.isTrue(success, 'not able to create');
-			// then send transaction to check effects
-			let tx = await beethovenContract.create(false, {
-				from: alice,
-				value: web3.utils.toWei(amtEth + '')
-			});
-			assert.isTrue(
-				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_CREATE &&
-					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
-				'incorrect event emitted'
-			);
-
-			totalSupplyA += tokenValueAPayFeeDUO;
-			totalSupplyB += tokenValueBPayFeeDUO;
-			assert.isTrue(
-				tx.logs[0].args.sender === alice &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.tokenAInWei.valueOf(), 'ether'),
-						tokenValueAPayFeeDUO
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.tokenBInWei.valueOf(), 'ether'),
-						tokenValueBPayFeeDUO
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.ethAmtInWei.valueOf(), 'ether'),
-						amtEth
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.ethFeeInWei.valueOf(), 'ether'),
-						0
-					) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[0].args.duoFeeInWei.valueOf(), 'ether'),
-						((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
-					),
-				'incorrect event arguments emitted'
-			);
-
-			assert.isTrue(
-				isEqual(
-					web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
-					totalSupplyA.toString()
-				) &&
-					isEqual(
-						web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
-						totalSupplyB.toString()
-					),
-				'totalSupply not updated connectly'
-			);
-		});
-
-		it('should update DUO balance of Alice correctly', async () => {
-			let balanceOfAlice = await duoContract.balanceOf.call(alice);
-			assert.isTrue(
-				isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeOfDUOinWei),
-				'DUO balance of Alice of updated correctly'
-			);
-		});
-
-		it('should update burned DUO correctly', async () => {
-			let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
-			assert.isTrue(
-				burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
-				'burned DUO not updated correctly'
-			);
-		});
-
-		it('should not create token A and B payFee with insufficient DUO allowed', async () => {
-			try {
-				await beethovenContract.create(false, {
-					from: bob,
-					value: web3.utils.toWei('1')
-				});
-				assert.isTrue(false, 'able to create without DUO allowed');
-			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
-			}
-		});
-
-		it('should not be added into userList with small creation amt', async () => {
-			await beethovenContract.create(true, {
-				from: charles,
-				value: web3.utils.toWei('0.00003')
-			});
-			let userIdx = await beethovenContract.existingUsers.call(charles);
-			assert.isTrue(userIdx.toNumber() === 0, 'new user is included in userList');
-		});
-
-		it('should only collect fee less than allowed', async () => {
-			try {
-				await beethovenContract.collectEthFee.call(web3.utils.toWei('1'), { from: fc });
-				assert.isTrue(false, 'can collect fee more than allowed');
-			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_INVALID_OP_CODE_MSG,
-					'can collect fee more than allowed'
+			let tokenValueBPayFeeDUO = ethInitPrice / (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+			let tokenValueAPayFeeDUO =
+				(BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
+			let accumulatedFeeAfterWithdrawal;
+			let preDUO = 1000000;
+			let feeOfDUOinWei = ((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio;
+			let totalSupplyA, totalSupplyB;
+			before(async () => {
+				await initContracts();
+				let time = await oracleContract.timestamp.call();
+				await oracleContract.setLastPrice(
+					web3.utils.toWei(ethInitPrice + '', 'ether'),
+					time.valueOf(),
+					pf1
 				);
+				await beethovenContract.startCustodian(
+					aContract.address,
+					bContract.address,
+					fc,
+					oracleContract.address,
+					{ from: creator }
+				);
+				await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
+				await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
+					from: alice
+				});
+				if(isWithWETH){
+					await wethContract.deposit({
+						from: alice,
+						value: web3.utils.toWei(amtEth * 3 + '', 'ether')
+					});
+				}
+				
+			});
+
+			if(isWithWETH) {
+				it('cannot createWiethWETH with not enough allowance', async () => {
+					try {
+						await beethovenContract.createWithWETH.call(
+							web3.utils.toWei(amtEth + '', 'ether'),
+							true,
+							wethContract.address,
+							{ from: alice }
+						);
+					} catch (err) {
+						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					}
+				});
+	
+				it('cannot createWiethWETH with more than balance', async () => {
+					await wethContract.approve(
+						beethovenContract.address,
+						web3.utils.toWei(amtEth + '', 'ether'),
+						{ from: alice }
+					);
+					try {
+						await beethovenContract.createWithWETH.call(
+							web3.utils.toWei(amtEth * 4 + '', 'ether'),
+							true,
+							wethContract.address,
+							{ from: alice }
+						);
+					} catch (err) {
+						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					}
+				});
+	
 			}
+
+			
+			it('should create', async () => {
+				let tx;
+				let preBalance, afterBalance;
+				if(isWithWETH){
+					await wethContract.approve(
+						beethovenContract.address,
+						web3.utils.toWei(amtEth + '', 'ether'),
+						{ from: alice }
+					);
+					preBalance = await web3.eth.getBalance(beethovenContract.address);
+					tx = await beethovenContract.createWithWETH(
+						web3.utils.toWei(amtEth + '', 'ether'),
+						true,
+						wethContract.address,
+						{ from: alice }
+					);
+				} else {
+					tx = await beethovenContract.create(true, {
+						from: alice,
+						value: web3.utils.toWei(amtEth + '')
+					});
+				}
+				
+				assert.isTrue(
+					tx.logs.length === 2 &&
+						tx.logs[0].event === EVENT_CREATE &&
+						tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+					'incorrect event emitted'
+				);
+
+				assert.isTrue(
+					tx.logs[0].args.sender === alice &&
+						isEqual(
+							// tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR,
+							web3.utils.fromWei(tx.logs[0].args.tokenAInWei.valueOf(), 'ether'),
+							tokenValueA + ''
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.tokenBInWei.valueOf(), 'ether'),
+							tokenValueB + ''
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.ethAmtInWei.valueOf(), 'ether'),
+							amtEth * (1 - BeethovenInit.comm / BP_DENOMINATOR) + ''
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.ethFeeInWei.valueOf(), 'ether'),
+							(amtEth * BeethovenInit.comm) / BP_DENOMINATOR + ''
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.duoFeeInWei.valueOf(), 'ether'),
+							'0'
+						),
+					'incorrect event arguments emitted'
+				);
+
+				afterBalance = await web3.eth.getBalance(beethovenContract.address);
+
+				if(isWithWETH) {
+					assert.isTrue(
+						web3.utils.fromWei(afterBalance.valueOf() + '', 'ether') -
+							web3.utils.fromWei(preBalance.valueOf() + '', 'ether') ===
+							amtEth,
+						'contract balance updated incorrectly'
+					);
+				}
+				
+
+				totalSupplyA = tokenValueA;
+				totalSupplyB = tokenValueB;
+				assert.isTrue(
+					isEqual(
+						web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
+						totalSupplyA + ''
+					) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
+							totalSupplyB + ''
+						),
+					'totalSupply not updated connectly'
+				);
+			});
+
+			it('feeAccumulated should be updated', async () => {
+				let ethFee = await beethovenContract.ethFeeBalanceInWei.call();
+				let fee = (1 * BeethovenInit.comm) / BP_DENOMINATOR;
+				assert.isTrue(
+					web3.utils.fromWei(ethFee.valueOf(), 'ether') === fee.toString(),
+					'feeAccumulated not updated correctly'
+				);
+			});
+
+			it('should update user list if required', async () => {
+				let userIdx = await beethovenContract.existingUsers.call(alice);
+				assert.isTrue(userIdx.toNumber() === 1, 'new user is not updated');
+			});
+
+			it('should update balance of A correctly', async () => {
+				let balanceA = await beethovenContract.balanceOf.call(0, alice);
+				assert.isTrue(
+					isEqual(web3.utils.fromWei(balanceA.valueOf(), 'ether'), tokenValueA.toString()),
+					'balance A not updated correctly'
+				);
+			});
+
+			it('should update balance of B correctly', async () => {
+				let balanceB = await beethovenContract.balanceOf.call(1, alice);
+				assert.isTrue(
+					isEqual(web3.utils.fromWei(balanceB.valueOf(), 'ether'), tokenValueB.toString()),
+					'balance B not updated correctly'
+				);
+			});
+
+			it('should createWithWETH token A and B payFee with DUO', async () => {
+				let tx;
+				if(isWithWETH) {
+					await wethContract.approve(
+						beethovenContract.address,
+						web3.utils.toWei(amtEth + '', 'ether'),
+						{ from: alice }
+					);
+					tx = await beethovenContract.createWithWETH(
+						web3.utils.toWei(amtEth + '', 'ether'),
+						false,
+						wethContract.address,
+						{ from: alice }
+					);
+				} else {
+					tx = await beethovenContract.create(false, {
+						from: alice,
+						value: web3.utils.toWei(amtEth + '')
+					});
+				}
+				
+				// console.log(tx);
+
+				assert.isTrue(
+					tx.logs.length === 2 &&
+						tx.logs[0].event === EVENT_CREATE &&
+						tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+					'incorrect event emitted'
+				);
+
+				totalSupplyA += tokenValueAPayFeeDUO;
+				totalSupplyB += tokenValueBPayFeeDUO;
+				assert.isTrue(
+					tx.logs[0].args.sender === alice &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.tokenAInWei.valueOf(), 'ether'),
+							tokenValueAPayFeeDUO
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.tokenBInWei.valueOf(), 'ether'),
+							tokenValueBPayFeeDUO
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.ethAmtInWei.valueOf(), 'ether'),
+							amtEth
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.ethFeeInWei.valueOf(), 'ether'),
+							0
+						) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[0].args.duoFeeInWei.valueOf(), 'ether'),
+							((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
+						),
+					'incorrect event arguments emitted'
+				);
+
+				assert.isTrue(
+					isEqual(
+						web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
+						totalSupplyA.toString()
+					) &&
+						isEqual(
+							web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
+							totalSupplyB.toString()
+						),
+					'totalSupply not updated connectly'
+				);
+			});
+
+			it('should update DUO balance of Alice correctly', async () => {
+				let balanceOfAlice = await duoContract.balanceOf.call(alice);
+				assert.isTrue(
+					isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeOfDUOinWei),
+					'DUO balance of Alice of updated correctly'
+				);
+			});
+
+			it('should update burned DUO correctly', async () => {
+				let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
+				assert.isTrue(
+					burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
+					'burned DUO not updated correctly'
+				);
+			});
+
+			it('should not create token A and B payFee with insufficient DUO allowed', async () => {
+				try {
+					await beethovenContract.create(false, {
+						from: bob,
+						value: web3.utils.toWei('1')
+					});
+					assert.isTrue(false, 'able to create without DUO allowed');
+				} catch (err) {
+					assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
+				}
+			});
+
+			it('should not be added into userList with small creation amt', async () => {
+				await beethovenContract.create(true, {
+					from: charles,
+					value: web3.utils.toWei('0.00003')
+				});
+				let userIdx = await beethovenContract.existingUsers.call(charles);
+				assert.isTrue(userIdx.toNumber() === 0, 'new user is included in userList');
+			});
+
+			it('should only collect fee less than allowed', async () => {
+				try {
+					await beethovenContract.collectEthFee.call(web3.utils.toWei('1'), { from: fc });
+					assert.isTrue(false, 'can collect fee more than allowed');
+				} catch (err) {
+					assert.equal(
+						err.message,
+						VM_INVALID_OP_CODE_MSG,
+						'can collect fee more than allowed'
+					);
+				}
+			});
+
+			it('should collectETH fee', async () => {
+				let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
+				let duoFeeBalanceInWei = await duoContract.balanceOf.call(beethovenContract.address);
+				accumulatedFeeAfterWithdrawal =
+					ethFeeBalanceInWei.toNumber() - web3.utils.toWei('0.0001');
+				let success = await beethovenContract.collectEthFee.call(web3.utils.toWei('0.0001'), {
+					from: fc
+				});
+				assert.isTrue(success);
+				let tx = await beethovenContract.collectEthFee(web3.utils.toWei('0.0001'), {
+					from: fc
+				});
+
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
+					'worng event emitted'
+				);
+				assert.isTrue(
+					tx.logs[0].args.addr.valueOf() === fc &&
+						tx.logs[0].args.ethFeeInWei.valueOf() === web3.utils.toWei('0.0001') &&
+						tx.logs[0].args.ethFeeBalanceInWei.toNumber() ===
+							accumulatedFeeAfterWithdrawal &&
+						tx.logs[0].args.duoFeeInWei.valueOf() === '0' &&
+						tx.logs[0].args.duoFeeBalanceInWei.valueOf() === duoFeeBalanceInWei.valueOf(),
+					'worng fee parameter'
+				);
+			});
+
+			it('should fee pending withdrawal amount should be updated correctly', async () => {
+				let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
+				assert.isTrue(
+					isEqual(
+						ethFeeBalanceInWei.toNumber() / WEI_DENOMINATOR,
+						accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR
+					),
+					'fee not updated correctly'
+				);
+			});
+
+		}
+
+		describe('ucreate with ETH', () => {
+			CREATE(false);
 		});
 
-		it('should collectETH fee', async () => {
-			let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
-			let duoFeeBalanceInWei = await duoContract.balanceOf.call(beethovenContract.address);
-			accumulatedFeeAfterWithdrawal =
-				ethFeeBalanceInWei.toNumber() - web3.utils.toWei('0.0001');
-			let success = await beethovenContract.collectEthFee.call(web3.utils.toWei('0.0001'), {
-				from: fc
-			});
-			assert.isTrue(success);
-			let tx = await beethovenContract.collectEthFee(web3.utils.toWei('0.0001'), {
-				from: fc
-			});
-
-			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
-				'worng event emitted'
-			);
-			assert.isTrue(
-				tx.logs[0].args.addr.valueOf() === fc &&
-					tx.logs[0].args.ethFeeInWei.valueOf() === web3.utils.toWei('0.0001') &&
-					tx.logs[0].args.ethFeeBalanceInWei.toNumber() ===
-						accumulatedFeeAfterWithdrawal &&
-					tx.logs[0].args.duoFeeInWei.valueOf() === '0' &&
-					tx.logs[0].args.duoFeeBalanceInWei.valueOf() === duoFeeBalanceInWei.valueOf(),
-				'worng fee parameter'
-			);
-		});
-
-		it('should fee pending withdrawal amount should be updated correctly', async () => {
-			let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
-			assert.isTrue(
-				isEqual(
-					ethFeeBalanceInWei.toNumber() / WEI_DENOMINATOR,
-					accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR
-				),
-				'fee not updated correctly'
-			);
+		describe('ucreate with ETH', () => {
+			CREATE(true);
 		});
 	});
 
@@ -941,7 +1030,12 @@ contract('Beethoven', accounts => {
 			await beethovenContract.setCollatarization(web3.utils.toWei('1', 'ether'));
 			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			let currentBalanceB = await beethovenContract.balanceOf.call(1, alice);
-			await beethovenContract.redeem(currentBalanceA.valueOf(), currentBalanceB.valueOf(), true, { from: alice });
+			await beethovenContract.redeem(
+				currentBalanceA.valueOf(),
+				currentBalanceB.valueOf(),
+				true,
+				{ from: alice }
+			);
 			let userIdx = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
 			let userSize = await beethovenContract.getUserSize.call();
