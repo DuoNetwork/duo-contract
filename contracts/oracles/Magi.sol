@@ -211,7 +211,14 @@ contract Magi is Managed {
 		return true;
 	}
 
-	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
+	function setValue(
+		uint idx, 
+		uint newValue
+	) 
+		public 
+		only(operator) 
+		inUpdateWindow() 
+	returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
 			oldValue = priceTolInBP;

@@ -264,7 +264,6 @@ contract('Beethoven', accounts => {
 				await beethovenContract.startCustodian.call(
 					aContract.address,
 					bContract.address,
-					fc,
 					oracleContract.address,
 					{ from: alice }
 				);
@@ -279,7 +278,6 @@ contract('Beethoven', accounts => {
 				await beethovenContract.startCustodian.call(
 					aContract.address,
 					bContract.address,
-					fc,
 					oracleContract.address,
 					{ from: creator }
 				);
@@ -299,7 +297,6 @@ contract('Beethoven', accounts => {
 			let tx = await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -368,7 +365,6 @@ contract('Beethoven', accounts => {
 			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -423,14 +419,15 @@ contract('Beethoven', accounts => {
 	});
 
 	describe('creation', () => {
-		function CREATE(isWithWETH){
+		function CREATE(isWithWETH) {
 			let amtEth = 1;
 			let tokenValueB =
 				((1 - BeethovenInit.comm / BP_DENOMINATOR) * ethInitPrice) /
 				(1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
 			let tokenValueA = (BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueB;
 
-			let tokenValueBPayFeeDUO = ethInitPrice / (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+			let tokenValueBPayFeeDUO =
+				ethInitPrice / (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
 			let tokenValueAPayFeeDUO =
 				(BeethovenInit.alphaInBP / BP_DENOMINATOR) * tokenValueBPayFeeDUO;
 			let accumulatedFeeAfterWithdrawal;
@@ -448,7 +445,6 @@ contract('Beethoven', accounts => {
 				await beethovenContract.startCustodian(
 					aContract.address,
 					bContract.address,
-					fc,
 					oracleContract.address,
 					{ from: creator }
 				);
@@ -456,16 +452,15 @@ contract('Beethoven', accounts => {
 				await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
 					from: alice
 				});
-				if(isWithWETH){
+				if (isWithWETH) {
 					await wethContract.deposit({
 						from: alice,
 						value: web3.utils.toWei(amtEth * 3 + '', 'ether')
 					});
 				}
-				
 			});
 
-			if(isWithWETH) {
+			if (isWithWETH) {
 				it('cannot createWiethWETH with not enough allowance', async () => {
 					try {
 						await beethovenContract.createWithWETH.call(
@@ -478,7 +473,7 @@ contract('Beethoven', accounts => {
 						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 					}
 				});
-	
+
 				it('cannot createWiethWETH with more than balance', async () => {
 					await wethContract.approve(
 						beethovenContract.address,
@@ -496,14 +491,12 @@ contract('Beethoven', accounts => {
 						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 					}
 				});
-	
 			}
 
-			
 			it('should create', async () => {
 				let tx;
 				let preBalance, afterBalance;
-				if(isWithWETH){
+				if (isWithWETH) {
 					await wethContract.approve(
 						beethovenContract.address,
 						web3.utils.toWei(amtEth + '', 'ether'),
@@ -522,7 +515,7 @@ contract('Beethoven', accounts => {
 						value: web3.utils.toWei(amtEth + '')
 					});
 				}
-				
+
 				assert.isTrue(
 					tx.logs.length === 2 &&
 						tx.logs[0].event === EVENT_CREATE &&
@@ -558,7 +551,7 @@ contract('Beethoven', accounts => {
 
 				afterBalance = await web3.eth.getBalance(beethovenContract.address);
 
-				if(isWithWETH) {
+				if (isWithWETH) {
 					assert.isTrue(
 						web3.utils.fromWei(afterBalance.valueOf() + '', 'ether') -
 							web3.utils.fromWei(preBalance.valueOf() + '', 'ether') ===
@@ -566,7 +559,6 @@ contract('Beethoven', accounts => {
 						'contract balance updated incorrectly'
 					);
 				}
-				
 
 				totalSupplyA = tokenValueA;
 				totalSupplyB = tokenValueB;
@@ -576,7 +568,10 @@ contract('Beethoven', accounts => {
 						totalSupplyA + ''
 					) &&
 						isEqual(
-							web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
+							web3.utils.fromWei(
+								tx.logs[1].args.totalSupplyBInWei.valueOf(),
+								'ether'
+							),
 							totalSupplyB + ''
 						),
 					'totalSupply not updated connectly'
@@ -600,7 +595,10 @@ contract('Beethoven', accounts => {
 			it('should update balance of A correctly', async () => {
 				let balanceA = await beethovenContract.balanceOf.call(0, alice);
 				assert.isTrue(
-					isEqual(web3.utils.fromWei(balanceA.valueOf(), 'ether'), tokenValueA.toString()),
+					isEqual(
+						web3.utils.fromWei(balanceA.valueOf(), 'ether'),
+						tokenValueA.toString()
+					),
 					'balance A not updated correctly'
 				);
 			});
@@ -608,14 +606,17 @@ contract('Beethoven', accounts => {
 			it('should update balance of B correctly', async () => {
 				let balanceB = await beethovenContract.balanceOf.call(1, alice);
 				assert.isTrue(
-					isEqual(web3.utils.fromWei(balanceB.valueOf(), 'ether'), tokenValueB.toString()),
+					isEqual(
+						web3.utils.fromWei(balanceB.valueOf(), 'ether'),
+						tokenValueB.toString()
+					),
 					'balance B not updated correctly'
 				);
 			});
 
 			it('should createWithWETH token A and B payFee with DUO', async () => {
 				let tx;
-				if(isWithWETH) {
+				if (isWithWETH) {
 					await wethContract.approve(
 						beethovenContract.address,
 						web3.utils.toWei(amtEth + '', 'ether'),
@@ -633,7 +634,7 @@ contract('Beethoven', accounts => {
 						value: web3.utils.toWei(amtEth + '')
 					});
 				}
-				
+
 				// console.log(tx);
 
 				assert.isTrue(
@@ -676,7 +677,10 @@ contract('Beethoven', accounts => {
 						totalSupplyA.toString()
 					) &&
 						isEqual(
-							web3.utils.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf(), 'ether'),
+							web3.utils.fromWei(
+								tx.logs[1].args.totalSupplyBInWei.valueOf(),
+								'ether'
+							),
 							totalSupplyB.toString()
 						),
 					'totalSupply not updated connectly'
@@ -735,12 +739,17 @@ contract('Beethoven', accounts => {
 
 			it('should collectETH fee', async () => {
 				let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
-				let duoFeeBalanceInWei = await duoContract.balanceOf.call(beethovenContract.address);
+				let duoFeeBalanceInWei = await duoContract.balanceOf.call(
+					beethovenContract.address
+				);
 				accumulatedFeeAfterWithdrawal =
 					ethFeeBalanceInWei.toNumber() - web3.utils.toWei('0.0001');
-				let success = await beethovenContract.collectEthFee.call(web3.utils.toWei('0.0001'), {
-					from: fc
-				});
+				let success = await beethovenContract.collectEthFee.call(
+					web3.utils.toWei('0.0001'),
+					{
+						from: fc
+					}
+				);
 				assert.isTrue(success);
 				let tx = await beethovenContract.collectEthFee(web3.utils.toWei('0.0001'), {
 					from: fc
@@ -756,7 +765,8 @@ contract('Beethoven', accounts => {
 						tx.logs[0].args.ethFeeBalanceInWei.toNumber() ===
 							accumulatedFeeAfterWithdrawal &&
 						tx.logs[0].args.duoFeeInWei.valueOf() === '0' &&
-						tx.logs[0].args.duoFeeBalanceInWei.valueOf() === duoFeeBalanceInWei.valueOf(),
+						tx.logs[0].args.duoFeeBalanceInWei.valueOf() ===
+							duoFeeBalanceInWei.valueOf(),
 					'worng fee parameter'
 				);
 			});
@@ -771,7 +781,6 @@ contract('Beethoven', accounts => {
 					'fee not updated correctly'
 				);
 			});
-
 		}
 
 		describe('ucreate with ETH', () => {
@@ -807,7 +816,6 @@ contract('Beethoven', accounts => {
 			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -1055,7 +1063,6 @@ contract('Beethoven', accounts => {
 			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -1141,7 +1148,6 @@ contract('Beethoven', accounts => {
 			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -1411,7 +1417,6 @@ contract('Beethoven', accounts => {
 				await beethovenContract.startCustodian(
 					aContract.address,
 					bContract.address,
-					fc,
 					oracleContract.address,
 					{ from: creator }
 				);
@@ -1796,7 +1801,6 @@ contract('Beethoven', accounts => {
 			await beethovenContract.startCustodian(
 				aContract.address,
 				bContract.address,
-				fc,
 				oracleContract.address,
 				{ from: creator }
 			);

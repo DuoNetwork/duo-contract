@@ -50,7 +50,7 @@ contract Custodian is Managed {
 	uint public redeemCommInBP;
 	uint public period;
 	uint public preResetWaitingBlocks;
-	uint public priceFetchCoolDown = 3000;
+	uint public priceFetchCoolDown;
 	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
@@ -241,11 +241,9 @@ contract Custodian is Managed {
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		uint totalBalance = address(this).balance;
-		uint feeBalance = totalBalance.sub(ethCollateralInWei).sub(amountInWei);
-		// require(feeBalance >= 0);
+		uint feeBalance = ethFeeBalanceInWei().sub(amountInWei);
 		feeCollector.transfer(amountInWei);
-		emit CollectFee(msg.sender, amountInWei, feeBalance, 0, duoToken.balanceOf(this));
+		emit CollectFee(feeCollector, amountInWei, feeBalance, 0, duoToken.balanceOf(this));
 		return true;
 	}
 
@@ -256,7 +254,7 @@ contract Custodian is Managed {
 		returns (bool success) 
 	{
 		duoToken.transfer(feeCollector, amountInWei);
-		emit CollectFee(msg.sender, 0, address(this).balance.sub(ethCollateralInWei), amountInWei, duoToken.balanceOf(this));
+		emit CollectFee(feeCollector, 0, address(this).balance.sub(ethCollateralInWei), amountInWei, duoToken.balanceOf(this));
 		return true;
 	}
 

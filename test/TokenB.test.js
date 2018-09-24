@@ -100,7 +100,6 @@ contract('TokenB', accounts => {
 		await beethovenContract.startCustodian(
 			tokenAContract.address,
 			tokenBContract.address,
-			fc,
 			oracleContract.address,
 			{ from: creator }
 		);

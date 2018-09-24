@@ -23,8 +23,8 @@ contract Beethoven is Custodian {
 	uint public limitPeriodicInWei; 
 	uint public limitUpperInWei; 
 	uint public limitLowerInWei;
-	uint public iterationGasThreshold = 65000;
-	uint public ethDuoFeeRatio = 800;
+	uint public iterationGasThreshold;
+	uint public ethDuoFeeRatio;
 
 	// reset intermediate values
 	uint bAdj;
@@ -90,12 +90,10 @@ contract Beethoven is Custodian {
 	/// @dev startCustodian
 	///	@param aAddr contract address of Class A
 	///	@param bAddr contract address of Class B
-	///	@param feeAddress account address of feeCollector
 	///	@param oracleAddr contract address of Oracle
 	function startCustodian(
 		address aAddr,
 		address bAddr,
-		address feeAddress, 
 		address oracleAddr
 		) 
 		public 
@@ -105,8 +103,6 @@ contract Beethoven is Custodian {
 	{	
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
-		
-		feeCollector = feeAddress;
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
