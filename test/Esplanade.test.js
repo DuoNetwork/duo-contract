@@ -32,7 +32,7 @@ const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invali
 // const DUMMY_ADDR = '0xc';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
-contract.only('Esplanade', accounts => {
+contract('Esplanade', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 	let newCustodianContract;
 
