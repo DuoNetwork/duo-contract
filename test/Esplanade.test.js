@@ -882,7 +882,7 @@ contract('Esplanade', accounts => {
 				}
 			});
 
-			it.only('moderator should remove address in the pool', async () => {
+			it('moderator should remove address in the pool', async () => {
 				let tx = await roleManagerContract.addCustodian(custodianContract.address, {
 					from: moderator
 				}); // consume one from coldPool
