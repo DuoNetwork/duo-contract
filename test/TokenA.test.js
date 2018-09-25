@@ -5,7 +5,7 @@ const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
 const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];

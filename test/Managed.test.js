@@ -3,7 +3,7 @@ const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
@@ -19,7 +19,7 @@ const EVENT_UPDATE_OPERATOR = 'UpdateOperator';
 
 let validColdPool = Pool[0].map(addr => web3.utils.toChecksumAddress(addr));
 
-contract.only('Managed', accounts => {
+contract('Managed', accounts => {
 	let managedContract;
 	let roleManagerContract;
 

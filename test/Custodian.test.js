@@ -3,7 +3,7 @@ const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT || '8545'));
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
@@ -683,7 +683,7 @@ contract('Custodian', accounts => {
 			await custodianContract.skipCooldown(1);
 			let firstColdAddr = PoolInit[0][0];
 			// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
-			let updator = tx.logs[0].args.currentModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase() ? PoolInit[0][1]: firstColdAddr;
+			let updator = tx.logs[0].args.newModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase() ? PoolInit[0][1]: firstColdAddr;
 			let status = await custodianContract.updateFeeCollector.call({ from: updator });
 			assert.isTrue(status, 'not be able to update');
 		});

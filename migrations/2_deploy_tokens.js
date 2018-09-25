@@ -39,7 +39,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf3 = '0x0076c03e1028F92f8391029f15096026bd3bdFd2';
 		fc = '0x0';
 	}
-	if (network == 'development') {
+	if (network == 'development' || network == 'coverage') {
 		creator = accounts[0];
 		pf1 = accounts[1];
 		pf2 = accounts[2];
@@ -47,9 +47,9 @@ module.exports = async (deployer, network, accounts) => {
 		fc = accounts[4];
 	}
 
-	let BeethovenToDeploy = network !== 'development' ? Beethoven : BeethovenMock;
-	let DuoToDeploy = network !== 'development' ? DUO : DuoMock;
-	let EsplanadeToDeploy = network !== 'development' ? Esplanade : EsplanadeMock;
+	let BeethovenToDeploy = (network !== 'development' && network !== 'coverage') ? Beethoven : BeethovenMock;
+	let DuoToDeploy = (network !== 'development' && network !== 'coverage') ? DUO : DuoMock;
+	let EsplanadeToDeploy = (network !== 'development' && network !== 'coverage') ? Esplanade : EsplanadeMock;
 
 	// 42008
 	await deployer.deploy(SafeMath, {
