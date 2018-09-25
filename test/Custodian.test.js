@@ -15,10 +15,10 @@ const MagiInit = InitParas['Magi'];
 const PoolInit = InitParas['Pool'];
 
 // Event
-const TRANSFER = 'Transfer';
-const APPROVAL = 'Approval';
-const UPDATE_ORACLE = 'UpdateOracle';
-const COLLECT_FEE = 'CollectFee';
+const EVENT_TRANSFER = 'Transfer';
+const EVENT_APPROVAL = 'Approval';
+const EVENT_UPDATE_ORACLE = 'UpdateOracle';
+const EVENT_COLLECT_FEE = 'CollectFee';
 
 const STATE_INCEPT_RESET = '0';
 const STATE_TRADING = '1';
@@ -217,7 +217,7 @@ contract('Custodian', accounts => {
 					}
 				);
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === APPROVAL,
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_APPROVAL,
 					'incorrect event emitted'
 				);
 				assert.isTrue(
@@ -266,7 +266,7 @@ contract('Custodian', accounts => {
 				);
 
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === TRANSFER,
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_TRANSFER,
 					'incorrect event emitted'
 				);
 				assert.isTrue(
@@ -345,7 +345,7 @@ contract('Custodian', accounts => {
 					}
 				);
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === TRANSFER,
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_TRANSFER,
 					'incorrect event emitted'
 				);
 				assert.isTrue(
@@ -469,10 +469,6 @@ contract('Custodian', accounts => {
 		before(async () => {
 			await initContracts();
 			await custodianContract.setState(1);
-			// await custodianContract.addEthFeeBalance(web3.utils.toWei(initEthFee, 'ether'), {
-			// 	from: creator,
-			// 	value: web3.utils.toWei(initEthFee, 'ether')
-			// });
 			await web3.eth.sendTransaction({
 				from: creator,
 				to: custodianContract.address,
@@ -489,7 +485,6 @@ contract('Custodian', accounts => {
 			let balance = await web3.eth.getBalance(custodianContract.address);
 			let ethFee = await custodianContract.ethFeeBalanceInWei.call();
 			let duoBalance = await duoContract.balanceOf(custodianContract.address);
-			// console.log(balance.valueOf(), ethFee.valueOf(), duoBalance.valueOf());
 			assert.isTrue(
 				web3.utils.fromWei(balance.valueOf(), 'ether') === initEthFee &&
 					web3.utils.fromWei(ethFee.valueOf(), 'ether') === initEthFee &&
@@ -535,7 +530,7 @@ contract('Custodian', accounts => {
 				from: fc
 			});
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === COLLECT_FEE,
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
 				'worng event emitted'
 			);
 			assert.isTrue(
@@ -583,7 +578,7 @@ contract('Custodian', accounts => {
 				from: fc
 			});
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === COLLECT_FEE,
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
 				'worng event emitted'
 			);
 
@@ -608,7 +603,7 @@ contract('Custodian', accounts => {
 			await custodianContract.setState(1);
 		});
 
-		it('none operator cannot update oracle', async () => {
+		it('non operator cannot update oracle', async () => {
 			try {
 				await custodianContract.updateOracle.call(newOracleAddr, { from: alice });
 				assert.isTrue(false, 'non operator can update address');
@@ -617,12 +612,12 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('operator cannot update non passed contract', async () => {
+		it('operator cannot update not passed contract', async () => {
 			try {
 				await custodianContract.updateOracle.call(oracleContract.address, {
 					from: creator
 				});
-				assert.isTrue(false, 'can update non passed contract');
+				assert.isTrue(false, 'can update not passed contract');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
 			}
@@ -631,14 +626,9 @@ contract('Custodian', accounts => {
 		it('operator cannot update oracle whose lastPrice is not set', async () => {
 			try {
 				await roleManagerContract.setPassedContract(oracleContract.address);
-				assert.isTrue(
-					await roleManagerContract.setPassedContract.call(oracleContract.address),
-					'cannot set passedContract'
-				);
 				await custodianContract.updateOracle.call(oracleContract.address, {
 					from: creator
 				});
-
 				assert.isTrue(false, 'can update non passed contract');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
@@ -647,17 +637,13 @@ contract('Custodian', accounts => {
 
 		it('operator can update Oracle', async () => {
 			await roleManagerContract.setPassedContract(oracleContract.address);
-			assert.isTrue(
-				await roleManagerContract.setPassedContract.call(oracleContract.address),
-				'cannot set passedContract'
-			);
 			await oracleContract.setLastPrice(100, 100, pf1);
 			let tx = await custodianContract.updateOracle(oracleContract.address, {
 				from: creator
 			});
 
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === UPDATE_ORACLE,
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATE_ORACLE,
 				'incorrect event emitted'
 			);
 			assert.isTrue(
@@ -673,23 +659,31 @@ contract('Custodian', accounts => {
 			await custodianContract.setState(1);
 		});
 
-		it('non allowed cold updator cannot update fc', async () => {
+		it('address not in pool cannot update fc', async () => {
 			try {
 				await custodianContract.updateFeeCollector.call({ from: alice });
-				assert.isTrue(false, 'non operator can update address');
+				assert.isTrue(false, 'address not in pool can update address');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
-		it('cold updator can update fc', async () => {
+		it('hot address cannot update fc', async () => {
+			try {
+				await custodianContract.updateFeeCollector.call({ from: PoolInit[1][0] });
+				assert.isTrue(false, 'hot address can update address');
+			} catch (err) {
+				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('cold address can update fc', async () => {
 			let tx = await roleManagerContract.addCustodian(custodianContract.address, {
 				from: creator
 			});
 			await roleManagerContract.skipCooldown(1);
 			await custodianContract.skipCooldown(1);
 			let firstColdAddr = PoolInit[0][0];
-			// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
 			let updator =
 				tx.logs[0].args.newModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase()
 					? PoolInit[0][1]
