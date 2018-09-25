@@ -1,45 +1,36 @@
 const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock');
-// const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const A = artifacts.require('../contracts/tokens/TokenA.sol');
-const B = artifacts.require('../contracts/tokens/TokenB.sol');
+// const A = artifacts.require('../contracts/tokens/TokenA.sol');
+// const B = artifacts.require('../contracts/tokens/TokenB.sol');
 const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const WETH = artifacts.require('../contracts/tokens/WETH.sol');
 const Web3 = require('web3');
 const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
 );
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
-const AInit = InitParas['TokenA'];
-const BInit = InitParas['TokenB'];
-// const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 
 // Event
 const EVENT_ACCEPT_PX = 'AcceptPrice';
 const EVENT_START_TRADING = 'StartTrading';
-// const START_TRADING = 'StartTrading';
 const EVENT_CREATE = 'Create';
 const EVENT_REDEEM = 'Redeem';
 const EVENT_TOTAL_SUPPLY = 'TotalSupply';
 const EVENT_START_RESET = 'StartReset';
-// const EVENT_TRANSFER = 'Transfer';
-// const APPROVAL = 'Approval';
-// const ADD_ADDRESS = 'AddAddress';
-// const UPDATE_ADDRESS = 'UpdateAddress';
-// const REMOVE_ADDRESS = 'RemoveAddress';
 const EVENT_SET_VALUE = 'SetValue';
 const EVENT_COLLECT_FEE = 'CollectFee';
 
-const STATE_INCEPT_RESET = '0';
+const STATE_INCEPTION = '0';
 const STATE_TRADING = '1';
 const STATE_PRE_RESET = '2';
 const STATE_RESET = '3';
+
 const STATE_UPWARD_RESET = '0';
 const STATE_DOWNWARD_RESET = '1';
 const STATE_PERIODIC_RESET = '2';
@@ -47,16 +38,14 @@ const STATE_PERIODIC_RESET = '2';
 const DUMMY_ADDR = '0xc';
 
 const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-const VM_INVALID_OP_CODE_MSG = 'VM Exception while processing transaction: invalid opcode';
-// const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
+const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
 const EPSILON = 1e-10;
 const ethInitPrice = 582;
 const ethDuoFeeRatio = 800;
 
-// const A_ADDR = '0xa';
-// const B_ADDR = '0xb';
-
+const A_ADDR = '0xa';
+const B_ADDR = '0xb';
 const isEqual = (a, b, log = false) => {
 	if (log) {
 		console.log(a);
@@ -68,6 +57,7 @@ const isEqual = (a, b, log = false) => {
 		return Math.abs(Number(a) - Number(b)) <= EPSILON;
 	}
 };
+
 const assertState = async (beethovenContract, state) => {
 	let _state = await beethovenContract.state.call();
 	assert.isTrue(_state.valueOf() === state);
@@ -78,11 +68,10 @@ const assertResetState = async (beethovenContract, state) => {
 	assert.isTrue(_state.valueOf() === state);
 };
 
-contract('Beethoven', accounts => {
+contract.only('Beethoven', accounts => {
 	let beethovenContract;
 	let duoContract;
 	let roleManagerContract;
-	let aContract, bContract;
 	let oracleContract;
 	let wethContract;
 
@@ -91,11 +80,9 @@ contract('Beethoven', accounts => {
 	const pf2 = accounts[2];
 	const pf3 = accounts[3];
 	const fc = accounts[4];
-	// const pm = accounts[5];
-	const alice = accounts[6]; //duoMember
+	const alice = accounts[6];
 	const bob = accounts[7];
 	const charles = accounts[8];
-	// const david = accounts[9];
 
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
@@ -134,13 +121,6 @@ contract('Beethoven', accounts => {
 				from: creator
 			}
 		);
-
-		aContract = await A.new(AInit.tokenName, AInit.tokenSymbol, beethovenContract.address, {
-			from: creator
-		});
-		bContract = await B.new(BInit.tokenName, BInit.tokenSymbol, beethovenContract.address, {
-			from: creator
-		});
 
 		oracleContract = await Magi.new(
 			creator,
@@ -258,14 +238,14 @@ contract('Beethoven', accounts => {
 
 		it('state should be Inception before starting', async () => {
 			let state = await beethovenContract.state.call();
-			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
+			assert.equal(state.valueOf(), STATE_INCEPTION, 'state is not inception');
 		});
 
 		it('non operator cannot start', async () => {
 			try {
 				await beethovenContract.startCustodian.call(
-					aContract.address,
-					bContract.address,
+					A_ADDR,
+					B_ADDR,
 					oracleContract.address,
 					{ from: alice }
 				);
@@ -278,8 +258,8 @@ contract('Beethoven', accounts => {
 		it('should not start with oracle not ready', async () => {
 			try {
 				await beethovenContract.startCustodian.call(
-					aContract.address,
-					bContract.address,
+					A_ADDR,
+					B_ADDR,
 					oracleContract.address,
 					{ from: creator }
 				);
@@ -297,8 +277,8 @@ contract('Beethoven', accounts => {
 			);
 
 			let tx = await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
+				A_ADDR,
+				B_ADDR,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -364,12 +344,9 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				oracleContract.address,
-				{ from: creator }
-			);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
 		});
 
 		it('should not fetchPrice 0', async () => {
@@ -382,7 +359,7 @@ contract('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					VM_INVALID_OP_CODE_MSG,
+					VM_INVALID_OPCODE_MSG,
 					'can collect fee more than allowed'
 				);
 			}
@@ -444,12 +421,9 @@ contract('Beethoven', accounts => {
 					time.valueOf(),
 					pf1
 				);
-				await beethovenContract.startCustodian(
-					aContract.address,
-					bContract.address,
-					oracleContract.address,
-					{ from: creator }
-				);
+				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+					from: creator
+				});
 				await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
 				await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
 					from: alice
@@ -733,7 +707,7 @@ contract('Beethoven', accounts => {
 				} catch (err) {
 					assert.equal(
 						err.message,
-						VM_INVALID_OP_CODE_MSG,
+						VM_INVALID_OPCODE_MSG,
 						'can collect fee more than allowed'
 					);
 				}
@@ -815,12 +789,9 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				oracleContract.address,
-				{ from: creator }
-			);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
 			await duoContract.transfer(alice, web3.utils.toWei(preDUO + ''), { from: creator });
 			await duoContract.transfer(bob, web3.utils.toWei(preDUO + ''), { from: creator });
 			await beethovenContract.create(true, { from: alice, value: web3.utils.toWei('1') });
@@ -1062,12 +1033,9 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				oracleContract.address,
-				{ from: creator }
-			);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
 		});
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
@@ -1147,12 +1115,9 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				oracleContract.address,
-				{ from: creator }
-			);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
 			// let state = await beethovenContract.state.call();
 			// console.log(state.valueOf());
 
@@ -1416,12 +1381,9 @@ contract('Beethoven', accounts => {
 					time.valueOf(),
 					pf1
 				);
-				await beethovenContract.startCustodian(
-					aContract.address,
-					bContract.address,
-					oracleContract.address,
-					{ from: creator }
-				);
+				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+					from: creator
+				});
 				// let state = await beethovenContract.state.call();
 				// console.log(state.valueOf());
 
@@ -1834,12 +1796,9 @@ contract('Beethoven', accounts => {
 				time.valueOf(),
 				pf1
 			);
-			await beethovenContract.startCustodian(
-				aContract.address,
-				bContract.address,
-				oracleContract.address,
-				{ from: creator }
-			);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
 		});
 
 		beforeEach(async () => {

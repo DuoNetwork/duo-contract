@@ -4,7 +4,7 @@ const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');
 const Web3 = require('web3');
 const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
 );
 
 const InitParas = require('../migrations/contractInitParas.json');

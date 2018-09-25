@@ -5,7 +5,7 @@
   "description": "DUO Contract",
   "author": "FinBook Pte Ltd",
   "scripts": {
-    "test": "truffle.cmd test",
+    "test": "cross-env GANACHE_PORT=8545 truffle.cmd test",
     "coverage": "cross-env SOLIDITY_COVERAGE=true GANACHE_PORT=8555 solidity-coverage",
     "clean": "rimraf build",
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8545 -a 20",
