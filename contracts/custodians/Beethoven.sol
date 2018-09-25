@@ -154,11 +154,10 @@ contract Beethoven is Custodian {
 		internal 
 		returns(bool)
 	{
-		// uint ethAmtInWei; 
 		require(ethAmtInWei > 0);
 		uint feeInWei;
 		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, createCommInBP, payFeeInEth);
-		ethCollateralInWei += ethAmtInWei;
+		ethCollateralInWei = ethCollateralInWei.add(ethAmtInWei);
 		uint numeritor = ethAmtInWei
 						.mul(resetPriceInWei)
 						.mul(betaInWei)
@@ -171,7 +170,6 @@ contract Beethoven is Custodian {
 		);
 		uint tokenValueB = numeritor.div(denominator);
 		uint tokenValueA = tokenValueB.mul(alphaInBP).div(BP_DENOMINATOR);
-		// address sender = msg.sender;
 		balanceOf[0][sender] = balanceOf[0][sender].add(tokenValueA);
 		balanceOf[1][sender] = balanceOf[1][sender].add(tokenValueB);
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
@@ -209,6 +207,7 @@ contract Beethoven is Custodian {
 			.mul(WEI_DENOMINATOR)
 			.div(resetPriceInWei)
 			.div(betaInWei);
+		ethCollateralInWei = ethCollateralInWei.sub(ethAmtInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP, payFeeInEth);
 
@@ -218,7 +217,6 @@ contract Beethoven is Custodian {
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiA);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
 		sender.transfer(ethAmtInWei);
-		ethCollateralInWei = ethCollateralInWei.sub(ethAmtInWei).sub(feeInWei); 
 		emit Redeem(
 			sender, 
 			ethAmtInWei, 
@@ -256,7 +254,7 @@ contract Beethoven is Custodian {
 		uint currentTime = getNowTimestamp();
 		require(currentTime > lastPriceTimeInSecond.add(priceFetchCoolDown));
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(timeInSecond > lastPriceTimeInSecond && timeInSecond <= currentTime);
+		require(timeInSecond > lastPriceTimeInSecond && timeInSecond <= currentTime && priceInWei > 0);
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;
 		(navAInWei, navBInWei) = calculateNav(

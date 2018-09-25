@@ -1,12 +1,11 @@
 pragma solidity ^0.4.24;
 
-import { Custodian } from "./Custodian.sol";
+import { Custodian } from "../custodians/Custodian.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract CustodianMock is Custodian {
 	uint public timestamp = now;
 	address public roleManagerAddr;
-	// uint public ethFeeBalanceInWei;
 
 	constructor(
 		address duoTokenAddr,
@@ -57,12 +56,6 @@ contract CustodianMock is Custodian {
 	function getExistingUser(address addr) public view returns (uint) {
 		return existingUsers[addr];
 	}
-
-	// function addEthFeeBalance(uint amtInWei) public payable returns (bool) {
-	// 	// ethFeeBalanceInWei = address(this).balance.sub(ethCollateralInWei) + amtInWei;
-	// 	address(this).balance = address(this).balance.add(amtInWei);
-	// 	return true;
-	// }
 
 	function setTimestamp(uint ts) public {
 		timestamp = ts;

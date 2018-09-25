@@ -1,12 +1,9 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
-const BeethovenMock = artifacts.require('./BeethovenMock.sol');
-const Magi = artifacts.require('./oracles/Magi.sol');
+const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
-const EsplanadeMock = artifacts.require('./EsplanadeMock.sol');
 const DUO = artifacts.require('./DUO.sol');
-const DuoMock = artifacts.require('./DuoMock.sol');
 const TokenA = artifacts.require('./TokenA.sol');
 const TokenB = artifacts.require('./TokenB.sol');
 const InitParas = require('./contractInitParas.json');
@@ -29,7 +26,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf3 = '0x00476E55e02673B0E4D2B474071014D5a366Ed4E';
 		fc = '0x0';
 	}
-	if (network == 'ropsten') {
+	else if (network == 'ropsten') {
 		// creator = accounts[3];
 		creator = '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E';
 		pf1 = '0x00f125c2C1b08c2516e7A7B789d617ad93Fdf4C0';
@@ -39,7 +36,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf3 = '0x0076c03e1028F92f8391029f15096026bd3bdFd2';
 		fc = '0x0';
 	}
-	if (network == 'development' || network == 'coverage') {
+	else if (network == 'development' || network == 'coverage') {
 		creator = accounts[0];
 		pf1 = accounts[1];
 		pf2 = accounts[2];
@@ -47,20 +44,16 @@ module.exports = async (deployer, network, accounts) => {
 		fc = accounts[4];
 	}
 
-	let BeethovenToDeploy = (network !== 'development' && network !== 'coverage') ? Beethoven : BeethovenMock;
-	let DuoToDeploy = (network !== 'development' && network !== 'coverage') ? DUO : DuoMock;
-	let EsplanadeToDeploy = (network !== 'development' && network !== 'coverage') ? Esplanade : EsplanadeMock;
-
 	// 42008
 	await deployer.deploy(SafeMath, {
 		from: creator
 	});
 	// 74748, 27008
-	await deployer.link(SafeMath, [BeethovenToDeploy, Magi]);
+	await deployer.link(SafeMath, [Beethoven, Magi]);
 
 	// 950268
 	await deployer.deploy(
-		DuoToDeploy,
+		DUO,
 		web3.utils.toWei(DuoInit.initSupply),
 		DuoInit.tokenName,
 		DuoInit.tokenSymbol,
@@ -70,15 +63,15 @@ module.exports = async (deployer, network, accounts) => {
 	);
 
 	// 2611094
-	await deployer.deploy(EsplanadeToDeploy, RoleManagerInit.optCoolDown, {
+	await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 		from: creator
 	});
 
 	// 5788827 for mock
 	await deployer.deploy(
-		BeethovenToDeploy,
-		DuoToDeploy.address,
-		EsplanadeToDeploy.address,
+		Beethoven,
+		DUO.address,
+		Esplanade.address,
 		fc,
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
@@ -101,7 +94,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf1,
 		pf2,
 		pf3,
-		EsplanadeToDeploy.address,
+		Esplanade.address,
 		MagiInit.pxCoolDown,
 		MagiInit.optCoolDown,
 		{
@@ -114,7 +107,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenA,
 		TokenAInit.tokenName,
 		TokenAInit.tokenSymbol,
-		BeethovenToDeploy.address,
+		Beethoven.address,
 		{
 			from: creator
 		}
@@ -124,7 +117,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenB,
 		TokenBInit.tokenName,
 		TokenBInit.tokenSymbol,
-		BeethovenToDeploy.address,
+		Beethoven.address,
 		{ from: creator }
 	);
 };

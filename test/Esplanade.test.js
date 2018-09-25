@@ -1,7 +1,7 @@
-const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const Esplanade = artifacts.require('../contracts/common/EsplanadeMock.sol');
-const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
-const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
+const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
+const Esplanade = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
+const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
+const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const Web3 = require('web3');
 const web3 = new Web3(
 	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)

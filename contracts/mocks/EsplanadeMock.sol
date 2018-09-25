@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import { Esplanade } from "./Esplanade.sol";
+import { Esplanade } from "../common/Esplanade.sol";
 
 
 contract EsplanadeMock is Esplanade {

@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import { Magi } from "./Magi.sol";
+import { Magi } from "../oracles/Magi.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract MagiMock is Magi {

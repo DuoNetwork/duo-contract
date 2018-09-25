@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-/// @title WETH - Wrap of ETH, issue WETH 1:1 to ETH
+/// @title Mock implementation of WETH - Wrap of ETH, issue WETH 1:1 to ETH
 /// @author duo.network
-contract WETH {
+contract WETHMock {
     string public name     = "Wrapped Ether";
     string public symbol   = "WETH";
     uint8  public decimals = 18;

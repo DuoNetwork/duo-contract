@@ -1,6 +1,6 @@
-const Custodian = artifacts.require('../contracts/custodians/CustodianMock.sol');
-const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
-const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
+const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
+const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
+const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');
 const Web3 = require('web3');
 const web3 = new Web3(

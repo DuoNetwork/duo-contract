@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import { Beethoven } from "./Beethoven.sol";
+import { Beethoven } from "../custodians/Beethoven.sol";
 
 contract BeethovenMock is Beethoven {
 
@@ -51,10 +51,6 @@ contract BeethovenMock is Beethoven {
 
 	function skipHour(uint numOfHour) public {
 		timestamp = timestamp.add(period * numOfHour);
-	}
-
-	function setCollatarization(uint number) public {
-		ethCollateralInWei = number;
 	}
 	
 	function getNowTimestamp() internal view returns (uint) {

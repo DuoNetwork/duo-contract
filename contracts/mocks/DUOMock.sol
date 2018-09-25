@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-import { DUO } from "./DUO.sol";
+import { DUO } from "../tokens/DUO.sol";
 
-contract DuoMock is DUO {
+contract DUOMock is DUO {
 
 	constructor(
 		uint initialSupply,

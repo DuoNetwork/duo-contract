@@ -12,9 +12,6 @@ module.exports = function(deployer, network, accounts) {
 		case "live":
 			deployer.deploy(Migrations, {from: accounts[0]});
 			break;
-		case "coverage":
-			deployer.deploy(Migrations, {from: accounts[0]});
-			break;
 		default:
 			deployer.deploy(Migrations, {from: accounts[0]});
 			break;

@@ -1,10 +1,8 @@
-const Beethoven = artifacts.require('../contracts/custodians/BeethovenMock');
-// const A = artifacts.require('../contracts/tokens/TokenA.sol');
-// const B = artifacts.require('../contracts/tokens/TokenB.sol');
-const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
-const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
-const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
-const WETH = artifacts.require('../contracts/tokens/WETH.sol');
+const Beethoven = artifacts.require('../contracts/mocks/BeethovenMock');
+const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
+const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
+const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
+const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const Web3 = require('web3');
 const web3 = new Web3(
 	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
@@ -46,6 +44,7 @@ const ethDuoFeeRatio = 800;
 
 const A_ADDR = '0xa';
 const B_ADDR = '0xb';
+
 const isEqual = (a, b, log = false) => {
 	if (log) {
 		console.log(a);
@@ -68,7 +67,7 @@ const assertResetState = async (beethovenContract, state) => {
 	assert.isTrue(_state.valueOf() === state);
 };
 
-contract.only('Beethoven', accounts => {
+contract('Beethoven', accounts => {
 	let beethovenContract;
 	let duoContract;
 	let roleManagerContract;
@@ -141,93 +140,86 @@ contract.only('Beethoven', accounts => {
 	describe('constructor', () => {
 		before(initContracts);
 
-		it('alpha should equal specified value', async () => {
+		it('alpha should be set correctly', async () => {
 			let alpha = await beethovenContract.alphaInBP.call();
-			assert.equal(alpha.toNumber(), BeethovenInit.alphaInBP, 'alpha specified incorrect');
+			assert.equal(alpha.toNumber(), BeethovenInit.alphaInBP, 'alpha set incorrectly');
 		});
 
-		it('period should equal specified value', async () => {
+		it('period should be set correctly', async () => {
 			let pd = await beethovenContract.period.call();
-			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period specified incorrect');
+			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period set incorrectly');
 		});
 
-		it('limitPeriodicInWei should equal specified value', async () => {
+		it('limitPeriodicInWei should be set correctly', async () => {
 			let limitPeriodicInWei = await beethovenContract.limitPeriodicInWei.call();
-			// console.log(web3.utils.fromWei(limitPeriodicInWei.valueOf(), 'ether'), BeethovenInit.hp);
 			assert.equal(
 				web3.utils.fromWei(limitPeriodicInWei.valueOf(), 'ether'),
 				BeethovenInit.hp + '',
-				'limitPeriodicInWei specified incorrect'
+				'limitPeriodicInWei set incorrectly'
 			);
 		});
 
-		it('limitUpperInWei should equal specified value', async () => {
+		it('limitUpperInWei should be set correctly', async () => {
 			let limitUpperInWei = await beethovenContract.limitUpperInWei.call();
-			// console.log(web3.utils.fromWei(limitUpperInWei.valueOf(), 'ether'), BeethovenInit.hu);
 			assert.equal(
 				web3.utils.fromWei(limitUpperInWei.valueOf(), 'ether'),
 				Number(BeethovenInit.hu) + '',
-				'limitUpperInWei specified incorrect'
+				'limitUpperInWei set incorrectly'
 			);
 		});
 
-		it('limitLowerInWei should equal specified value', async () => {
+		it('limitLowerInWei should be set correctly', async () => {
 			let limitLowerInWei = await beethovenContract.limitLowerInWei.call();
 			assert.equal(
 				web3.utils.fromWei(limitLowerInWei.valueOf(), 'ether'),
 				BeethovenInit.hd + '',
-				'limitLowerInWei specified incorrect'
+				'limitLowerInWei set incorrectly'
 			);
 		});
 
-		it('iterationGasThreshold should equal specified value', async () => {
+		it('iterationGasThreshold should be set correctly', async () => {
 			let iterationGasThreshold = await beethovenContract.iterationGasThreshold.call();
 			assert.equal(
 				iterationGasThreshold.valueOf(),
 				process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
-				'iterationGasThreshold specified incorrect'
+				'iterationGasThreshold set incorrectly'
 			);
 		});
 
-		it('ethDuoFeeRatio should equal specified value', async () => {
+		it('ethDuoFeeRatio should be set correctly', async () => {
 			let ethDuoFeeRatio = await beethovenContract.ethDuoFeeRatio.call();
 			assert.equal(
 				ethDuoFeeRatio.valueOf(),
 				BeethovenInit.ethDuoRate,
-				'ethDuoRate specified incorrect'
+				'ethDuoRate set incorrectly'
 			);
 		});
 
-		it('createCommInBP should equal specified value', async () => {
+		it('createCommInBP should be set correctly', async () => {
 			let createCommInBP = await beethovenContract.createCommInBP.call();
 			assert.equal(
 				createCommInBP.valueOf(),
 				BeethovenInit.comm + '',
-				'ethDuoRate specified incorrect'
+				'ethDuoRate set incorrectly'
 			);
 		});
 
-		it('redeemCommInBP should equal specified value', async () => {
+		it('redeemCommInBP should be set correctly', async () => {
 			let comm = await beethovenContract.redeemCommInBP.call();
-			assert.equal(comm.toNumber(), BeethovenInit.comm, 'redeemCommInBP specified incorrect');
+			assert.equal(comm.toNumber(), BeethovenInit.comm, 'redeemCommInBP set incorrectly');
 		});
 
-		it('bAdj should equal specified value', async () => {
+		it('bAdj should be set correctly', async () => {
 			let bAdj = await beethovenContract.getBadj.call();
-			assert.equal(
-				web3.utils.fromWei(bAdj.valueOf(), 'ether'),
-				'2',
-				'bAdj specified incorrect'
-			);
+			assert.equal(web3.utils.fromWei(bAdj.valueOf(), 'ether'), '2', 'bAdj set incorrectly');
 		});
 
-		it('preResetWaitingBlocks should equal specified value', async () => {
+		it('preResetWaitingBlocks should be set correctly', async () => {
 			let preResetWaitingBlocks = await beethovenContract.preResetWaitingBlocks.call();
-			// console.log(web3.utils.fromWei(preResetWaitingBlocks.valueOf(), 'ether'));
 			assert.equal(
 				preResetWaitingBlocks.valueOf(),
 				'10',
-				'preResetWaitingBlocks specified incorrect'
+				'preResetWaitingBlocks set incorrectly'
 			);
 		});
 	});
@@ -263,6 +255,7 @@ contract.only('Beethoven', accounts => {
 					oracleContract.address,
 					{ from: creator }
 				);
+				assert.isTrue(false, 'can start with oracle not ready');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -349,35 +342,33 @@ contract.only('Beethoven', accounts => {
 			});
 		});
 
-		it('should not fetchPrice 0', async () => {
+		it('should not fetch price 0', async () => {
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
 			await beethovenContract.setTimestamp(time.toNumber());
 			await oracleContract.setLastPrice(0, time.valueOf(), pf1);
 			try {
 				await beethovenContract.fetchPrice();
+				assert.isTrue(false, 'fetched price 0');
 			} catch (err) {
-				assert.equal(
-					err.message,
-					VM_INVALID_OPCODE_MSG,
-					'can collect fee more than allowed'
-				);
+				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
-		it('should fetchPrice with time more than current time', async () => {
+		it('should not fetch price with future time', async () => {
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
 			await beethovenContract.setTimestamp(time.toNumber() - 1);
 			await oracleContract.setLastPrice(100, time.valueOf(), pf1);
 			try {
 				await beethovenContract.fetchPrice();
+				assert.isTrue(false, 'fetched with future time');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
+				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
-		it('should fetchPrice price', async () => {
+		it('should fetch price', async () => {
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
 			await beethovenContract.setTimestamp(time.toNumber());
@@ -387,18 +378,21 @@ contract.only('Beethoven', accounts => {
 				pf1
 			);
 			let tx = await beethovenContract.fetchPrice();
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX);
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX,
+				'wrong event'
+			);
 			assert.isTrue(
 				web3.utils.fromWei(tx.logs[0].args.priceInWei.valueOf(), 'ether') ===
 					ethInitPrice.toString() &&
 					tx.logs[0].args.timeInSecond.valueOf() === time.valueOf(),
-				'wrong fetching'
+				'wrong event args'
 			);
 		});
 	});
 
 	describe('creation', () => {
-		function CREATE(isWithWETH) {
+		function createTest(isWithWETH) {
 			let amtEth = 1;
 			let tokenValueB =
 				((1 - BeethovenInit.comm / BP_DENOMINATOR) * ethInitPrice) /
@@ -437,7 +431,7 @@ contract.only('Beethoven', accounts => {
 			});
 
 			if (isWithWETH) {
-				it('cannot createWiethWETH with not enough allowance', async () => {
+				it('cannot create with insufficient allowance', async () => {
 					try {
 						await beethovenContract.createWithWETH.call(
 							web3.utils.toWei(amtEth + '', 'ether'),
@@ -445,12 +439,13 @@ contract.only('Beethoven', accounts => {
 							wethContract.address,
 							{ from: alice }
 						);
+						assert.isTrue(false, 'can create with insufficient allowance');
 					} catch (err) {
 						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 					}
 				});
 
-				it('cannot createWiethWETH with more than balance', async () => {
+				it('cannot create more than allowance', async () => {
 					await wethContract.approve(
 						beethovenContract.address,
 						web3.utils.toWei(amtEth + '', 'ether'),
@@ -463,6 +458,7 @@ contract.only('Beethoven', accounts => {
 							wethContract.address,
 							{ from: alice }
 						);
+						assert.isTrue(false, 'can create more than allowance');
 					} catch (err) {
 						assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 					}
@@ -471,14 +467,13 @@ contract.only('Beethoven', accounts => {
 
 			it('should create', async () => {
 				let tx;
-				let preBalance, afterBalance;
+				let preBalance = await web3.eth.getBalance(beethovenContract.address);
 				if (isWithWETH) {
 					await wethContract.approve(
 						beethovenContract.address,
 						web3.utils.toWei(amtEth + '', 'ether'),
 						{ from: alice }
 					);
-					preBalance = await web3.eth.getBalance(beethovenContract.address);
 					tx = await beethovenContract.createWithWETH(
 						web3.utils.toWei(amtEth + '', 'ether'),
 						true,
@@ -502,7 +497,6 @@ contract.only('Beethoven', accounts => {
 				assert.isTrue(
 					tx.logs[0].args.sender === alice &&
 						isEqual(
-							// tx.logs[0].args.tokenAInWei.toNumber() / WEI_DENOMINATOR,
 							web3.utils.fromWei(tx.logs[0].args.tokenAInWei.valueOf(), 'ether'),
 							tokenValueA + ''
 						) &&
@@ -525,16 +519,14 @@ contract.only('Beethoven', accounts => {
 					'incorrect event arguments emitted'
 				);
 
-				afterBalance = await web3.eth.getBalance(beethovenContract.address);
+				let afterBalance = await web3.eth.getBalance(beethovenContract.address);
 
-				if (isWithWETH) {
-					assert.isTrue(
-						web3.utils.fromWei(afterBalance.valueOf() + '', 'ether') -
-							web3.utils.fromWei(preBalance.valueOf() + '', 'ether') ===
-							amtEth,
-						'contract balance updated incorrectly'
-					);
-				}
+				assert.isTrue(
+					web3.utils.fromWei(afterBalance.valueOf() + '', 'ether') -
+						web3.utils.fromWei(preBalance.valueOf() + '', 'ether') ===
+						amtEth,
+					'contract balance updated incorrectly'
+				);
 
 				totalSupplyA = tokenValueA;
 				totalSupplyB = tokenValueB;
@@ -564,8 +556,8 @@ contract.only('Beethoven', accounts => {
 			});
 
 			it('should update user list if required', async () => {
-				let userIdx = await beethovenContract.existingUsers.call(alice);
-				assert.isTrue(userIdx.toNumber() === 1, 'new user is not updated');
+				let userFlag = await beethovenContract.existingUsers.call(alice);
+				assert.isTrue(userFlag.toNumber() === 1, 'new user is not updated');
 			});
 
 			it('should update balance of A correctly', async () => {
@@ -590,7 +582,7 @@ contract.only('Beethoven', accounts => {
 				);
 			});
 
-			it('should createWithWETH token A and B payFee with DUO', async () => {
+			it('should create token A and B payFee with DUO', async () => {
 				let tx;
 				if (isWithWETH) {
 					await wethContract.approve(
@@ -610,8 +602,6 @@ contract.only('Beethoven', accounts => {
 						value: web3.utils.toWei(amtEth + '')
 					});
 				}
-
-				// console.log(tx);
 
 				assert.isTrue(
 					tx.logs.length === 2 &&
@@ -667,15 +657,15 @@ contract.only('Beethoven', accounts => {
 				let balanceOfAlice = await duoContract.balanceOf.call(alice);
 				assert.isTrue(
 					isEqual(preDUO - balanceOfAlice.toNumber() / WEI_DENOMINATOR, feeOfDUOinWei),
-					'DUO balance of Alice of updated correctly'
+					'DUO balance of Alice not updated correctly'
 				);
 			});
 
-			it('should update burned DUO correctly', async () => {
-				let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
+			it('should update beethoven DUO balance correctly', async () => {
+				let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
 				assert.isTrue(
-					burntDUOamt.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
-					'burned DUO not updated correctly'
+					duoBalance.toNumber() / WEI_DENOMINATOR === feeOfDUOinWei,
+					'beethoven DUO balance not updated correctly'
 				);
 			});
 
@@ -696,8 +686,8 @@ contract.only('Beethoven', accounts => {
 					from: charles,
 					value: web3.utils.toWei('0.00003')
 				});
-				let userIdx = await beethovenContract.existingUsers.call(charles);
-				assert.isTrue(userIdx.toNumber() === 0, 'new user is included in userList');
+				let userFlag = await beethovenContract.existingUsers.call(charles);
+				assert.isTrue(userFlag.valueOf() === '0', 'new user is included in userList');
 			});
 
 			it('should only collect fee less than allowed', async () => {
@@ -705,11 +695,7 @@ contract.only('Beethoven', accounts => {
 					await beethovenContract.collectEthFee.call(web3.utils.toWei('1'), { from: fc });
 					assert.isTrue(false, 'can collect fee more than allowed');
 				} catch (err) {
-					assert.equal(
-						err.message,
-						VM_INVALID_OPCODE_MSG,
-						'can collect fee more than allowed'
-					);
+					assert.equal(err.message, VM_INVALID_OPCODE_MSG, 'not reverted');
 				}
 			});
 
@@ -747,7 +733,7 @@ contract.only('Beethoven', accounts => {
 				);
 			});
 
-			it('should fee pending withdrawal amount should be updated correctly', async () => {
+			it('should update fee balance correctly', async () => {
 				let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
 				assert.isTrue(
 					isEqual(
@@ -759,17 +745,17 @@ contract.only('Beethoven', accounts => {
 			});
 		}
 
-		describe('ucreate with ETH', () => {
-			CREATE(false);
+		describe('create with ETH', () => {
+			createTest(false);
 		});
 
-		describe('ucreate with ETH', () => {
-			CREATE(true);
+		describe('create with WETH', () => {
+			createTest(true);
 		});
 	});
 
-	describe('redemption and eth withdrawal', () => {
-		let prevBalanceA, prevBalanceB, prevFeeAccumulated;
+	describe('redemption', () => {
+		let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevCollateral;
 		let amtA = 28;
 		let amtB = 29;
 		let adjAmtA = (amtA * BP_DENOMINATOR) / BeethovenInit.alphaInBP;
@@ -799,6 +785,8 @@ contract.only('Beethoven', accounts => {
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
 			let ethFee = await beethovenContract.ethFeeBalanceInWei.call();
 			prevFeeAccumulated = ethFee.valueOf();
+			prevCollateral =
+				(await beethovenContract.ethCollateralInWei.call()).toNumber() / WEI_DENOMINATOR;
 			await duoContract.approve(beethovenContract.address, web3.utils.toWei('1000000'), {
 				from: alice
 			});
@@ -818,7 +806,7 @@ contract.only('Beethoven', accounts => {
 						from: alice
 					}
 				);
-				assert.isTrue(false, 'able to redeem more than allowed');
+				assert.isTrue(false, 'able to redeem more than balance');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'able to redeem more than allowed');
 			}
@@ -869,7 +857,14 @@ contract.only('Beethoven', accounts => {
 				'incorrect event arguments emitted'
 			);
 
-			// console.log(tx.logs[1].args.totalSupplyAInWei.valueOf(), totalSupplyA);
+			let ethCollateral =
+				(await beethovenContract.ethCollateralInWei.call()).toNumber() / WEI_DENOMINATOR;
+			assert.isTrue(
+				isEqual(ethCollateral, prevCollateral - amtEth),
+				'eth collateral not set correctly'
+			);
+			prevCollateral = ethCollateral;
+
 			assert.isTrue(
 				isEqual(
 					web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
@@ -882,27 +877,25 @@ contract.only('Beethoven', accounts => {
 			);
 		});
 
-		it('feeAccumulated should be updated', async () => {
+		it('fee balance should be updated', async () => {
 			let feeAccumulated = await beethovenContract.ethFeeBalanceInWei.call();
-			// let feeAccumulated = sysStates[IDX_FEE_IN_WEI];
 			assert.isTrue(
 				isEqual(
 					web3.utils.fromWei(feeAccumulated.minus(prevFeeAccumulated).valueOf(), 'ether'),
 					fee
 				),
-				'feeAccumulated not updated correctly'
+				'fee balance not updated correctly'
 			);
 		});
 
 		it('should update balance of A correctly', async () => {
 			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
-			// console.log(currentBalanceA.toNumber() / WEI_DENOMINATOR);
 			assert.isTrue(
 				isEqual(
 					currentBalanceA.toNumber() / WEI_DENOMINATOR + deductAmtA,
 					prevBalanceA.toNumber() / WEI_DENOMINATOR
 				),
-				'balance A not updated correctly after redeed'
+				'balance A not updated correctly after redemption'
 			);
 		});
 
@@ -913,13 +906,13 @@ contract.only('Beethoven', accounts => {
 					currentBalanceB.toNumber() / WEI_DENOMINATOR + deductAmtB,
 					prevBalanceB.toNumber() / WEI_DENOMINATOR
 				),
-				'balance B not updated correctly after redeed'
+				'balance B not updated correctly after redemption'
 			);
 		});
 
 		it('should be in user list', async () => {
-			let userIdx = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+			let userFlag = await beethovenContract.existingUsers.call(alice);
+			assert.isTrue(userFlag.valueOf() === '1', 'user not in the user list');
 			let userSize = await beethovenContract.getUserSize.call();
 			assert.equal(userSize.toNumber(), 1, 'user size not updated correctly');
 		});
@@ -970,6 +963,15 @@ contract.only('Beethoven', accounts => {
 					),
 				'incorrect event arguments emitted'
 			);
+
+			let ethCollateral =
+				(await beethovenContract.ethCollateralInWei.call()).toNumber() / WEI_DENOMINATOR;
+			assert.isTrue(
+				isEqual(ethCollateral, prevCollateral - amtEth),
+				'eth collateral not set correctly'
+			);
+			prevCollateral = ethCollateral;
+
 			assert.isTrue(
 				isEqual(
 					web3.utils.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf(), 'ether'),
@@ -991,24 +993,22 @@ contract.only('Beethoven', accounts => {
 			);
 		});
 
-		it('should update burned DUO correctly', async () => {
-			let burntDUOamt = await duoContract.balanceOf.call(beethovenContract.address);
+		it('should update beethoven DUO balance correctly', async () => {
+			let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
 			assert.isTrue(
-				isEqual(burntDUOamt.toNumber() / WEI_DENOMINATOR, feeInDUO),
-				'burned DUO not updated correctly'
+				isEqual(duoBalance.toNumber() / WEI_DENOMINATOR, feeInDUO),
+				'beethoven DUO balance not updated correctly'
 			);
 		});
 
 		it('should be in user list', async () => {
-			let userIdx = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userIdx.toNumber() === 1, 'user not in the user list');
+			let userFlag = await beethovenContract.existingUsers.call(alice);
+			assert.isTrue(userFlag.valueOf() == '1', 'user not in the user list');
 			let userSize = await beethovenContract.getUserSize.call();
 			assert.equal(userSize.toNumber(), 1, 'user size not updated correctly');
 		});
 
 		it('should be removed from user list if all tokens are redeemed', async () => {
-			// await web3.eth.sendTransaction({from: creator, to: beethovenContract.address, value: web3.utils.toWei('10', 'ether')});
-			await beethovenContract.setCollatarization(web3.utils.toWei('1', 'ether'));
 			let currentBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			let currentBalanceB = await beethovenContract.balanceOf.call(1, alice);
 			await beethovenContract.redeem(
@@ -1017,8 +1017,8 @@ contract.only('Beethoven', accounts => {
 				true,
 				{ from: alice }
 			);
-			let userIdx = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userIdx.toNumber() === 0, 'user still in the userList');
+			let userFlag = await beethovenContract.existingUsers.call(alice);
+			assert.isTrue(userFlag.toNumber() === 0, 'user still in the userList');
 			let userSize = await beethovenContract.getUserSize.call();
 			assert.equal(userSize.toNumber(), 0, 'user size not updated correctly');
 		});
@@ -1118,20 +1118,16 @@ contract.only('Beethoven', accounts => {
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 				from: creator
 			});
-			// let state = await beethovenContract.state.call();
-			// console.log(state.valueOf());
 
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
 
 			await beethovenContract.setTimestamp(time.valueOf());
-			// console.log(time);
 			await oracleContract.setLastPrice(
 				web3.utils.toWei('888', 'ether'),
 				time.valueOf(),
 				pf1
 			);
-			// console.log(await beethovenContract.timestamp.call());
 
 			await beethovenContract.fetchPrice();
 		});
@@ -1170,7 +1166,7 @@ contract.only('Beethoven', accounts => {
 			}
 		});
 
-		it('should not allow any transfer or approve of A', async () => {
+		it('should not allow any transfer of A', async () => {
 			try {
 				await beethovenContract.transfer.call(0, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
 					from: alice
@@ -1182,7 +1178,7 @@ contract.only('Beethoven', accounts => {
 			}
 		});
 
-		it('should not allow any transfer or approve of B', async () => {
+		it('should not allow any transfer of B', async () => {
 			try {
 				await beethovenContract.transfer.call(1, DUMMY_ADDR, bob, web3.utils.toWei('1'), {
 					from: alice
@@ -1243,14 +1239,11 @@ contract.only('Beethoven', accounts => {
 		});
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
-			// console.log(await beethovenContract.state.call());
-
 			let preResetWaitBlk = await beethovenContract.preResetWaitingBlocks.call();
 
 			for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
 				await beethovenContract.startPreReset();
 
-			// await beethovenContract.startPreReset();
 			await assertState(beethovenContract, STATE_PRE_RESET);
 
 			let tx = await beethovenContract.startPreReset();
@@ -1366,7 +1359,6 @@ contract.only('Beethoven', accounts => {
 			let newBalanceAalice, newBalanceBalice;
 			let newBalanceAbob, newBalanceBbob;
 			let newBalanceAcharles, newBalanceBcharles;
-			// let timestamp;
 			let prevBeta, beta;
 
 			let skipNum = isPeriodicReset
@@ -1384,11 +1376,6 @@ contract.only('Beethoven', accounts => {
 				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 					from: creator
 				});
-				// let state = await beethovenContract.state.call();
-				// console.log(state.valueOf());
-
-				// console.log(time);
-
 				await duoContract.transfer(alice, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(bob, web3.utils.toWei('100'), { from: creator });
 				await duoContract.transfer(charles, web3.utils.toWei('100'), { from: creator });
@@ -1444,10 +1431,6 @@ contract.only('Beethoven', accounts => {
 					);
 				let charlesB = await beethovenContract.balanceOf.call(1, charles);
 				prevBalanceBcharles = charlesB.toNumber() / WEI_DENOMINATOR;
-
-				// await beethovenContract.skipCooldown(skipNum);
-
-				// timestamp = await beethovenContract.timestamp.call();
 				await oracleContract.skipCooldown(skipNum);
 				time = await oracleContract.timestamp.call();
 				await beethovenContract.setTimestamp(time.valueOf());
@@ -1457,12 +1440,10 @@ contract.only('Beethoven', accounts => {
 					time.valueOf(),
 					pf1
 				);
-				// console.log(await beethovenContract.timestamp.call());
 
 				await beethovenContract.fetchPrice();
 
 				let navAinWei = await beethovenContract.navAInWei.call();
-				// let navAinWei = sysStates[IDX_NAV_A];
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 				let navBinWei = await beethovenContract.navBInWei.call();
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
@@ -1470,9 +1451,7 @@ contract.only('Beethoven', accounts => {
 				let betaInWei = await beethovenContract.betaInWei.call();
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await beethovenContract.startPreReset();
-				// let sysStatesAfter = await beethovenContract.getSystemStates.call();
 				let betaInWeiAfter = await beethovenContract.betaInWei.call();
-				// let betaInWeiAfter = await beethovenContract.betaInWei.call();
 				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
 			});
 
@@ -1526,14 +1505,12 @@ contract.only('Beethoven', accounts => {
 
 			it('should process reset for only one user', async () => {
 				let tx = await beethovenContract.startReset({ gas: resetGas });
-				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_RESET,
 					'not only one user processed'
 				);
 
 				let nextIndex = await beethovenContract.getNextResetAddrIndex.call();
-				// let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
 				let currentBalanceAalice = await beethovenContract.balanceOf.call(0, alice);
 				let currentBalanceBalice = await beethovenContract.balanceOf.call(1, alice);
@@ -1570,14 +1547,10 @@ contract.only('Beethoven', accounts => {
 				newBalanceAbob = newBalanceA;
 				newBalanceBbob = newBalanceB;
 				let tx = await beethovenContract.startReset({ gas: resetGas });
-				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_RESET,
 					'reset not completed'
 				);
-				// let sysStates = await beethovenContract.getSystemStates.call();
-				// let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
-				// assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(bob, newBalanceA);
 				await assertBBalanceForAddress(bob, newBalanceB);
 			});
@@ -1594,13 +1567,11 @@ contract.only('Beethoven', accounts => {
 				newBalanceAcharles = newBalanceA;
 				newBalanceBcharles = newBalanceB;
 				let tx = await beethovenContract.startReset({ gas: resetGas });
-				//console.log(tx);
 				assert.isTrue(
 					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_TRADING,
 					'reset not completed'
 				);
 				let nextIndex = await beethovenContract.getNextResetAddrIndex.call();
-				// let nextIndex = sysStates[IDX_NEXT_RESET_ADDR_IDX];
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(charles, newBalanceA);
 				await assertBBalanceForAddress(charles, newBalanceB);
@@ -1639,8 +1610,6 @@ contract.only('Beethoven', accounts => {
 				let navB = await beethovenContract.navBInWei.call();
 
 				assert.equal(web3.utils.fromWei(navA.valueOf()), '1', 'nav A not reset to 1');
-
-				// lnavB = sysStates[IDX_NAV_B];
 				assert.isTrue(
 					isPeriodicReset
 						? isEqual(web3.utils.fromWei(navB.valueOf()), currentNavB)
@@ -1831,7 +1800,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1844,7 +1813,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1878,7 +1847,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1891,7 +1860,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1924,7 +1893,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1957,7 +1926,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
@@ -1991,7 +1960,7 @@ contract.only('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					'VM Exception while processing transaction: revert',
+					VM_REVERT_MSG,
 					'transaction not reverted'
 				);
 			}
