@@ -1,1 +1,0 @@
-SOLIDITY_COVERAGE=true GANACHE_PORT=8555 scripts/test.sh

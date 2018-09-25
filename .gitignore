@@ -8,6 +8,9 @@ node_modules
 *.tmp
 *~
 build
+# coverage files
 coverage
 coverage.json
 coverageEnv
+scTopics
+allFiredEvents

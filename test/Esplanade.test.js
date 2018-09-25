@@ -3,7 +3,9 @@ const Esplanade = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT));
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+);
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
@@ -880,14 +882,19 @@ contract('Esplanade', accounts => {
 				}
 			});
 
-			it('moderator should remove address in the pool', async () => {
-				await roleManagerContract.addCustodian(custodianContract.address, {
+			it.only('moderator should remove address in the pool', async () => {
+				let tx = await roleManagerContract.addCustodian(custodianContract.address, {
 					from: moderator
 				}); // consume one from coldPool
 				await roleManagerContract.skipCooldown(1);
 				await roleManagerContract.setModerator(newModerator);
-				let addrToRemove = await roleManagerContract.addrPool.call(index, 0);
-				let tx = await roleManagerContract.removeAddress(addrToRemove.valueOf(), index, {
+				let addrToRemove = Pool[index][0];
+				addrToRemove =
+					tx.logs[0].args.newModerator.valueOf().toLowerCase() ===
+					addrToRemove.toLowerCase()
+						? Pool[index][1]
+						: addrToRemove;
+				tx = await roleManagerContract.removeAddress(addrToRemove.valueOf(), index, {
 					from: newModerator
 				});
 				assert.isTrue(
@@ -897,10 +904,11 @@ contract('Esplanade', accounts => {
 					'wrong event emitted'
 				);
 				let args = tx.logs[1].args;
+
 				assert.isTrue(
 					args.poolIndex.valueOf() === index.toString() &&
 						web3.utils.toChecksumAddress(args.addr.valueOf()) ===
-							web3.utils.toChecksumAddress(Pool[index][0]),
+							web3.utils.toChecksumAddress(addrToRemove),
 					'wrong event arguments'
 				);
 				let newModeratorAfterRemove = web3.utils.toChecksumAddress(

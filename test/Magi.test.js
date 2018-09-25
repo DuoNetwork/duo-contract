@@ -3,7 +3,9 @@ const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT));
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+);
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];

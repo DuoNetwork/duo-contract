@@ -7,7 +7,9 @@ const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const WETH = artifacts.require('../contracts/tokens/WETH.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT || '8545'));
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+);
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
@@ -125,7 +127,7 @@ contract('Beethoven', accounts => {
 			BeethovenInit.pd,
 			BeethovenInit.optCoolDown,
 			BeethovenInit.pxFetchCoolDown,
-			process.env.SOLIDITY_COVERAGE? BeethovenInit.iteGasThSC: BeethovenInit.iteGasTh,
+			process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
 			BeethovenInit.ethDuoRate,
 			BeethovenInit.preResetWaitBlk,
 			{
@@ -202,7 +204,7 @@ contract('Beethoven', accounts => {
 			let iterationGasThreshold = await beethovenContract.iterationGasThreshold.call();
 			assert.equal(
 				iterationGasThreshold.valueOf(),
-				process.env.SOLIDITY_COVERAGE? BeethovenInit.iteGasThSC: BeethovenInit.iteGasTh,
+				process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
 				'iterationGasThreshold specified incorrect'
 			);
 		});
@@ -1698,7 +1700,7 @@ contract('Beethoven', accounts => {
 			});
 		}
 
-		let resetGasAmt = process.env.SOLIDITY_COVERAGE? 155000: 95000;
+		let resetGasAmt = process.env.SOLIDITY_COVERAGE ? 155000 : 95000;
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
@@ -1732,7 +1734,7 @@ contract('Beethoven', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, false); 
+			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, false);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
@@ -1772,22 +1774,54 @@ contract('Beethoven', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 3', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, false, 20000);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				false,
+				20000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 4', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, true, 20000);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				true,
+				20000
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 5', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, false, 5000);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				false,
+				5000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 6', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, true, 5000);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				true,
+				5000
+			);
 		});
 	});
 

@@ -3,7 +3,9 @@ const RoleManager = artifacts.require('../contracts/common/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/oracles/MagiMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DuoMock.sol');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT || '8545'));
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:' + (process.env.GANACHE_PORT || '8545'))
+);
 
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
@@ -25,7 +27,6 @@ const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
 const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
 
 const DUMMY_ADDR = '0xc';
-
 
 contract('Custodian', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
@@ -472,7 +473,11 @@ contract('Custodian', accounts => {
 			// 	from: creator,
 			// 	value: web3.utils.toWei(initEthFee, 'ether')
 			// });
-			await web3.eth.sendTransaction({from: creator, to: custodianContract.address, value: web3.utils.toWei(initEthFee, 'ether')});
+			await web3.eth.sendTransaction({
+				from: creator,
+				to: custodianContract.address,
+				value: web3.utils.toWei(initEthFee, 'ether')
+			});
 
 			await duoContract.mintTokens(
 				custodianContract.address,
@@ -678,12 +683,17 @@ contract('Custodian', accounts => {
 		});
 
 		it('cold updator can update fc', async () => {
-			let tx = await roleManagerContract.addCustodian(custodianContract.address, { from: creator });
+			let tx = await roleManagerContract.addCustodian(custodianContract.address, {
+				from: creator
+			});
 			await roleManagerContract.skipCooldown(1);
 			await custodianContract.skipCooldown(1);
 			let firstColdAddr = PoolInit[0][0];
 			// console.log(tx.logs[0].args.currentModerator.valueOf().toLowerCase());
-			let updator = tx.logs[0].args.newModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase() ? PoolInit[0][1]: firstColdAddr;
+			let updator =
+				tx.logs[0].args.newModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase()
+					? PoolInit[0][1]
+					: firstColdAddr;
 			let status = await custodianContract.updateFeeCollector.call({ from: updator });
 			assert.isTrue(status, 'not be able to update');
 		});
