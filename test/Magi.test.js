@@ -38,7 +38,7 @@ const isEqual = (a, b, log = false) => {
 	}
 };
 
-contract.only('Magi', accounts => {
+contract('Magi', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];

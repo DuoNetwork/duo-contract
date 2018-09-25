@@ -1700,7 +1700,7 @@ contract('Beethoven', accounts => {
 			});
 		}
 
-		let resetGasAmt = process.env.SOLIDITY_COVERAGE ? 155000 : 95000;
+		let resetGasAmt = process.env.SOLIDITY_COVERAGE ? 160000 : 95000;
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
