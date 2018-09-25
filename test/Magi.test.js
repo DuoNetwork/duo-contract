@@ -38,7 +38,7 @@ const isEqual = (a, b, log = false) => {
 	}
 };
 
-contract('Magi', accounts => {
+contract.only('Magi', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
@@ -48,12 +48,7 @@ contract('Magi', accounts => {
 	const pf3 = accounts[4];
 	const alice = accounts[5];
 	const bob = accounts[6];
-	// const charles = accounts[7];
-	// const david = accounts[8];
-	// const eric = accounts[9];
-	// const frank = accounts[10];
 	const newModerator = accounts[11];
-	// const newModerator2 = accounts[12];
 
 	const initContracts = async () => {
 		duoContract = await DUO.new(
@@ -107,43 +102,43 @@ contract('Magi', accounts => {
 	describe('constructor', () => {
 		before(initContracts);
 
-		it('opt should be not started', async () => {
+		it('opt should be set correctly', async () => {
 			let value = await oracleContract.operator.call();
-			assert.equal(value.valueOf(), creator, 'opt is not not started');
+			assert.equal(value.valueOf(), creator, 'opt is not set correctly');
 		});
 
-		it('pf1 should be not started', async () => {
+		it('pf1 should be set correctly', async () => {
 			let value = await oracleContract.priceFeed1.call();
-			assert.equal(value.valueOf(), pf1, 'pf1 is not not started');
+			assert.equal(value.valueOf(), pf1, 'pf1 is not set correctly');
 		});
 
-		it('pf2 should be not started', async () => {
+		it('pf2 should be set correctly', async () => {
 			let value = await oracleContract.priceFeed2.call();
-			assert.equal(value.valueOf(), pf2, 'pf2 is not not started');
+			assert.equal(value.valueOf(), pf2, 'pf2 is not set correctly');
 		});
 
-		it('pf3 should be not started', async () => {
+		it('pf3 should be set correctly', async () => {
 			let value = await oracleContract.priceFeed3.call();
-			assert.equal(value.valueOf(), pf3, 'pf3 is not not started');
+			assert.equal(value.valueOf(), pf3, 'pf3 is not set correctly');
 		});
 
-		it('roleManagerAddr should be not started', async () => {
+		it('roleManagerAddr should be set correctly', async () => {
 			let value = await oracleContract.roleManagerAddress.call();
 			assert.equal(
 				value.valueOf(),
 				roleManagerContract.address,
-				'roleManagerAddr is not not started'
+				'roleManagerAddr is not set correctly'
 			);
 		});
 
-		it('pxCoolDown should be not started', async () => {
+		it('pxCoolDown should be set correctly', async () => {
 			let value = await oracleContract.priceUpdateCoolDown.call();
-			assert.equal(value.valueOf(), MagiInit.pxCoolDown, 'pxCoolDown is not not started');
+			assert.equal(value.valueOf(), MagiInit.pxCoolDown, 'pxCoolDown is not set correctly');
 		});
 
-		it('optCoolDown should be not started', async () => {
+		it('optCoolDown should be set correctly', async () => {
 			let value = await oracleContract.operationCoolDown.call();
-			assert.equal(value.valueOf(), MagiInit.optCoolDown, 'optCoolDown is not not started');
+			assert.equal(value.valueOf(), MagiInit.optCoolDown, 'optCoolDown is not set correctly');
 		});
 	});
 
@@ -161,6 +156,7 @@ contract('Magi', accounts => {
 					web3.utils.toWei(startPrice + '', 'ether'),
 					{ from: alice }
 				);
+				assert.isTrue(false, 'non pf can start');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -175,6 +171,7 @@ contract('Magi', accounts => {
 					blockTime.valueOf() + 10,
 					{ from: pf1 }
 				);
+				assert.isTrue(false, 'startTime can be less than blockchain time');
 			} catch (err) {
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
@@ -197,12 +194,16 @@ contract('Magi', accounts => {
 				'initial states not set correctly'
 			);
 
-			assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PRICE);
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PRICE,
+				'wrong events'
+			);
 			assert.isTrue(
 				tx.logs[0].args.priceInWei.valueOf() ===
 					web3.utils.toWei(startPrice + '', 'ether') &&
 					tx.logs[0].args.timeInSecond.valueOf() === blockTime.valueOf() &&
-					tx.logs[0].args.sender === pf1
+					tx.logs[0].args.sender === pf1,
+				'wrong event args'
 			);
 		});
 
@@ -305,8 +306,6 @@ contract('Magi', accounts => {
 				'incorrect event arguments emitted'
 			);
 			let firstPrice = await oracleContract.firstPrice.call();
-			// let px = sysPrices[IDX_FIRST_PX];
-			// let ts = sysPrices[IDX_FIRST_TS];
 			assert.isTrue(
 				isEqual(firstPrice[0].toNumber(), web3.utils.toWei('500')) &&
 					isEqual(firstPrice[1].toNumber(), firstPeriod.toNumber()),
@@ -353,7 +352,6 @@ contract('Magi', accounts => {
 				'source is not updated correctly'
 			);
 		});
-		// });
 
 		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
 			// first price
@@ -407,7 +405,6 @@ contract('Magi', accounts => {
 			);
 			assert.equal(tx.logs.length, 1, 'more than one event emitted');
 			assert.equal(tx.logs[0].event, EVENT_ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
-			// console.log(web3.utils.fromWei(tx.logs[0].args.priceInWei.valueOf(), 'ether'));
 			assert.isTrue(
 				isEqual(web3.utils.fromWei(tx.logs[0].args.priceInWei.valueOf(), 'ether'), '550'),
 				'last price is not updated correctly'
@@ -715,6 +712,7 @@ contract('Magi', accounts => {
 				.then(median => assert.equal(median.toNumber(), 600, 'the median is wrong'));
 		});
 	});
+
 	describe('getLastPrice', () => {
 		let blockTime;
 		before(async () => {
@@ -741,19 +739,19 @@ contract('Magi', accounts => {
 	});
 
 	describe('updatePriceFeed', () => {
-		before(initContracts);
-
-		function UPDATE_PF(index) {
+		function updatePriceFeed(index) {
 			before(initContracts);
-			it('non cold address cannot updatePriceFeed', async () => {
+
+			it('hot address cannot updatePriceFeed', async () => {
 				try {
 					await oracleContract.updatePriceFeed.call(0, { from: alice });
+					assert.isTrue(false, 'hot address can update price feed');
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
 			});
+
 			it('should update priceFeed', async () => {
-				// let index = 0;
 				await roleManagerContract.addCustodian(custodianContract.address, {
 					from: creator
 				});
@@ -779,8 +777,10 @@ contract('Magi', accounts => {
 					default:
 						assert.isTrue(false, 'wrong argument');
 				}
-				// console.log(addr.valueOf(), newFeedAddr.valueOf());
-				assert.isTrue(validHotPool.includes(web3.utils.toChecksumAddress(newFeedAddr)));
+				assert.isTrue(
+					validHotPool.includes(web3.utils.toChecksumAddress(newFeedAddr)),
+					'address not from hot pool'
+				);
 				let statusOfAlice = await roleManagerContract.addrStatus.call(alice);
 				let statusOfNewAddr = await roleManagerContract.addrStatus.call(newFeedAddr);
 				assert.isTrue(
@@ -788,10 +788,14 @@ contract('Magi', accounts => {
 					'status updated incorrectly'
 				);
 
-				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATE_PF);
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATE_PF,
+					'wrong events'
+				);
 				assert.isTrue(
 					(tx.logs[0].args.updater =
-						alice && tx.logs[0].args.newPriceFeed === newFeedAddr.valueOf())
+						alice && tx.logs[0].args.newPriceFeed === newFeedAddr.valueOf()),
+					'wrong event args'
 				);
 			});
 
@@ -799,6 +803,7 @@ contract('Magi', accounts => {
 				await roleManagerContract.setPool(0, 0, bob);
 				try {
 					await oracleContract.updatePriceFeed(index, { from: bob });
+					assert.isTrue(false, 'can update price feed in cool down period');
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
@@ -806,23 +811,26 @@ contract('Magi', accounts => {
 		}
 
 		describe('updatePF1', () => {
-			UPDATE_PF(0);
+			updatePriceFeed(0);
 		});
 
 		describe('updatePF2', () => {
-			UPDATE_PF(1);
+			updatePriceFeed(1);
 		});
+
 		describe('updatePF3', () => {
-			UPDATE_PF(2);
+			updatePriceFeed(2);
 		});
 	});
 
 	describe('setValue', () => {
-		function SET_VALUE(index, value) {
+		function setValue(index, value) {
 			before(initContracts);
+
 			it('non operator cannot setValue', async () => {
 				try {
 					await oracleContract.setValue(index, value, { from: alice });
+					assert.isTrue(false, 'non operater can setValue');
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
@@ -862,9 +870,12 @@ contract('Magi', accounts => {
 						}
 						break;
 				}
-				assert.isTrue(newValue.valueOf() === value + '');
+				assert.isTrue(newValue.valueOf() === value + '', 'wrong value');
 
-				assert.isTrue(tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE);
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+					'wrong events'
+				);
 
 				assert.isTrue(
 					tx.logs[0].args.index.valueOf() === index + '' &&
@@ -877,6 +888,7 @@ contract('Magi', accounts => {
 			it('cannot update within cool down', async () => {
 				try {
 					await oracleContract.setValue(index, value, { from: creator });
+					assert.isTrue(false, 'non update within cool down');
 				} catch (err) {
 					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 				}
@@ -884,19 +896,19 @@ contract('Magi', accounts => {
 		}
 
 		describe('set priceTolInBP', () => {
-			SET_VALUE(0, 100);
+			setValue(0, 100);
 		});
 
 		describe('set priceFeedTolInBP', () => {
-			SET_VALUE(1, 200);
+			setValue(1, 200);
 		});
 
 		describe('set priceFeedTimeTol', () => {
-			SET_VALUE(2, 300);
+			setValue(2, 300);
 		});
 
 		describe('set priceUpdateCoolDown', () => {
-			SET_VALUE(3, 400);
+			setValue(3, 400);
 		});
 	});
 });
