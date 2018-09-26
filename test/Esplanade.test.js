@@ -2,17 +2,13 @@ const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const Esplanade = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
-const Web3 = require('web3');
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
-);
-
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
+const util = require('./util');
 
 // Event
 const EVENT_TERMINATE_CON_VOTING = 'TerminateContractVoting';
@@ -28,10 +24,6 @@ const STATE_VOTING_NOT_STARTED = '0';
 const STATE_VOTING_MODERATOR = '1';
 const STATE_VOTING_CONTRACT = '2';
 
-const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
-
-// const DUMMY_ADDR = '0xc';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
 contract('Esplanade', accounts => {
@@ -54,7 +46,7 @@ contract('Esplanade', accounts => {
 
 	const initContracts = async () => {
 		duoContract = await DUO.new(
-			web3.utils.toWei(DuoInit.initSupply),
+			util.toWei(DuoInit.initSupply),
 			DuoInit.tokenName,
 			DuoInit.tokenSymbol,
 			{
@@ -194,7 +186,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -212,7 +204,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -224,7 +216,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting in contract voting stage');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -235,7 +227,7 @@ contract('Esplanade', accounts => {
 			let votedFor = await roleManagerContract.votedFor.call();
 			let votedAgainst = await roleManagerContract.votedAgainst.call();
 			assert.isTrue(
-				votedAgainst.valueOf() === '0' && votedFor.valueOf() === '0',
+				Number(votedAgainst.valueOf()) === 0 && Number(votedFor.valueOf()) === 0,
 				'not reset correctly'
 			);
 			let candidate = await roleManagerContract.candidate.call();
@@ -254,7 +246,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.terminateContractVoting.call({ from: creator });
 				assert.isTrue(false, 'can terminate voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -264,7 +256,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.terminateContractVoting.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -275,12 +267,12 @@ contract('Esplanade', accounts => {
 			let moderator = tx.logs[0].args.newModerator;
 			assert.isTrue(newModerator != moderator, 'moderator not changed');
 			let votingStage = await roleManagerContract.votingStage.call();
-			assert.isTrue(votingStage.valueOf() === STATE_VOTING_NOT_STARTED, 'not reset');
+			assert.equal(votingStage.valueOf(), STATE_VOTING_NOT_STARTED, 'not reset');
 			assert.isTrue(tx.logs.length === 2, 'not correct event emitted');
 			assert.isTrue(
 				tx.logs[0].event === EVENT_TERMINATE_CON_VOTING &&
-					tx.logs[0].args.terminator === newModerator &&
-					tx.logs[0].args.currentCandidate === newCustodianContract.address,
+					tx.logs[0].args.terminator.valueOf() === newModerator &&
+					tx.logs[0].args.currentCandidate.valueOf() === newCustodianContract.address,
 				'wrong event args'
 			);
 			assert.isTrue(tx.logs[1].event === EVENT_REPLACE_MODERATOR, 'wrong event args');
@@ -295,7 +287,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.startModeratorVoting.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -323,7 +315,7 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.vote(true, { from: alice });
 					assert.isTrue(false, 'non cold can vote');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -335,7 +327,7 @@ contract('Esplanade', accounts => {
 				try {
 					await vote([bob, bob], [true, true]);
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -350,12 +342,12 @@ contract('Esplanade', accounts => {
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
 				assert.isTrue(
-					votedAgainst.valueOf() === '0' && votedFor.valueOf() === '4',
+					Number(votedAgainst.valueOf()) === 0 && Number(votedFor.valueOf()) === 4,
 					'voting result wrong'
 				);
-				assert.isTrue(
-					votingStage.valueOf() ===
-						(isContract ? STATE_VOTING_CONTRACT : STATE_VOTING_MODERATOR),
+				assert.equal(
+					votingStage.valueOf(),
+					isContract ? STATE_VOTING_CONTRACT : STATE_VOTING_MODERATOR,
 					'not in correct voting stage'
 				);
 			});
@@ -371,12 +363,12 @@ contract('Esplanade', accounts => {
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
 				assert.isTrue(
-					votedAgainst.valueOf() === '4' && votedFor.valueOf() === '0',
+					Number(votedAgainst.valueOf()) === 4 && Number(votedFor.valueOf()) === 0,
 					'voting result wrong'
 				);
-				assert.isTrue(
-					votingStage.valueOf() ===
-						(isContract ? STATE_VOTING_CONTRACT : STATE_VOTING_MODERATOR),
+				assert.equal(
+					votingStage.valueOf(),
+					isContract ? STATE_VOTING_CONTRACT : STATE_VOTING_MODERATOR,
 					'not in correct voting stage'
 				);
 			});
@@ -392,11 +384,12 @@ contract('Esplanade', accounts => {
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
 				assert.isTrue(
-					votedAgainst.valueOf() === '0' && votedFor.valueOf() === '5',
+					Number(votedAgainst.valueOf()) === 0 && Number(votedFor.valueOf()) === 5,
 					'wrong voted number'
 				);
-				assert.isTrue(
-					votingStage.valueOf() === STATE_VOTING_NOT_STARTED,
+				assert.equal(
+					votingStage.valueOf(),
+					STATE_VOTING_NOT_STARTED,
 					'not in correct voting stage'
 				);
 			});
@@ -412,11 +405,12 @@ contract('Esplanade', accounts => {
 				let votedAgainst = await roleManagerContract.votedAgainst.call();
 				let votingStage = await roleManagerContract.votingStage.call();
 				assert.isTrue(
-					votedAgainst.valueOf() === '5' && votedFor.valueOf() === '0',
+					Number(votedAgainst.valueOf()) === 5 && Number(votedFor.valueOf()) === 0,
 					'wrong voted number'
 				);
-				assert.isTrue(
-					votingStage.valueOf() === STATE_VOTING_NOT_STARTED,
+				assert.equal(
+					votingStage.valueOf(),
+					STATE_VOTING_NOT_STARTED,
 					'not in correct voting stage'
 				);
 			});
@@ -442,7 +436,7 @@ contract('Esplanade', accounts => {
 						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -453,7 +447,7 @@ contract('Esplanade', accounts => {
 						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -489,7 +483,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.startManager.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -497,7 +491,7 @@ contract('Esplanade', accounts => {
 			try {
 				await roleManagerContract.startManager({ from: creator });
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -521,7 +515,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator2);
 				await roleManagerContract.startManager({ from: newModerator2 });
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -532,7 +526,7 @@ contract('Esplanade', accounts => {
 			try {
 				await roleManagerContract.addCustodian(custodianContract.address, { from: alice });
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -543,7 +537,7 @@ contract('Esplanade', accounts => {
 					from: creator
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -569,7 +563,7 @@ contract('Esplanade', accounts => {
 			);
 			assert.isTrue(isExist.valueOf(), 'not set as existing');
 			let status = await roleManagerContract.addrStatus.call(custodianContract.address);
-			assert.isTrue(status.valueOf() === '3', 'marked as used');
+			assert.isTrue(Number(status.valueOf()) === 3, 'marked as used');
 		});
 
 		it('cannot add existing custodians', async () => {
@@ -582,7 +576,7 @@ contract('Esplanade', accounts => {
 					from: newModerator
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -595,7 +589,7 @@ contract('Esplanade', accounts => {
 					from: alice
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -606,7 +600,7 @@ contract('Esplanade', accounts => {
 					from: creator
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -616,7 +610,7 @@ contract('Esplanade', accounts => {
 					from: creator
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -648,7 +642,7 @@ contract('Esplanade', accounts => {
 			);
 			assert.isTrue(isExist.valueOf(), 'not set as existing');
 			let status = await roleManagerContract.addrStatus.call(oracleContract.address);
-			assert.isTrue(status.valueOf() === '3', 'not marked as used');
+			assert.isTrue(Number(status.valueOf()) === 3, 'not marked as used');
 		});
 
 		it('cannot add existing contracts', async () => {
@@ -667,7 +661,7 @@ contract('Esplanade', accounts => {
 					from: newModerator2
 				});
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -684,7 +678,7 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.addAddress.call(alice, bob, index, { from: charles });
 					assert.isTrue(false, 'non moderator can add address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -695,7 +689,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can add same address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -704,20 +698,20 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.addAddress(pf1, pf2, index, { from: moderator });
 					assert.isTrue(false, 'can add used account');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
 			it('should not add address when custodian pool is empty', async () => {
 				try {
 					await roleManagerContract.addAddress.call(
-						web3.utils.toChecksumAddress(alice),
-						web3.utils.toChecksumAddress(bob),
+						util.toChecksumAddress(alice),
+						util.toChecksumAddress(bob),
 						index,
 						{ from: moderator }
 					);
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -730,21 +724,21 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator2);
 				try {
 					await roleManagerContract.addAddress(
-						web3.utils.toChecksumAddress(alice),
-						web3.utils.toChecksumAddress(bob),
+						util.toChecksumAddress(alice),
+						util.toChecksumAddress(bob),
 						index,
 						{ from: newModerator2 }
 					);
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
 			it('should add two different address', async () => {
 				await roleManagerContract.skipCooldown(1);
 				let tx = await roleManagerContract.addAddress(
-					web3.utils.toChecksumAddress(alice),
-					web3.utils.toChecksumAddress(bob),
+					util.toChecksumAddress(alice),
+					util.toChecksumAddress(bob),
 					index,
 					{ from: newModerator2 }
 				);
@@ -756,26 +750,21 @@ contract('Esplanade', accounts => {
 					'not exactly one event emitted'
 				);
 				assert.isTrue(
-					tx.logs[1].args['poolIndex'].valueOf() === index.toString() &&
-						tx.logs[1].args['added1'].valueOf() === alice &&
-						tx.logs[1].args['added2'].valueOf() === bob &&
-						tx.logs[1].args['newModerator'] != newModerator2,
+					Number(tx.logs[1].args.poolIndex.valueOf()) === index &&
+						tx.logs[1].args.added1 === alice &&
+						tx.logs[1].args.added2 === bob &&
+						tx.logs[1].args.newModerator != newModerator2,
 					'event args is wrong'
 				);
 			});
 
 			it('pool size should be 10 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
 				let poolSize = await roleManagerContract.getPoolSize.call();
-				// console.log(poolSize.valueOf());
 				assert.isTrue(
-					poolSize[0].valueOf() ===
-						(index === 0
-							? Pool[0].length.toString()
-							: (Pool[0].length - 2).toString()) &&
-						poolSize[1].valueOf() ===
-							(index === 0
-								? Pool[1].length.toString()
-								: (Pool[1].length + 2).toString()),
+					Number(poolSize[0].valueOf()) ===
+						(index === 0 ? Pool[0].length : Pool[0].length - 2) &&
+						Number(poolSize[1].valueOf()) ===
+							(index === 0 ? Pool[1].length : Pool[1].length + 2),
 					'pool size wrong'
 				);
 				let poolList = [];
@@ -783,7 +772,7 @@ contract('Esplanade', accounts => {
 				for (let i = 0; i < poolSize[0].valueOf(); i++) {
 					let addr = await roleManagerContract.addrPool.call(index, i);
 					assert.isTrue(
-						web3.utils.checkAddressChecksum(web3.utils.toChecksumAddress(addr)),
+						util.checkAddressChecksum(util.toChecksumAddress(addr)),
 						' invalid address'
 					);
 					poolList.push(addr);
@@ -797,7 +786,7 @@ contract('Esplanade', accounts => {
 
 			it('new moderator should be marked as used', async () => {
 				let addStatus = await roleManagerContract.addrStatus.call(newModerator2);
-				assert.isTrue(addStatus.toNumber() === 3, 'new adder not marked as used');
+				assert.isTrue(Number(addStatus.valueOf()) === 3, 'new adder not marked as used');
 			});
 		}
 
@@ -824,7 +813,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'non moderator can remove address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -835,7 +824,11 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'index can be more than 1');
 				} catch (err) {
-					assert.equal(err.message, VM_INVALID_OPCODE_MSG, 'transaction not reverted');
+					assert.equal(
+						err.message,
+						util.VM_INVALID_OPCODE_MSG,
+						'transaction not reverted'
+					);
 				}
 			});
 
@@ -846,20 +839,20 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'address not in pool can be removed');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
 			it('should not remove if custodian pool size less than 1', async () => {
 				try {
 					await roleManagerContract.removeAddress.call(
-						web3.utils.toChecksumAddress(Pool[index][0]),
+						util.toChecksumAddress(Pool[index][0]),
 						index,
 						{ from: moderator }
 					);
 					assert.isTrue(false, 'can remove when custodian pool size is less than 1');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -872,13 +865,13 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setPoolLength(index, 5);
 				try {
 					await roleManagerContract.removeAddress.call(
-						web3.utils.toChecksumAddress(Pool[index][0]),
+						util.toChecksumAddress(Pool[index][0]),
 						index,
 						{ from: newModerator }
 					);
 					assert.isTrue(false, 'can remove when pool size is less than threshold');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -906,39 +899,37 @@ contract('Esplanade', accounts => {
 				let args = tx.logs[1].args;
 
 				assert.isTrue(
-					args.poolIndex.valueOf() === index.toString() &&
-						web3.utils.toChecksumAddress(args.addr.valueOf()) ===
-							web3.utils.toChecksumAddress(addrToRemove),
+					Number(args.poolIndex.valueOf()) === index &&
+						util.toChecksumAddress(args.addr.valueOf()) ===
+							util.toChecksumAddress(addrToRemove),
 					'wrong event arguments'
 				);
-				let newModeratorAfterRemove = web3.utils.toChecksumAddress(
-					tx.logs[0].args.newModerator
-				);
-				let validatedPool = Pool[0].map(addr => web3.utils.toChecksumAddress(addr));
+				let newModeratorAfterRemove = util.toChecksumAddress(tx.logs[0].args.newModerator);
+				let validatedPool = Pool[0].map(addr => util.toChecksumAddress(addr));
 
 				assert.isTrue(validatedPool.includes(newModeratorAfterRemove));
 				let poolSize = await roleManagerContract.getPoolSize.call().valueOf();
 				let length = poolSize[0];
 				for (let i = 1; i < length; i++) {
 					let poolAddr = await roleManagerContract.addrPool.call(0, i);
-					assert.isTrue(
-						web3.utils.toChecksumAddress(poolAddr) != newModeratorAfterRemove
-					);
+					assert.isTrue(util.toChecksumAddress(poolAddr) != newModeratorAfterRemove);
 				}
 				assert.isTrue(
-					poolSize[index].valueOf() ===
-						(Pool[index].length - (index === 0 ? 3 : 1)).toString(),
+					Number(poolSize[index]) === Pool[index].length - (index === 0 ? 3 : 1),
 					'cannot remove address'
 				);
 
 				let addStatus = await roleManagerContract.addrStatus.call(Pool[index][0]);
-				assert.isTrue(addStatus.toNumber() === 3, 'removed adder not marked as used');
+				assert.isTrue(
+					Number(addStatus.valueOf()) === 3,
+					'removed adder not marked as used'
+				);
 
 				let addStatusOfNewModerator = await roleManagerContract.addrStatus.call(
 					newModeratorAfterRemove
 				);
 				assert.isTrue(
-					addStatusOfNewModerator.toNumber() === 3,
+					Number(addStatusOfNewModerator.valueOf()) === 3,
 					'new moderator not marked as used'
 				);
 			});
@@ -962,9 +953,7 @@ contract('Esplanade', accounts => {
 					from: newModerator
 				});
 
-				let newModeratorAfterRemove = web3.utils.toChecksumAddress(
-					tx.logs[0].args.newModerator
-				);
+				let newModeratorAfterRemove = util.toChecksumAddress(tx.logs[0].args.newModerator);
 
 				addrToRemove = Pool[index][2];
 				addrToRemove =
@@ -978,7 +967,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can remove within cool down');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 		}
@@ -1005,7 +994,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'non contract address can request address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1016,7 +1005,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'hot address can request address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1030,7 +1019,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can request address');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1041,7 +1030,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'index can be more than 1');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1052,7 +1041,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can add when custodian pool is empty');
 				} catch (err) {
-					assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1066,14 +1055,16 @@ contract('Esplanade', accounts => {
 				await custodianContract.triggerProvideAddr(index, { from: alice });
 				let statusAddr = await roleManagerContract.addrStatus.call(addr);
 				let statusAlice = await roleManagerContract.addrStatus.call(alice);
-				assert.isTrue(statusAddr.valueOf() === '3' && statusAlice.valueOf() === '3');
+				assert.isTrue(
+					Number(statusAddr.valueOf()) === 3 && Number(statusAlice.valueOf()) === 3
+				);
 
-				let validatedPool = Pool[index].map(addr => web3.utils.toChecksumAddress(addr));
-				assert.isTrue(validatedPool.includes(web3.utils.toChecksumAddress(addr)));
+				let validatedPool = Pool[index].map(addr => util.toChecksumAddress(addr));
+				assert.isTrue(validatedPool.includes(util.toChecksumAddress(addr)));
 
 				let poolSize = await roleManagerContract.getPoolSize.call();
 				assert.isTrue(
-					poolSize.valueOf()[index].toNumber() === 10 - (index === 0 ? 3 : 1),
+					Number(poolSize[index].valueOf()) === 10 - (index === 0 ? 3 : 1),
 					'poolSize not updated corrctly'
 				);
 			});
@@ -1092,14 +1083,16 @@ contract('Esplanade', accounts => {
 				await oracleContract.triggerProvideAddr(index, { from: alice });
 				let statusAddr = await roleManagerContract.addrStatus.call(addr);
 				let statusAlice = await roleManagerContract.addrStatus.call(alice);
-				assert.isTrue(statusAddr.valueOf() === '3' && statusAlice.valueOf() === '3');
+				assert.isTrue(
+					Number(statusAddr.valueOf()) === 3 && Number(statusAlice.valueOf()) === 3
+				);
 
-				let validatedPool = Pool[index].map(addr => web3.utils.toChecksumAddress(addr));
-				assert.isTrue(validatedPool.includes(web3.utils.toChecksumAddress(addr)));
+				let validatedPool = Pool[index].map(addr => util.toChecksumAddress(addr));
+				assert.isTrue(validatedPool.includes(util.toChecksumAddress(addr)));
 
 				let poolSize = await roleManagerContract.getPoolSize.call();
 				assert.isTrue(
-					poolSize.valueOf()[index].toNumber() === 10 - (index === 0 ? 4 : 1),
+					Number(poolSize[index].valueOf()) === 10 - (index === 0 ? 4 : 1),
 					'poolSize not updated corrctly'
 				);
 			});
