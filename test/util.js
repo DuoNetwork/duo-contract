@@ -19,6 +19,7 @@ module.exports = {
 	fromWei: (bn) => web3.utils.fromWei(bn.valueOf(), 'ether'),
 	toWei: (num) => web3.utils.toWei(num + '', 'ether'),
 	toChecksumAddress: (addr) => web3.utils.toChecksumAddress(addr),
+	checkAddressChecksum: (addr) => web3.utils.checkAddressChecksum(addr),
 	getLastBlockTime: async () => {
 		let blockNumber = await web3.eth.getBlockNumber();
 		let block = await web3.eth.getBlock(blockNumber);

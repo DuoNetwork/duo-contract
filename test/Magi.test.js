@@ -19,7 +19,7 @@ const ethInitPrice = 582;
 
 let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
-contract.only('Magi', accounts => {
+contract('Magi', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
@@ -693,7 +693,7 @@ contract.only('Magi', accounts => {
 					'wrong events'
 				);
 				assert.isTrue(
-					tx.logs[0].args.updater.valueOf() === alice &&
+					tx.logs[0].args.updater === alice &&
 						tx.logs[0].args.newPriceFeed === newFeedAddr.valueOf(),
 					'wrong event args'
 				);
