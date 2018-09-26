@@ -1,4 +1,7 @@
-const web3 = require('web3');
+const Web3 = require('web3');
+const web3 = new Web3(
+	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
+);
 const EPSILON = 1e-10;
 
 module.exports = {
@@ -16,6 +19,11 @@ module.exports = {
 	fromWei: (bn) => web3.utils.fromWei(bn.valueOf(), 'ether'),
 	toWei: (num) => web3.utils.toWei(num + '', 'ether'),
 	toChecksumAddress: (addr) => web3.utils.toChecksumAddress(addr),
+	getLastBlockTime: async () => {
+		let blockNumber = await web3.eth.getBlockNumber();
+		let block = await web3.eth.getBlock(blockNumber);
+		return block.timestamp;
+	},
 	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert',
 	VM_INVALID_OPCODE_MSG : 'Returned error: VM Exception while processing transaction: invalid opcode'
 };
