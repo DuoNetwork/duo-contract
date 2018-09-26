@@ -36,7 +36,11 @@
 		"optCoolDown": 86400
 	},
 	"Custodian": {
-		"commissionRateInBP": 100
+		"comm": 100,
+		"pd": 3600,
+		"optCoolDown": 86400,
+		"pxFetchCoolDown": 3000,
+		"preResetWaitBlk": 10
 	},
 	"Managed": {
 		"optCoolDown": 3600

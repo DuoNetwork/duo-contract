@@ -3,10 +3,13 @@ import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
+// import { SafeMath } from "../common/SafeMath.sol";
 
 /// @title Beethoven - dual class token contract
 /// @author duo.network
 contract Beethoven is Custodian {
+	// using SafeMath for uint;
+
 	/*
      * Storage
      */
