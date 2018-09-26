@@ -33,7 +33,7 @@ const STATE_UPWARD_RESET = '0';
 const STATE_DOWNWARD_RESET = '1';
 const STATE_PERIODIC_RESET = '2';
 
-const DUMMY_ADDR = '0xc';
+const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 
 const VM_REVERT_MSG = 'Returned error: VM Exception while processing transaction: revert';
 const VM_INVALID_OPCODE_MSG = 'Returned error: VM Exception while processing transaction: invalid opcode';
@@ -59,7 +59,7 @@ const isEqual = (a, b, log = false) => {
 
 const assertState = async (beethovenContract, state) => {
 	let _state = await beethovenContract.state.call();
-	assert.isTrue(_state.valueOf() === state);
+	assert.isTrue(isEqual(_state.valueOf() , state));
 };
 
 const assertResetState = async (beethovenContract, state) => {
@@ -241,10 +241,8 @@ contract('Beethoven', accounts => {
 					oracleContract.address,
 					{ from: alice }
 				);
-				console.log('not reverted');
 				assert.isTrue(false, 'can start');
 			} catch (err) {
-				console.log(err.message);
 				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
 			}
 		});
@@ -288,23 +286,23 @@ contract('Beethoven', accounts => {
 			assert.isTrue(
 				isEqual(
 					web3.utils.fromWei(tx.logs[0].args.priceInWei.valueOf(), 'ether'),
-					Number(ethInitPrice).toString(),
-					true
+					Number(ethInitPrice).toString()
+					
 				) &&
 					isEqual(
 						tx.logs[0].args.timeInSecond.valueOf() / WEI_DENOMINATOR,
-						time.valueOf() / WEI_DENOMINATOR,
-						true
+						time.valueOf() / WEI_DENOMINATOR
+						
 					) &&
 					isEqual(
 						web3.utils.fromWei(tx.logs[0].args.navAInWei.valueOf(), 'ether'),
-						'1',
-						true
+						'1'
+						
 					) &&
 					isEqual(
 						web3.utils.fromWei(tx.logs[0].args.navBInWei.valueOf(), 'ether'),
-						'1',
-						true
+						'1'
+						
 					),
 				'worng event parameter emitted'
 			);
@@ -316,14 +314,14 @@ contract('Beethoven', accounts => {
 			assert.isTrue(
 				isEqual(
 					lastPrice.valueOf() / WEI_DENOMINATOR,
-					web3.utils.toWei(ethInitPrice + '', 'ether') / WEI_DENOMINATOR,
-					true
+					web3.utils.toWei(ethInitPrice + '', 'ether') / WEI_DENOMINATOR
+					
 				),
 
 				'lastPrice price not updated correctly'
 			);
 			assert.isTrue(
-				isEqual(lastPriceTime.valueOf(), time.valueOf(), true),
+				isEqual(lastPriceTime.valueOf(), time.valueOf()),
 
 				'lastPrice time not updated correctly'
 			);
@@ -331,12 +329,12 @@ contract('Beethoven', accounts => {
 			let resetPrice = await beethovenContract.resetPriceInWei.call();
 			let resetPriceTime = await beethovenContract.resetPriceTimeInSecond.call();
 			assert.isTrue(
-				isEqual(resetPrice.valueOf(), web3.utils.toWei(ethInitPrice + '', 'ether'), true),
+				isEqual(resetPrice.valueOf(), web3.utils.toWei(ethInitPrice + '', 'ether')),
 
 				'resetPrice price not updated correctly'
 			);
 			assert.isTrue(
-				isEqual(resetPriceTime.valueOf(), time.valueOf(), true),
+				isEqual(resetPriceTime.valueOf(), time.valueOf()),
 
 				'resetPrice time not updated correctly'
 			);
@@ -405,8 +403,8 @@ contract('Beethoven', accounts => {
 			);
 			assert.isTrue(
 				isEqual(web3.utils.fromWei(tx.logs[0].args.priceInWei.valueOf(), 'ether') ,
-					ethInitPrice.toString(), true) &&
-					isEqual(tx.logs[0].args.timeInSecond.valueOf() , time.valueOf(), true),
+					ethInitPrice.toString()) &&
+					isEqual(tx.logs[0].args.timeInSecond.valueOf() , time.valueOf()),
 				'wrong event args'
 			);
 		});
@@ -578,7 +576,7 @@ contract('Beethoven', accounts => {
 
 			it('should update user list if required', async () => {
 				let userFlag = await beethovenContract.existingUsers.call(alice);
-				assert.isTrue(userFlag.valueOf() === 1, 'new user is not updated');
+				assert.isTrue(isEqual(userFlag.valueOf() , 1), 'new user is not updated');
 			});
 
 			it('should update balance of A correctly', async () => {
@@ -677,7 +675,7 @@ contract('Beethoven', accounts => {
 			it('should update DUO balance of Alice correctly', async () => {
 				let balanceOfAlice = await duoContract.balanceOf.call(alice);
 				assert.isTrue(
-					isEqual(preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR, feeOfDUOinWei, true),
+					isEqual(preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR, feeOfDUOinWei),
 					'DUO balance of Alice not updated correctly'
 				);
 			});
@@ -685,7 +683,7 @@ contract('Beethoven', accounts => {
 			it('should update beethoven DUO balance correctly', async () => {
 				let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
 				assert.isTrue(
-					isEqual(duoBalance.valueOf() / WEI_DENOMINATOR , feeOfDUOinWei, true),
+					isEqual(duoBalance.valueOf() / WEI_DENOMINATOR , feeOfDUOinWei),
 					'beethoven DUO balance not updated correctly'
 				);
 			});
@@ -708,7 +706,7 @@ contract('Beethoven', accounts => {
 					value: web3.utils.toWei('0.00003')
 				});
 				let userFlag = await beethovenContract.existingUsers.call(charles);
-				assert.isTrue(isEqual(userFlag.valueOf() , '0', true), 'new user is included in userList');
+				assert.isTrue(isEqual(userFlag.valueOf() , '0'), 'new user is included in userList');
 			});
 
 			it('should only collect fee less than allowed', async () => {
@@ -727,7 +725,6 @@ contract('Beethoven', accounts => {
 				);
 				accumulatedFeeAfterWithdrawal =
 					web3.utils.toBN(ethFeeBalanceInWei) - web3.utils.toWei('0.0001');
-				console.log(accumulatedFeeAfterWithdrawal);
 				let success = await beethovenContract.collectEthFee.call(
 					web3.utils.toWei('0.0001'),
 					{
@@ -744,13 +741,13 @@ contract('Beethoven', accounts => {
 					'worng event emitted'
 				);
 				assert.isTrue(
-					isEqual(tx.logs[0].args.addr.valueOf() , fc, true) &&
-						isEqual(tx.logs[0].args.ethFeeInWei.valueOf() , web3.utils.toWei('0.0001'), true) &&
+					isEqual(tx.logs[0].args.addr.valueOf() , fc) &&
+						isEqual(tx.logs[0].args.ethFeeInWei.valueOf() , web3.utils.toWei('0.0001')) &&
 						isEqual(tx.logs[0].args.ethFeeBalanceInWei.valueOf() ,
-							accumulatedFeeAfterWithdrawal, true) &&
-						isEqual(tx.logs[0].args.duoFeeInWei.valueOf() , '0', true) &&
+							accumulatedFeeAfterWithdrawal) &&
+						isEqual(tx.logs[0].args.duoFeeInWei.valueOf() , '0') &&
 						isEqual(tx.logs[0].args.duoFeeBalanceInWei.valueOf() ,
-							duoFeeBalanceInWei.valueOf(), true),
+							duoFeeBalanceInWei.valueOf()),
 					'worng fee parameter'
 				);
 			});
@@ -776,7 +773,7 @@ contract('Beethoven', accounts => {
 		});
 	});
 
-	describe.only('redemption', () => {
+	describe('redemption', () => {
 		let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevCollateral;
 		let amtA = 28;
 		let amtB = 29;
@@ -903,8 +900,9 @@ contract('Beethoven', accounts => {
 			let feeAccumulated = await beethovenContract.ethFeeBalanceInWei.call();
 			assert.isTrue(
 				isEqual(
-					web3.utils.fromWei(feeAccumulated.minus(prevFeeAccumulated).valueOf(), 'ether'),
+					web3.utils.fromWei(feeAccumulated.valueOf() - prevFeeAccumulated.valueOf() + '', 'ether'),
 					fee
+					
 				),
 				'fee balance not updated correctly'
 			);
@@ -934,9 +932,9 @@ contract('Beethoven', accounts => {
 
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userFlag.valueOf() === '1', 'user not in the user list');
+			assert.isTrue(isEqual(userFlag.valueOf() , '1'), 'user not in the user list');
 			let userSize = await beethovenContract.getUserSize.call();
-			assert.equal(userSize.valueOf(), 1, 'user size not updated correctly');
+			assert.isTrue(isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
 		});
 
 		it('should redeem token A and B fee paying with DUO token', async () => {
@@ -1040,9 +1038,9 @@ contract('Beethoven', accounts => {
 				{ from: alice }
 			);
 			let userFlag = await beethovenContract.existingUsers.call(alice);
-			assert.isTrue(userFlag.valueOf() === 0, 'user still in the userList');
+			assert.isTrue(isEqual(userFlag.valueOf() , 0), 'user still in the userList');
 			let userSize = await beethovenContract.getUserSize.call();
-			assert.equal(userSize.valueOf(), 0, 'user size not updated correctly');
+			assert.isTrue(isEqual(userSize.valueOf(), 0), 'user size not updated correctly');
 		});
 	});
 
@@ -1807,9 +1805,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.index.valueOf() === 0 &&
-					tx.logs[0].args.oldValue.valueOf() === preValue &&
-					tx.logs[0].args.newValue.valueOf() === 50,
+				isEqual(tx.logs[0].args.index.valueOf() , 0) &&
+				isEqual(tx.logs[0].args.oldValue.valueOf() , preValue) &&
+				isEqual(tx.logs[0].args.newValue.valueOf() , 50),
 				'wrong argument emitted'
 			);
 		});
@@ -1846,9 +1844,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.index.valueOf() === 1 &&
-					tx.logs[0].args.oldValue.valueOf() === preValue &&
-					tx.logs[0].args.newValue.valueOf() === 100,
+				isEqual(tx.logs[0].args.index.valueOf() , 1) &&
+				isEqual(tx.logs[0].args.oldValue.valueOf() , preValue) &&
+				isEqual(tx.logs[0].args.newValue.valueOf() , 100),
 				'wrong argument emitted'
 			);
 		});
@@ -1885,9 +1883,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.index.valueOf() === 2 &&
-					tx.logs[0].args.oldValue.valueOf() === preValue &&
-					tx.logs[0].args.newValue.valueOf() === 100,
+				isEqual(tx.logs[0].args.index.valueOf() , 2 )&&
+				isEqual(tx.logs[0].args.oldValue.valueOf() , preValue) &&
+				isEqual(tx.logs[0].args.newValue.valueOf() , 100),
 				'wrong argument emitted'
 			);
 		});
@@ -1914,9 +1912,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.index.valueOf() === 3 &&
-					tx.logs[0].args.oldValue.valueOf() === preValue &&
-					tx.logs[0].args.newValue.valueOf() === 100,
+				isEqual(tx.logs[0].args.index.valueOf() , 3) &&
+				isEqual(tx.logs[0].args.oldValue.valueOf() , preValue) &&
+				isEqual(tx.logs[0].args.newValue.valueOf() , 100),
 				'wrong argument emitted'
 			);
 		});
@@ -1943,9 +1941,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.index.valueOf() === 4 &&
-					tx.logs[0].args.oldValue.valueOf() === preValue &&
-					tx.logs[0].args.newValue.valueOf() === 100,
+				isEqual(tx.logs[0].args.index.valueOf() , 4) &&
+				isEqual(tx.logs[0].args.oldValue.valueOf() , preValue) &&
+				isEqual(tx.logs[0].args.newValue.valueOf() , 100),
 				'wrong argument emitted'
 			);
 		});
