@@ -89,7 +89,7 @@ contract('TokenA', accounts => {
 			pf2,
 			pf3,
 			roleManagerContract.address,
-			MagiInit.pxCoolDown,
+			MagiInit.pxFetchCoolDown,
 			MagiInit.optCoolDown,
 			{
 				from: creator

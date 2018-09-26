@@ -72,7 +72,7 @@ contract('Magi', accounts => {
 			pf2,
 			pf3,
 			roleManagerContract.address,
-			MagiInit.pxCoolDown,
+			MagiInit.pxFetchCoolDown,
 			MagiInit.optCoolDown,
 			{
 				from: creator
@@ -114,7 +114,7 @@ contract('Magi', accounts => {
 
 		it('pxCoolDown should be set correctly', async () => {
 			let value = await oracleContract.priceUpdateCoolDown.call();
-			assert.equal(value.valueOf(), MagiInit.pxCoolDown, 'pxCoolDown is not set correctly');
+			assert.equal(value.valueOf(), MagiInit.pxFetchCoolDown, 'pxCoolDown is not set correctly');
 		});
 
 		it('optCoolDown should be set correctly', async () => {
