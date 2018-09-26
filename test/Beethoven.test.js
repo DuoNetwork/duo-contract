@@ -272,8 +272,8 @@ contract('Beethoven', accounts => {
 					util.fromWei(tx.logs[0].args.priceInWei, 'ether'),
 					Number(ethInitPrice).toString()
 				) &&
-					util.isEqual(
-						tx.logs[0].args.timeInSecond.valueOf() / WEI_DENOMINATOR,
+					(
+						tx.logs[0].args.timeInSecond.valueOf() / WEI_DENOMINATOR ===
 						time.valueOf() / WEI_DENOMINATOR
 					) &&
 					util.isEqual(util.fromWei(tx.logs[0].args.navAInWei, 'ether'), '1') &&
@@ -293,8 +293,9 @@ contract('Beethoven', accounts => {
 
 				'lastPrice price not updated correctly'
 			);
+
 			assert.isTrue(
-				util.isEqual(lastPriceTime.valueOf(), time.valueOf()),
+				Number(lastPriceTime.valueOf()) === Number(time.valueOf()),
 
 				'lastPrice time not updated correctly'
 			);
@@ -307,7 +308,7 @@ contract('Beethoven', accounts => {
 				'resetPrice price not updated correctly'
 			);
 			assert.isTrue(
-				util.isEqual(resetPriceTime.valueOf(), time.valueOf()),
+				Number(resetPriceTime.valueOf()) ===  Number(time.valueOf()),
 
 				'resetPrice time not updated correctly'
 			);
@@ -378,7 +379,7 @@ contract('Beethoven', accounts => {
 				util.isEqual(
 					util.fromWei(tx.logs[0].args.priceInWei, 'ether'),
 					ethInitPrice.toString()
-				) && util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), time.valueOf()),
+				) && (Number(tx.logs[0].args.timeInSecond.valueOf()) === Number(time.valueOf())),
 				'wrong event args'
 			);
 		});
@@ -695,7 +696,7 @@ contract('Beethoven', accounts => {
 					'worng event emitted'
 				);
 				assert.isTrue(
-					util.isEqual(tx.logs[0].args.addr.valueOf(), fc) &&
+					(tx.logs[0].args.addr.valueOf() === fc) &&
 						util.isEqual(tx.logs[0].args.ethFeeInWei.valueOf(), util.toWei('0.0001')) &&
 						util.isEqual(
 							tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
