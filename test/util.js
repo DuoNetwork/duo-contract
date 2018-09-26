@@ -16,5 +16,6 @@ module.exports = {
 	fromWei: (bn) => web3.utils.fromWei(bn.valueOf(), 'ether'),
 	toWei: (num) => web3.utils.toWei(num + '', 'ether'),
 	toChecksumAddress: (addr) => web3.utils.toChecksumAddress(addr),
-	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert'
+	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert',
+	VM_INVALID_OPCODE_MSG : 'Returned error: VM Exception while processing transaction: invalid opcode'
 };
