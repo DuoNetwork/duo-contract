@@ -20,7 +20,7 @@ const STATE_TRADING = '1';
 
 const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 
-contract.only('Custodian', accounts => {
+contract('Custodian', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
