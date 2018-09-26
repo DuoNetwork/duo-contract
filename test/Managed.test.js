@@ -2,24 +2,18 @@ const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');
-const Web3 = require('web3');
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
-);
-
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const ManagedInit = InitParas['Managed'];
-
-const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
+const util = require('./util');
 
 const EVENT_UPDATE_ROLEMANAGER = 'UpdateRoleManager';
 const EVENT_UPDATE_OPERATOR = 'UpdateOperator';
 
-let validColdPool = Pool[0].map(addr => web3.utils.toChecksumAddress(addr));
+let validColdPool = Pool[0].map(addr => util.toChecksumAddress(addr));
 
 contract('Managed', accounts => {
 	let managedContract;
@@ -39,7 +33,7 @@ contract('Managed', accounts => {
 
 	const initCustodian = async () => {
 		let duoContract = await DUO.new(
-			web3.utils.toWei(DuoInit.initSupply),
+			util.toWei(DuoInit.initSupply),
 			DuoInit.tokenName,
 			DuoInit.tokenSymbol,
 			{
@@ -98,7 +92,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager.call(roleManagerContract.address);
 				assert.isTrue(false, 'can set not passed role manager contract');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -108,7 +102,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager.call(alice);
 				assert.isTrue(false, 'can set role manager contract without moderator');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -135,7 +129,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager(new2RoleManagerContract.address);
 				assert.isTrue(false, 'can set within cool down');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -148,7 +142,7 @@ contract('Managed', accounts => {
 				await managedContract.updateOperator({ from: alice });
 				assert.isTrue(false, 'address not in pool can update');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -170,7 +164,7 @@ contract('Managed', accounts => {
 				'wrong event argument'
 			);
 			assert.isTrue(
-				validColdPool.includes(web3.utils.toChecksumAddress(tx.logs[0].args.newOperator)),
+				validColdPool.includes(util.toChecksumAddress(tx.logs[0].args.newOperator)),
 				'newOperator invalid'
 			);
 		});
@@ -182,7 +176,7 @@ contract('Managed', accounts => {
 				await custodianContract.updateOperator({ from: bob });
 				assert.isTrue(false, 'hot addr can update');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
