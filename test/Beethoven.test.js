@@ -3,17 +3,12 @@ const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
-const util = require('./util');
-const Web3 = require('web3');
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
-);
-
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
+const util = require('./util');
 
 // Event
 const EVENT_ACCEPT_PX = 'AcceptPrice';
@@ -385,8 +380,8 @@ contract('Beethoven', accounts => {
 				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 					from: creator
 				});
-				await duoContract.transfer(alice, util.toWei(preDUO + ''), { from: creator });
-				await duoContract.approve(beethovenContract.address, util.toWei('1000000'), {
+				await duoContract.transfer(alice, util.toWei(preDUO), { from: creator });
+				await duoContract.approve(beethovenContract.address, util.toWei(1000000), {
 					from: alice
 				});
 				if (isWithWETH) {
@@ -432,7 +427,7 @@ contract('Beethoven', accounts => {
 
 			it('should create', async () => {
 				let tx;
-				let preBalance = await web3.eth.getBalance(beethovenContract.address);
+				let preBalance = await util.getBalance(beethovenContract.address);
 				if (isWithWETH) {
 					await wethContract.approve(beethovenContract.address, util.toWei(amtEth), {
 						from: alice
@@ -446,7 +441,7 @@ contract('Beethoven', accounts => {
 				} else {
 					tx = await beethovenContract.create(true, {
 						from: alice,
-						value: util.toWei(amtEth + '')
+						value: util.toWei(amtEth)
 					});
 				}
 
@@ -473,7 +468,7 @@ contract('Beethoven', accounts => {
 					'incorrect event arguments emitted'
 				);
 
-				let afterBalance = await web3.eth.getBalance(beethovenContract.address);
+				let afterBalance = await util.getBalance(beethovenContract.address);
 
 				assert.isTrue(
 					util.fromWei(afterBalance + '') - util.fromWei(preBalance + '') === amtEth,
@@ -608,7 +603,7 @@ contract('Beethoven', accounts => {
 				try {
 					await beethovenContract.create(false, {
 						from: bob,
-						value: util.toWei('1')
+						value: util.toWei(1)
 					});
 					assert.isTrue(false, 'able to create without DUO allowed');
 				} catch (err) {
@@ -623,7 +618,7 @@ contract('Beethoven', accounts => {
 			it('should not be added into userList with small creation amt', async () => {
 				await beethovenContract.create(true, {
 					from: charles,
-					value: util.toWei('0.00003')
+					value: util.toWei(0.00003)
 				});
 				let userFlag = await beethovenContract.existingUsers.call(charles);
 				assert.isTrue(
@@ -634,7 +629,7 @@ contract('Beethoven', accounts => {
 
 			it('should only collect fee less than allowed', async () => {
 				try {
-					await beethovenContract.collectEthFee.call(util.toWei('1'), { from: fc });
+					await beethovenContract.collectEthFee.call(util.toWei(1), { from: fc });
 					assert.isTrue(false, 'can collect fee more than allowed');
 				} catch (err) {
 					assert.equal(err.message, util.VM_INVALID_OPCODE_MSG, 'not reverted');
@@ -646,13 +641,12 @@ contract('Beethoven', accounts => {
 				let duoFeeBalanceInWei = await duoContract.balanceOf.call(
 					beethovenContract.address
 				);
-				accumulatedFeeAfterWithdrawal =
-					web3.utils.toBN(ethFeeBalanceInWei) - util.toWei('0.0001');
-				let success = await beethovenContract.collectEthFee.call(util.toWei('0.0001'), {
+				accumulatedFeeAfterWithdrawal = Number(util.fromWei(ethFeeBalanceInWei)) - 0.0001;
+				let success = await beethovenContract.collectEthFee.call(util.toWei(0.0001), {
 					from: fc
 				});
 				assert.isTrue(success);
-				let tx = await beethovenContract.collectEthFee(util.toWei('0.0001'), {
+				let tx = await beethovenContract.collectEthFee(util.toWei(0.0001), {
 					from: fc
 				});
 
@@ -662,9 +656,9 @@ contract('Beethoven', accounts => {
 				);
 				assert.isTrue(
 					tx.logs[0].args.addr.valueOf() === fc &&
-						util.isEqual(tx.logs[0].args.ethFeeInWei.valueOf(), util.toWei('0.0001')) &&
+						util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0.0001) &&
 						util.isEqual(
-							tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
+							util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
 							accumulatedFeeAfterWithdrawal
 						) &&
 						util.isEqual(tx.logs[0].args.duoFeeInWei.valueOf(), '0') &&
@@ -679,10 +673,7 @@ contract('Beethoven', accounts => {
 			it('should update fee balance correctly', async () => {
 				let ethFeeBalanceInWei = await beethovenContract.ethFeeBalanceInWei.call();
 				assert.isTrue(
-					util.isEqual(
-						web3.utils.toBN(ethFeeBalanceInWei) / WEI_DENOMINATOR,
-						accumulatedFeeAfterWithdrawal / WEI_DENOMINATOR
-					),
+					util.isEqual(util.fromWei(ethFeeBalanceInWei), accumulatedFeeAfterWithdrawal),
 					'fee not updated correctly'
 				);
 			});
@@ -713,20 +704,20 @@ contract('Beethoven', accounts => {
 		before(async () => {
 			await initContracts();
 			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice + ''), time.valueOf(), pf1);
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 				from: creator
 			});
-			await duoContract.transfer(alice, util.toWei(preDUO + ''), { from: creator });
-			await duoContract.transfer(bob, util.toWei(preDUO + ''), { from: creator });
-			await beethovenContract.create(true, { from: alice, value: util.toWei('1') });
+			await duoContract.transfer(alice, util.toWei(preDUO), { from: creator });
+			await duoContract.transfer(bob, util.toWei(preDUO), { from: creator });
+			await beethovenContract.create(true, { from: alice, value: util.toWei(1) });
 			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
 			let ethFee = await beethovenContract.ethFeeBalanceInWei.call();
 			prevFeeAccumulated = ethFee.valueOf();
 			prevCollateral =
 				(await beethovenContract.ethCollateralInWei.call()).valueOf() / WEI_DENOMINATOR;
-			await duoContract.approve(beethovenContract.address, util.toWei('1000000'), {
+			await duoContract.approve(beethovenContract.address, util.toWei(1000000), {
 				from: alice
 			});
 			totalSupplyA = await beethovenContract.totalSupplyA.call();
@@ -737,7 +728,7 @@ contract('Beethoven', accounts => {
 
 		it('should only redeem token value less than balance', async () => {
 			try {
-				await beethovenContract.redeem(util.toWei('2800'), util.toWei('2900'), true, {
+				await beethovenContract.redeem(util.toWei(2800), util.toWei(2900), true, {
 					from: alice
 				});
 				assert.isTrue(false, 'able to redeem more than balance');
@@ -748,18 +739,15 @@ contract('Beethoven', accounts => {
 
 		it('should redeem token A and B fee paying with eth', async () => {
 			let success = await beethovenContract.redeem.call(
-				util.toWei(amtA + ''),
-				util.toWei(amtB + ''),
+				util.toWei(amtA),
+				util.toWei(amtB),
 				true,
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			let tx = await beethovenContract.redeem(
-				util.toWei(amtA + ''),
-				util.toWei(amtB + ''),
-				true,
-				{ from: alice }
-			);
+			let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), true, {
+				from: alice
+			});
 			assert.isTrue(
 				tx.logs.length === 2 &&
 					tx.logs[0].event === EVENT_REDEEM &&
@@ -832,18 +820,15 @@ contract('Beethoven', accounts => {
 
 		it('should redeem token A and B fee paying with DUO token', async () => {
 			let success = await beethovenContract.redeem.call(
-				util.toWei(amtA + ''),
-				util.toWei(amtB + ''),
+				util.toWei(amtA),
+				util.toWei(amtB),
 				false,
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			let tx = await beethovenContract.redeem(
-				util.toWei(amtA + ''),
-				util.toWei(amtB + ''),
-				false,
-				{ from: alice }
-			);
+			let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), false, {
+				from: alice
+			});
 			assert.isTrue(
 				tx.logs.length === 2 &&
 					tx.logs[0].event === EVENT_REDEEM &&
@@ -923,7 +908,7 @@ contract('Beethoven', accounts => {
 		before(async () => {
 			await initContracts();
 			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice + ''), time.valueOf(), pf1);
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 				from: creator
 			});
@@ -942,11 +927,11 @@ contract('Beethoven', accounts => {
 		}
 
 		function testNav(resetPrice, lastPrice, beta) {
-			let resetPriceInWei = util.toWei(resetPrice + '');
+			let resetPriceInWei = util.toWei(resetPrice);
 			let resetPriceTimeSeconds = 1522745087;
-			let lastPriceInWei = util.toWei(lastPrice + '');
+			let lastPriceInWei = util.toWei(lastPrice);
 			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
-			let betaInWei = util.toWei(beta + '');
+			let betaInWei = util.toWei(beta);
 			let [navA, navB] = calcNav(
 				lastPrice,
 				lastPriceTimeSeconds,
@@ -1001,7 +986,7 @@ contract('Beethoven', accounts => {
 		before(async () => {
 			await initContracts();
 			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei('400'), time.valueOf(), pf1);
+			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 				from: creator
 			});
@@ -1010,7 +995,7 @@ contract('Beethoven', accounts => {
 			time = await oracleContract.timestamp.call();
 
 			await beethovenContract.setTimestamp(time.valueOf());
-			await oracleContract.setLastPrice(util.toWei('888'), time.valueOf(), pf1);
+			await oracleContract.setLastPrice(util.toWei(888), time.valueOf(), pf1);
 
 			await beethovenContract.fetchPrice();
 		});
@@ -1024,7 +1009,7 @@ contract('Beethoven', accounts => {
 			try {
 				await beethovenContract.create.call(true, {
 					from: alice,
-					value: util.toWei('1')
+					value: util.toWei(1)
 				});
 				assert.isTrue(false, 'still can create');
 			} catch (err) {
@@ -1034,7 +1019,7 @@ contract('Beethoven', accounts => {
 
 		it('should not allow redemption', async () => {
 			try {
-				await beethovenContract.redeem.call(util.toWei('2800'), util.toWei('2900'), true, {
+				await beethovenContract.redeem.call(util.toWei(2800), util.toWei(2900), true, {
 					from: alice
 				});
 
@@ -1046,7 +1031,7 @@ contract('Beethoven', accounts => {
 
 		it('should not allow any transfer of A', async () => {
 			try {
-				await beethovenContract.transfer.call(0, DUMMY_ADDR, bob, util.toWei('1'), {
+				await beethovenContract.transfer.call(0, DUMMY_ADDR, bob, util.toWei(1), {
 					from: alice
 				});
 
@@ -1058,7 +1043,7 @@ contract('Beethoven', accounts => {
 
 		it('should not allow any transfer of B', async () => {
 			try {
-				await beethovenContract.transfer.call(1, DUMMY_ADDR, bob, util.toWei('1'), {
+				await beethovenContract.transfer.call(1, DUMMY_ADDR, bob, util.toWei(1), {
 					from: alice
 				});
 
@@ -1246,28 +1231,24 @@ contract('Beethoven', accounts => {
 			before(async () => {
 				await initContracts(alphaInBP);
 				let time = await oracleContract.timestamp.call();
-				await oracleContract.setLastPrice(
-					util.toWei(ethInitPrice + ''),
-					time.valueOf(),
-					pf1
-				);
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 					from: creator
 				});
-				await duoContract.transfer(alice, util.toWei('100'), { from: creator });
-				await duoContract.transfer(bob, util.toWei('100'), { from: creator });
-				await duoContract.transfer(charles, util.toWei('100'), { from: creator });
+				await duoContract.transfer(alice, util.toWei(100), { from: creator });
+				await duoContract.transfer(bob, util.toWei(100), { from: creator });
+				await duoContract.transfer(charles, util.toWei(100), { from: creator });
 				await beethovenContract.create(true, {
 					from: alice,
-					value: util.toWei('1')
+					value: util.toWei(1)
 				});
 				await beethovenContract.create(true, {
 					from: bob,
-					value: util.toWei('1.2')
+					value: util.toWei(1.2)
 				});
 				await beethovenContract.create(true, {
 					from: charles,
-					value: util.toWei('1.5')
+					value: util.toWei(1.5)
 				});
 
 				if (transferABRequired) {
@@ -1311,7 +1292,7 @@ contract('Beethoven', accounts => {
 				time = await oracleContract.timestamp.call();
 				await beethovenContract.setTimestamp(time.valueOf());
 
-				await oracleContract.setLastPrice(util.toWei(price + ''), time.valueOf(), pf1);
+				await oracleContract.setLastPrice(util.toWei(price), time.valueOf(), pf1);
 
 				await beethovenContract.fetchPrice();
 
@@ -1635,7 +1616,7 @@ contract('Beethoven', accounts => {
 		before(async () => {
 			await initContracts();
 			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei('400'), time.valueOf(), pf1);
+			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
 				from: creator
 			});
@@ -1656,9 +1637,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				util.isEqual(tx.logs[0].args.index.valueOf(), 0) &&
-					util.isEqual(tx.logs[0].args.oldValue.valueOf(), preValue) &&
-					util.isEqual(tx.logs[0].args.newValue.valueOf(), 50),
+				Number(tx.logs[0].args.index.valueOf()) === 0 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 50,
 				'wrong argument emitted'
 			);
 		});
@@ -1695,9 +1676,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				util.isEqual(tx.logs[0].args.index.valueOf(), 1) &&
-					util.isEqual(tx.logs[0].args.oldValue.valueOf(), preValue) &&
-					util.isEqual(tx.logs[0].args.newValue.valueOf(), 100),
+				Number(tx.logs[0].args.index.valueOf()) === 1 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -1734,9 +1715,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				util.isEqual(tx.logs[0].args.index.valueOf(), 2) &&
-					util.isEqual(tx.logs[0].args.oldValue.valueOf(), preValue) &&
-					util.isEqual(tx.logs[0].args.newValue.valueOf(), 100),
+				Number(tx.logs[0].args.index.valueOf()) === 2 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -1763,9 +1744,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				util.isEqual(tx.logs[0].args.index.valueOf(), 3) &&
-					util.isEqual(tx.logs[0].args.oldValue.valueOf(), preValue) &&
-					util.isEqual(tx.logs[0].args.newValue.valueOf(), 100),
+				Number(tx.logs[0].args.index.valueOf()) === 3 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
 				'wrong argument emitted'
 			);
 		});
@@ -1792,9 +1773,9 @@ contract('Beethoven', accounts => {
 				'wrong event emitted'
 			);
 			assert.isTrue(
-				util.isEqual(tx.logs[0].args.index.valueOf(), 4) &&
-					util.isEqual(tx.logs[0].args.oldValue.valueOf(), preValue) &&
-					util.isEqual(tx.logs[0].args.newValue.valueOf(), 100),
+				Number(tx.logs[0].args.index.valueOf()) === 4 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
 				'wrong argument emitted'
 			);
 		});
