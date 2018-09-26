@@ -25,6 +25,8 @@ module.exports = {
 		let block = await web3.eth.getBlock(blockNumber);
 		return block.timestamp;
 	},
+	getBalance: (addr) => web3.eth.getBalance(addr),
+	sendTransaction: (param) => web3.eth.sendTransaction(param),
 	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert',
 	VM_INVALID_OPCODE_MSG : 'Returned error: VM Exception while processing transaction: invalid opcode'
 };
