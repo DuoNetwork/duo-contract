@@ -1,7 +1,7 @@
 const DUO = artifacts.require('./DUO.sol');
 const util = require('./util');
 
-contract.only('DUO', accounts => {
+contract('DUO', accounts => {
 	let duoContract;
 	const creator = accounts[0];
 	const alice = accounts[1];

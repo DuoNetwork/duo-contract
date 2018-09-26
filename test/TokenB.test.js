@@ -4,11 +4,6 @@ const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
 const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
-const Web3 = require('web3');
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
-);
-
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
@@ -16,6 +11,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const TokenAInit = InitParas['TokenA'];
 const TokenBInit = InitParas['TokenB'];
+const util = require('./util');
 const ethInitPrice = 582;
 const BP_DENOMINATOR = 10000;
 
@@ -34,13 +30,11 @@ contract('TokenB', accounts => {
 	const alice = accounts[5];
 	const bob = accounts[6];
 
-	const WEI_DENOMINATOR = 1e18;
-
 	let tokenValueB;
 
 	before(async () => {
 		duoContract = await DUO.new(
-			web3.utils.toWei(DuoInit.initSupply),
+			util.toWei(DuoInit.initSupply),
 			DuoInit.tokenName,
 			DuoInit.tokenSymbol,
 			{
@@ -56,10 +50,10 @@ contract('TokenB', accounts => {
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.alphaInBP,
-			web3.utils.toWei(BeethovenInit.couponRate),
-			web3.utils.toWei(BeethovenInit.hp),
-			web3.utils.toWei(BeethovenInit.hu),
-			web3.utils.toWei(BeethovenInit.hd),
+			util.toWei(BeethovenInit.couponRate),
+			util.toWei(BeethovenInit.hp),
+			util.toWei(BeethovenInit.hu),
+			util.toWei(BeethovenInit.hd),
 			BeethovenInit.comm,
 			BeethovenInit.pd,
 			BeethovenInit.optCoolDown,
@@ -103,7 +97,7 @@ contract('TokenB', accounts => {
 		);
 		let time = await oracleContract.timestamp.call();
 		await oracleContract.setLastPrice(
-			web3.utils.toWei(ethInitPrice + '', 'ether'),
+			util.toWei(ethInitPrice + '', 'ether'),
 			time.valueOf(),
 			pf1
 		);
@@ -116,7 +110,7 @@ contract('TokenB', accounts => {
 		let amtEth = 1;
 		await beethovenContract.create(true, {
 			from: creator,
-			value: web3.utils.toWei(amtEth + '')
+			value: util.toWei(amtEth + '')
 		});
 		tokenValueB =
 			((1 - BeethovenInit.comm / BP_DENOMINATOR) * ethInitPrice) /
@@ -126,19 +120,19 @@ contract('TokenB', accounts => {
 	it('total supply should be correct', async () => {
 		let totalSupply = await tokenBContract.totalSupply.call();
 		assert.equal(
-			totalSupply.valueOf(),
-			web3.utils.toWei(tokenValueB + ''),
+			util.fromWei(totalSupply),
+			tokenValueB,
 			'totalSupply not equal to correct value'
 		);
 	});
 
 	it('should show balance', async () => {
 		let balance = await tokenBContract.balanceOf.call(creator);
-		assert.isTrue(balance.toNumber() > 0, 'balance of creator not equal to created amount');
+		assert.isTrue(util.fromWei(balance) > 0, 'balance of creator not equal to created amount');
 	});
 
 	it('should be able to approve', async () => {
-		let success = await tokenBContract.approve(alice, web3.utils.toWei('100'), {
+		let success = await tokenBContract.approve(alice, util.toWei(100), {
 			from: creator
 		});
 		assert.isTrue(!!success, 'Not able to approve');
@@ -146,15 +140,11 @@ contract('TokenB', accounts => {
 
 	it('should show allowance', async () => {
 		let allowance = await tokenBContract.allowance.call(creator, alice);
-		assert.equal(
-			allowance.valueOf() / WEI_DENOMINATOR,
-			100,
-			'allowance of alice not equal to 100'
-		);
+		assert.equal(util.fromWei(allowance), 100, 'allowance of alice not equal to 100');
 	});
 
 	it('creator should be able to transfer to bob', async () => {
-		let transfer = await tokenBContract.transfer(bob, web3.utils.toWei('10'), {
+		let transfer = await tokenBContract.transfer(bob, util.toWei(10), {
 			from: creator
 		});
 		assert.isTrue(!!transfer, 'Not able to approve');
@@ -162,26 +152,22 @@ contract('TokenB', accounts => {
 
 	it('should show balance of bob', async () => {
 		let balance = await tokenBContract.balanceOf.call(bob);
-		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 10, 'balance of bob not equal to 10');
+		assert.equal(util.fromWei(balance), 10, 'balance of bob not equal to 10');
 	});
 
 	it('alice cannot transfer 200 from creator to bob', async () => {
 		try {
-			await tokenBContract.transferFrom(creator, bob, web3.utils.toWei('200'), {
+			await tokenBContract.transferFrom(creator, bob, util.toWei(200), {
 				from: alice
 			});
 			assert.isTrue(false, 'can transfer of more than balance');
 		} catch (err) {
-			assert.equal(
-				err.message,
-				'VM Exception while processing transaction: revert',
-				'transaction not reverted'
-			);
+			assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 		}
 	});
 
 	it('alice should transfer 50 from creator to bob', async () => {
-		let transferFrom = await tokenBContract.transferFrom(creator, bob, web3.utils.toWei('50'), {
+		let transferFrom = await tokenBContract.transferFrom(creator, bob, util.toWei(50), {
 			from: alice
 		});
 		assert.isTrue(!!transferFrom, 'Not able to transferFrom');
@@ -189,30 +175,22 @@ contract('TokenB', accounts => {
 
 	it('allowance for alice should be 50', async () => {
 		let allowance = await tokenBContract.allowance.call(creator, alice);
-		assert.equal(
-			allowance.toNumber() / WEI_DENOMINATOR,
-			50,
-			'allowance of alice not equal to 50'
-		);
+		assert.equal(util.fromWei(allowance), 50, 'allowance of alice not equal to 50');
 	});
 
 	it('check balance of bob equal 60', async () => {
 		let balance = await tokenBContract.balanceOf.call(bob);
-		assert.equal(balance.toNumber() / WEI_DENOMINATOR, 60, 'balance of bob not equal to 60');
+		assert.equal(util.fromWei(balance), 60, 'balance of bob not equal to 60');
 	});
 
 	it('should not transfer more than balance', async () => {
 		try {
-			await tokenBContract.transfer(bob, web3.utils.toWei('10000000000000000000000'), {
+			await tokenBContract.transfer(bob, util.toWei('10000000000000000000000'), {
 				from: creator
 			});
 			assert.isTrue(false, 'can transfer of more than balance');
 		} catch (err) {
-			assert.equal(
-				err.message,
-				'VM Exception while processing transaction: revert',
-				'transaction not reverted'
-			);
+			assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 		}
 	});
 });
