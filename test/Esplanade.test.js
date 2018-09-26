@@ -197,7 +197,7 @@ contract('Esplanade', accounts => {
 				});
 				await roleManagerContract.skipCooldown(1);
 				let moderator = tx.logs[0].args.newModerator;
-				assert.isTrue(moderator != creator, 'moderator not changed');
+				assert.isTrue(moderator !== creator, 'moderator not changed');
 				await roleManagerContract.setModerator(newModerator);
 				await roleManagerContract.startContractVoting(custodianContract.address, {
 					from: newModerator
@@ -223,7 +223,7 @@ contract('Esplanade', accounts => {
 		it('can propose contract', async () => {
 			let tx = await startContractVoting(custodianContract);
 			let moderator = tx.logs[0].args.newModerator;
-			assert.isTrue(newModerator != moderator, 'moderator not changed');
+			assert.isTrue(newModerator !== moderator, 'moderator not changed');
 			let votedFor = await roleManagerContract.votedFor.call();
 			let votedAgainst = await roleManagerContract.votedAgainst.call();
 			assert.isTrue(
@@ -265,14 +265,14 @@ contract('Esplanade', accounts => {
 			await roleManagerContract.setModerator(newModerator);
 			let tx = await roleManagerContract.terminateContractVoting({ from: newModerator });
 			let moderator = tx.logs[0].args.newModerator;
-			assert.isTrue(newModerator != moderator, 'moderator not changed');
+			assert.isTrue(newModerator !== moderator, 'moderator not changed');
 			let votingStage = await roleManagerContract.votingStage.call();
 			assert.equal(votingStage.valueOf(), STATE_VOTING_NOT_STARTED, 'not reset');
 			assert.isTrue(tx.logs.length === 2, 'not correct event emitted');
 			assert.isTrue(
 				tx.logs[0].event === EVENT_TERMINATE_CON_VOTING &&
-					tx.logs[0].args.terminator.valueOf() === newModerator &&
-					tx.logs[0].args.currentCandidate.valueOf() === newCustodianContract.address,
+					tx.logs[0].args.terminator === newModerator &&
+					tx.logs[0].args.currentCandidate === newCustodianContract.address,
 				'wrong event args'
 			);
 			assert.isTrue(tx.logs[1].event === EVENT_REPLACE_MODERATOR, 'wrong event args');
@@ -459,7 +459,7 @@ contract('Esplanade', accounts => {
 				let tx = await roleManagerContract.terminateByTimeout({ from: alice });
 				assert.isTrue(tx.logs.length === 1, tx.logs[0].event === EVENT_TERMINATE_TIMEOUT);
 				assert.isTrue(
-					tx.logs[0].args.candidate.valueOf() ===
+					tx.logs[0].args.candidate ===
 						(isContract ? newCustodianContract.address : alice),
 					'event args wrong'
 				);
@@ -554,7 +554,7 @@ contract('Esplanade', accounts => {
 
 			assert.isTrue(
 				tx.logs[0].args.oldModerator === creator &&
-					tx.logs[0].args.oldModerator != tx.logs[0].args.newModerator
+					tx.logs[0].args.oldModerator !== tx.logs[0].args.newModerator
 			);
 			assert.isTrue(tx.logs[1].args.newCustodianAddr === custodianContract.address);
 
@@ -633,7 +633,7 @@ contract('Esplanade', accounts => {
 
 			assert.isTrue(
 				tx.logs[0].args.oldModerator === newModerator &&
-					tx.logs[0].args.oldModerator != tx.logs[0].args.newModerator
+					tx.logs[0].args.oldModerator !== tx.logs[0].args.newModerator
 			);
 			assert.isTrue(tx.logs[1].args.newContractAddr === oracleContract.address);
 
@@ -883,11 +883,11 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator);
 				let addrToRemove = Pool[index][0];
 				addrToRemove =
-					tx.logs[0].args.newModerator.valueOf().toLowerCase() ===
+					tx.logs[0].args.newModerator.toLowerCase() ===
 					addrToRemove.toLowerCase()
 						? Pool[index][1]
 						: addrToRemove;
-				tx = await roleManagerContract.removeAddress(addrToRemove.valueOf(), index, {
+				tx = await roleManagerContract.removeAddress(addrToRemove, index, {
 					from: newModerator
 				});
 				assert.isTrue(
@@ -900,7 +900,7 @@ contract('Esplanade', accounts => {
 
 				assert.isTrue(
 					Number(args.poolIndex.valueOf()) === index &&
-						util.toChecksumAddress(args.addr.valueOf()) ===
+						util.toChecksumAddress(args.addr) ===
 							util.toChecksumAddress(addrToRemove),
 					'wrong event arguments'
 				);
@@ -942,9 +942,8 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator);
 
 				let addrToRemove = Pool[index][0];
-				// console.log(tx.logs[0].args.newModerator.valueOf().toLowerCase());
 				addrToRemove =
-					tx.logs[0].args.newModerator.valueOf().toLowerCase() ===
+					tx.logs[0].args.newModerator.toLowerCase() ===
 					addrToRemove.toLowerCase()
 						? Pool[index][1]
 						: addrToRemove;
@@ -957,7 +956,7 @@ contract('Esplanade', accounts => {
 
 				addrToRemove = Pool[index][2];
 				addrToRemove =
-					tx.logs[0].args.newModerator.valueOf().toLowerCase() ===
+					tx.logs[0].args.newModerator.toLowerCase() ===
 					addrToRemove.toLowerCase()
 						? Pool[index][3]
 						: addrToRemove;
