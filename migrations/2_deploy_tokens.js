@@ -44,11 +44,10 @@ module.exports = async (deployer, network, accounts) => {
 		fc = accounts[4];
 	}
 
-	// 42008
+	// 74748
 	await deployer.deploy(SafeMath, {
 		from: creator
 	});
-	// 74748, 27008
 	await deployer.link(SafeMath, [Beethoven, Magi]);
 
 	// 950268
@@ -62,12 +61,12 @@ module.exports = async (deployer, network, accounts) => {
 		}
 	);
 
-	// 2611094
+	// 4700965
 	await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 		from: creator
 	});
 
-	// 5788827 for mock
+	// 6709109
 	await deployer.deploy(
 		Beethoven,
 		DUO.address,
@@ -87,7 +86,7 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.preResetWaitBlk,
 		{ from: creator }
 	);
-	// 2359562 for mock
+	// 2575678
 	await deployer.deploy(
 		Magi,
 		creator,
