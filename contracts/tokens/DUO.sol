@@ -13,7 +13,7 @@ contract DUO {
 	mapping (address => mapping (address => uint)) public allowance;
 
 	// This generates a public event on the blockchain that will notify clients
-	event Transfer(address indexed from, address indexed to, uint value);
+	event Transfer(address indexed from, address indexed to, uint tokens);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 
 	/**

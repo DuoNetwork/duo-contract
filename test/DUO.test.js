@@ -1,6 +1,10 @@
 const DUO = artifacts.require('./DUO.sol');
 const util = require('./util');
 
+// Event
+const TRANSFER = 'Transfer';
+const APPROVAL = 'Approval';
+
 contract('DUO', accounts => {
 	let duoContract;
 	const creator = accounts[0];
@@ -32,8 +36,16 @@ contract('DUO', accounts => {
 	});
 
 	it('should be able to approve', async () => {
-		let success = await duoContract.approve(alice, util.toWei(100), { from: creator });
-		assert.isTrue(!!success, 'Not able to approve');
+		let tx = await duoContract.approve(alice, util.toWei(100), { from: creator });
+		assert.isTrue(tx.logs.length === 1, 'wdrong numof events');
+		assert.isTrue(tx.logs[0].event === APPROVAL);
+
+		assert.isTrue(
+			tx.logs[0].args.tokenOwner === creator &&
+				tx.logs[0].args.spender === alice &&
+				util.isEqual(util.fromWei(tx.logs[0].args.tokens.valueOf()), 100),
+			'wrong args'
+		);
 	});
 
 	it('should show allowance', async () => {
@@ -42,8 +54,17 @@ contract('DUO', accounts => {
 	});
 
 	it('creator should be able to transfer to bob', async () => {
-		let transfer = await duoContract.transfer(bob, util.toWei(10), { from: creator });
-		assert.isTrue(!!transfer, 'Not able to approve');
+		let tx = await duoContract.transfer(bob, util.toWei(10), { from: creator });
+
+		assert.isTrue(tx.logs.length === 1, 'wdrong numof events');
+		assert.isTrue(tx.logs[0].event === TRANSFER);
+
+		assert.isTrue(
+			tx.logs[0].args.from === creator &&
+				tx.logs[0].args.to === bob &&
+				util.isEqual(util.fromWei(tx.logs[0].args.tokens), 10),
+			'wrong args'
+		);
 	});
 
 	it('should show balance of bob', async () => {
@@ -61,10 +82,19 @@ contract('DUO', accounts => {
 	});
 
 	it('alice should transfer 50 from creator to bob', async () => {
-		let transferFrom = await duoContract.transferFrom(creator, bob, util.toWei(50), {
+		let tx = await duoContract.transferFrom(creator, bob, util.toWei(50), {
 			from: alice
 		});
-		assert.isTrue(!!transferFrom, 'Not able to transferFrom');
+
+		assert.isTrue(tx.logs.length === 1, 'wdrong numof events');
+		assert.isTrue(tx.logs[0].event === TRANSFER);
+
+		assert.isTrue(
+			tx.logs[0].args.from === creator &&
+				tx.logs[0].args.to === bob &&
+				util.isEqual(util.fromWei(tx.logs[0].args.tokens), 50),
+			'wrong args'
+		);
 	});
 
 	it('allowance for alice should be 50', async () => {
