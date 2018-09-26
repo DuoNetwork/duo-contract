@@ -44,6 +44,8 @@ module.exports = async (deployer, network, accounts) => {
 		fc = accounts[4];
 	}
 
+	console.log('creator: '+ creator);
+
 	// 74748
 	await deployer.deploy(SafeMath, {
 		from: creator
