@@ -2,6 +2,7 @@ const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
+const util = require('./util');
 const Web3 = require('web3');
 const web3 = new Web3(
 	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
@@ -23,10 +24,7 @@ const EVENT_COLLECT_FEE = 'CollectFee';
 const STATE_INCEPT_RESET = '0';
 const STATE_TRADING = '1';
 
-const VM_REVERT_MSG = 'VM Exception while processing transaction: revert';
-const VM_INVALID_OPCODE_MSG = 'VM Exception while processing transaction: invalid opcode';
-
-const DUMMY_ADDR = '0xc';
+const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 
 contract('Custodian', accounts => {
 	let custodianContract, duoContract, roleManagerContract, oracleContract;
@@ -43,7 +41,7 @@ contract('Custodian', accounts => {
 
 	const initContracts = async () => {
 		duoContract = await DUO.new(
-			web3.utils.toWei(DuoInit.initSupply),
+			util.toWei(DuoInit.initSupply),
 			DuoInit.tokenName,
 			DuoInit.tokenSymbol,
 			{
@@ -96,23 +94,23 @@ contract('Custodian', accounts => {
 
 		it('createCommInBP should equal specified value', async () => {
 			let comm = await custodianContract.createCommInBP.call();
-			assert.equal(comm.toNumber(), BeethovenInit.comm, 'createCommInBP specified incorrect');
+			assert.equal(comm.valueOf(), BeethovenInit.comm, 'createCommInBP specified incorrect');
 		});
 
 		it('redeemCommInBP should equal specified value', async () => {
 			let comm = await custodianContract.redeemCommInBP.call();
-			assert.equal(comm.toNumber(), BeethovenInit.comm, 'redeemCommInBP specified incorrect');
+			assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP specified incorrect');
 		});
 
 		it('period should equal specified value', async () => {
 			let pd = await custodianContract.period.call();
-			assert.equal(pd.toNumber(), BeethovenInit.pd, 'period specified incorrect');
+			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period specified incorrect');
 		});
 
 		it('preResetWaitingBlks should equal specified value', async () => {
 			let preResetWaitBlk = await custodianContract.preResetWaitingBlocks.call();
 			assert.equal(
-				preResetWaitBlk.toNumber(),
+				preResetWaitBlk.valueOf(),
 				BeethovenInit.preResetWaitBlk,
 				'preResetWaitingBlks specified incorrect'
 			);
@@ -121,7 +119,7 @@ contract('Custodian', accounts => {
 		it('priceFetchCoolDown should equal specified value', async () => {
 			let pxFetchCoolDown = await custodianContract.priceFetchCoolDown.call();
 			assert.equal(
-				pxFetchCoolDown.toNumber(),
+				pxFetchCoolDown.valueOf(),
 				BeethovenInit.pxFetchCoolDown,
 				'pxFetchCoolDown specified incorrect'
 			);
@@ -130,7 +128,7 @@ contract('Custodian', accounts => {
 		it('navA should equal specified value', async () => {
 			let navAInWei = await custodianContract.navAInWei.call();
 			assert.equal(
-				web3.utils.fromWei(navAInWei.valueOf(), 'ether'),
+				util.fromWei(navAInWei.valueOf(), 'ether'),
 				'1',
 				'navAInWei specified incorrect'
 			);
@@ -139,7 +137,7 @@ contract('Custodian', accounts => {
 		it('navB should equal specified value', async () => {
 			let navBInWei = await custodianContract.navBInWei.call();
 			assert.equal(
-				web3.utils.fromWei(navBInWei.valueOf(), 'ether'),
+				util.fromWei(navBInWei.valueOf(), 'ether'),
 				'1',
 				'navBInWei specified incorrect'
 			);
@@ -151,7 +149,7 @@ contract('Custodian', accounts => {
 
 		it('userLenght should be 0', async () => {
 			let userSize = await custodianContract.totalUsers.call();
-			assert.equal(userSize.toNumber(), 0, 'userLenght wrong');
+			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
 	});
 
@@ -167,7 +165,7 @@ contract('Custodian', accounts => {
 				await custodianContract.mintTokens(
 					alice,
 					index,
-					web3.utils.toWei(initialBalance, 'ether'),
+					util.toWei(initialBalance, 'ether'),
 					{
 						from: creator
 					}
@@ -182,16 +180,19 @@ contract('Custodian', accounts => {
 			it('should show balance', async () => {
 				let balance = await custodianContract.balanceOf.call(index, alice);
 				assert.isTrue(
-					web3.utils.fromWei(balance.valueOf(), 'ether') === initialBalance,
+					util.fromWei(balance.valueOf(), 'ether') === initialBalance,
 					'balance of alice not shown'
 				);
 			});
 
 			it('alice userIdx should be updated', async () => {
 				let userIdx = await custodianContract.getExistingUser.call(alice);
-				assert.isTrue(userIdx.toNumber() === 1, 'alice is not updated');
+				assert.isTrue(util.isEqual(userIdx.valueOf(), 1), 'alice is not updated');
 				let userSize = await custodianContract.totalUsers.call();
-				assert.equal(userSize.toNumber(), 1, 'user size not updated correctly');
+				assert.isTrue(
+					util.isEqual(userSize.valueOf(), 1),
+					'user size not updated correctly'
+				);
 			});
 
 			it('should be able to approve', async () => {
@@ -199,7 +200,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					web3.utils.toWei(approvalAmt + ''),
+					util.toWei(approvalAmt + ''),
 					{
 						from: alice
 					}
@@ -211,7 +212,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					web3.utils.toWei(approvalAmt, 'ether'),
+					util.toWei(approvalAmt, 'ether'),
 					{
 						from: alice
 					}
@@ -221,10 +222,13 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					tx.logs[0].args.tokenOwner.valueOf() === alice &&
-						tx.logs[0].args.spender.valueOf() === bob &&
-						tx.logs[0].args.tokens.valueOf() === web3.utils.toWei(approvalAmt + '') &&
-						tx.logs[0].args.index.toNumber() === index,
+					util.isEqual(tx.logs[0].args.tokenOwner.valueOf(), alice) &&
+						util.isEqual(tx.logs[0].args.spender.valueOf(), bob) &&
+						util.isEqual(
+							tx.logs[0].args.tokens.valueOf(),
+							util.toWei(approvalAmt + '')
+						) &&
+						util.isEqual(tx.logs[0].args.index.valueOf(), index),
 					'incorrect event arguments emitted'
 				);
 			});
@@ -232,7 +236,7 @@ contract('Custodian', accounts => {
 			it('should show allowance', async () => {
 				let allowance = await custodianContract.allowance.call(index, alice, bob);
 				assert.equal(
-					web3.utils.fromWei(allowance.valueOf(), 'ether'),
+					util.fromWei(allowance.valueOf(), 'ether'),
 					approvalAmt,
 					'allowance of bob not equal to approvalAmt'
 				);
@@ -240,7 +244,7 @@ contract('Custodian', accounts => {
 
 			it('dummy from address should not be used for approval', async () => {
 				let dummyAllowance = await custodianContract.allowance.call(index, DUMMY_ADDR, bob);
-				assert.equal(dummyAllowance.toNumber(), 0, 'dummy from address is used');
+				assert.equal(dummyAllowance.valueOf(), 0, 'dummy from address is used');
 			});
 
 			it('should be able to transfer', async () => {
@@ -248,7 +252,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					web3.utils.toWei(transferAmt, 'ether'),
+					util.toWei(transferAmt, 'ether'),
 					{
 						from: alice
 					}
@@ -259,7 +263,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					web3.utils.toWei(transferAmt, 'ether'),
+					util.toWei(transferAmt, 'ether'),
 					{
 						from: alice
 					}
@@ -270,35 +274,40 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					tx.logs[0].args.from.valueOf() === alice &&
-						tx.logs[0].args.to.valueOf() === bob &&
-						tx.logs[0].args.value.valueOf() ===
-							web3.utils.toWei(transferAmt, 'ether') &&
-						tx.logs[0].args.index.toNumber() === index,
+					util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
+						util.isEqual(tx.logs[0].args.to.valueOf(), bob) &&
+						util.isEqual(
+							tx.logs[0].args.value.valueOf(),
+							util.toWei(transferAmt, 'ether')
+						) &&
+						util.isEqual(tx.logs[0].args.index.valueOf(), index),
 					'incorrect event arguments emitted'
 				);
 			});
 
 			it('bob userIdx should be updated', async () => {
 				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
-				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
+				assert.isTrue(util.isEqual(userIdxAlice.valueOf(), 1), 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
-				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
+				assert.isTrue(util.isEqual(userIdxBob.valueOf(), 2), 'bob userIdx is not updated');
 				let userSize = await custodianContract.totalUsers.call();
-				assert.equal(userSize.toNumber(), 2, 'user size not updated correctly');
+				assert.isTrue(
+					util.isEqual(userSize.valueOf(), 2),
+					'user size not updated correctly'
+				);
 			});
 
 			it('should show balance of bob equal to transferAmt', async () => {
 				let balance = await custodianContract.balanceOf.call(index, bob);
 				assert.isTrue(
-					web3.utils.fromWei(balance.valueOf(), 'ether') === transferAmt,
+					util.fromWei(balance.valueOf(), 'ether') === transferAmt,
 					'balance of bob not shown'
 				);
 			});
 
 			it('dummy from address should not be used for transfer', async () => {
 				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
-				assert.isTrue(balance.toNumber() === 0, 'dummy from address is used');
+				assert.isTrue(util.isEqual(balance.valueOf(), 0), 'dummy from address is used');
 			});
 
 			it('should not transfer more than balance', async () => {
@@ -307,7 +316,7 @@ contract('Custodian', accounts => {
 						index,
 						DUMMY_ADDR,
 						bob,
-						web3.utils.toWei('10000000'),
+						util.toWei('10000000'),
 						{
 							from: alice
 						}
@@ -315,11 +324,7 @@ contract('Custodian', accounts => {
 
 					assert.isTrue(false, 'able to transfer more than balance');
 				} catch (err) {
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					);
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -329,7 +334,7 @@ contract('Custodian', accounts => {
 					DUMMY_ADDR,
 					alice,
 					charles,
-					web3.utils.toWei(transferFromAmt),
+					util.toWei(transferFromAmt),
 					{ from: bob }
 				);
 
@@ -339,7 +344,7 @@ contract('Custodian', accounts => {
 					DUMMY_ADDR,
 					alice,
 					charles,
-					web3.utils.toWei(transferFromAmt, 'ether'),
+					util.toWei(transferFromAmt, 'ether'),
 					{
 						from: bob
 					}
@@ -349,29 +354,37 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					tx.logs[0].args.from.valueOf() === alice &&
-						tx.logs[0].args.to.valueOf() === charles &&
-						tx.logs[0].args.value.valueOf() ===
-							web3.utils.toWei(transferFromAmt, 'ether') &&
-						tx.logs[0].args.index.toNumber() === index,
+					util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
+						util.isEqual(tx.logs[0].args.to.valueOf(), charles) &&
+						util.isEqual(
+							tx.logs[0].args.value.valueOf(),
+							util.toWei(transferFromAmt, 'ether')
+						) &&
+						util.isEqual(tx.logs[0].args.index.valueOf(), index),
 					'incorrect event arguments emitted'
 				);
 			});
 
 			it('charles userIdx should be updated', async () => {
 				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
-				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
+				assert.isTrue(util.isEqual(userIdxAlice.valueOf(), 1), 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
-				assert.isTrue(userIdxBob.toNumber() === 2, 'bob userIdx is not updated');
+				assert.isTrue(util.isEqual(userIdxBob.valueOf(), 2), 'bob userIdx is not updated');
 				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
-				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles userIdx is not updated');
+				assert.isTrue(
+					util.isEqual(userIdxCharles.valueOf(), 3),
+					'charles userIdx is not updated'
+				);
 				let userSize = await custodianContract.totalUsers.call();
-				assert.equal(userSize.toNumber(), 3, 'user size not updated correctly');
+				assert.isTrue(
+					util.isEqual(userSize.valueOf(), 3),
+					'user size not updated correctly'
+				);
 			});
 
 			it('dummy from address should not be used for transferFrom', async () => {
 				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
-				assert.isTrue(balance.toNumber() === 0, 'dummy from address is used');
+				assert.isTrue(util.isEqual(balance.valueOf(), 0), 'dummy from address is used');
 			});
 
 			it('should not transferFrom more than allowance', async () => {
@@ -381,25 +394,21 @@ contract('Custodian', accounts => {
 						DUMMY_ADDR,
 						alice,
 						charles,
-						web3.utils.toWei(transferFromAmt),
+						util.toWei(transferFromAmt),
 						{
 							from: bob
 						}
 					);
 					assert.isTrue(false, 'can transferFrom of more than allowance');
 				} catch (err) {
-					assert.equal(
-						err.message,
-						'VM Exception while processing transaction: revert',
-						'transaction not reverted'
-					);
+					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
 			it('allowance for bob should be updated', async () => {
 				let allowance = await custodianContract.allowance.call(index, alice, bob);
 				assert.equal(
-					Number(web3.utils.fromWei(allowance.valueOf(), 'ether')),
+					Number(util.fromWei(allowance.valueOf(), 'ether')),
 					Number(approvalAmt) - Number(transferFromAmt),
 					'allowance of bob not correct'
 				);
@@ -408,7 +417,7 @@ contract('Custodian', accounts => {
 			it('check balance of charles equal transferFromAmt', async () => {
 				let balance = await custodianContract.balanceOf.call(index, charles);
 				assert.equal(
-					web3.utils.fromWei(balance.valueOf(), 'ether'),
+					util.fromWei(balance.valueOf(), 'ether'),
 					transferFromAmt,
 					'balance of charles not correct'
 				);
@@ -418,34 +427,35 @@ contract('Custodian', accounts => {
 				await custodianContract.mintTokens(
 					alice,
 					1 - index,
-					web3.utils.toWei(initialBalance, 'ether')
+					util.toWei(initialBalance, 'ether')
 				);
 				let balanceA = await custodianContract.balanceOf.call(index, alice);
 				let balanceB = await custodianContract.balanceOf.call(1 - index, alice);
 				let userIdxDavid = await custodianContract.getExistingUser.call(david);
-				assert.isTrue(userIdxDavid.toNumber() === 0, 'david is not updated');
+
+				assert.equal(userIdxDavid.valueOf(), '0', 'david is not updated');
 				await custodianContract.transfer(index, alice, david, balanceA, {
 					from: alice
 				});
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
-				assert.isTrue(userIdxDavid.toNumber() === 4, 'david is not updated');
+				assert.equal(userIdxDavid.valueOf(), '4', 'david is not updated');
 				let userIdxAlice = await custodianContract.getExistingUser.call(alice);
-				assert.isTrue(userIdxAlice.toNumber() === 1, 'alice is not updated');
+				assert.equal(userIdxAlice.valueOf(), '1', 'alice is not updated');
 				await custodianContract.transfer(1 - index, alice, david, balanceB, {
 					from: alice
 				});
 
 				userIdxAlice = await custodianContract.getExistingUser.call(alice);
-				assert.isTrue(userIdxAlice.toNumber() === 0, 'alice is not updated');
+				assert.equal(userIdxAlice.valueOf(), '0', 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
-				assert.isTrue(userIdxBob.toNumber() === 2, 'bob is not updated');
+				assert.equal(userIdxBob.valueOf(), '2', 'bob is not updated');
 				let userIdxCharles = await custodianContract.getExistingUser.call(charles);
-				assert.isTrue(userIdxCharles.toNumber() === 3, 'charles is not updated');
+				assert.equal(userIdxCharles.valueOf(), '3', 'charles is not updated');
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
-				assert.isTrue(userIdxDavid.toNumber() === 1, 'david is not updated');
+				assert.equal(userIdxDavid.valueOf(), '1', 'david is not updated');
 
 				let userSize = await custodianContract.totalUsers.call();
-				assert.equal(userSize.toNumber(), 3, 'user size not updated correctly');
+				assert.equal(userSize.valueOf(), '3', 'user size not updated correctly');
 			});
 		}
 
@@ -472,12 +482,12 @@ contract('Custodian', accounts => {
 			await web3.eth.sendTransaction({
 				from: creator,
 				to: custodianContract.address,
-				value: web3.utils.toWei(initEthFee, 'ether')
+				value: util.toWei(initEthFee, 'ether')
 			});
 
 			await duoContract.mintTokens(
 				custodianContract.address,
-				web3.utils.toWei(initDuoFee, 'ether')
+				util.toWei(initDuoFee, 'ether')
 			);
 		});
 
@@ -486,32 +496,32 @@ contract('Custodian', accounts => {
 			let ethFee = await custodianContract.ethFeeBalanceInWei.call();
 			let duoBalance = await duoContract.balanceOf(custodianContract.address);
 			assert.isTrue(
-				web3.utils.fromWei(balance.valueOf(), 'ether') === initEthFee &&
-					web3.utils.fromWei(ethFee.valueOf(), 'ether') === initEthFee &&
-					web3.utils.fromWei(duoBalance.valueOf(), 'ether') === initDuoFee,
+				util.fromWei(balance.valueOf(), 'ether') === initEthFee &&
+					util.fromWei(ethFee.valueOf(), 'ether') === initEthFee &&
+					util.fromWei(duoBalance.valueOf(), 'ether') === initDuoFee,
 				'balance not correct'
 			);
 		});
 
 		it('only feeCollector is allowed to coolectFee', async () => {
 			try {
-				await custodianContract.collectEthFee.call(web3.utils.toWei('1'), { from: alice });
+				await custodianContract.collectEthFee.call(util.toWei('1'), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'non fc can withdraw');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
 			}
 		});
 
 		it('should only collect fee less than allowed', async () => {
 			try {
-				await custodianContract.collectEthFee.call(web3.utils.toWei(ethFeeCollectAmtMore), {
+				await custodianContract.collectEthFee.call(util.toWei(ethFeeCollectAmtMore), {
 					from: fc
 				});
 				assert.isTrue(false, 'can collect fee more than allowed');
 			} catch (err) {
 				assert.equal(
 					err.message,
-					VM_INVALID_OPCODE_MSG,
+					util.VM_INVALID_OPCODE_MSG,
 					'can collect fee more than allowed'
 				);
 			}
@@ -519,14 +529,14 @@ contract('Custodian', accounts => {
 
 		it('should collect eth fee', async () => {
 			let success = await custodianContract.collectEthFee.call(
-				web3.utils.toWei(ethFeeCollectAmtLess),
+				util.toWei(ethFeeCollectAmtLess),
 				{
 					from: fc
 				}
 			);
 
 			assert.isTrue(success);
-			let tx = await custodianContract.collectEthFee(web3.utils.toWei(ethFeeCollectAmtLess), {
+			let tx = await custodianContract.collectEthFee(util.toWei(ethFeeCollectAmtLess), {
 				from: fc
 			});
 			assert.isTrue(
@@ -535,46 +545,53 @@ contract('Custodian', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.addr.valueOf() === fc &&
-					tx.logs[0].args.ethFeeInWei.valueOf() ===
-						web3.utils.toWei(ethFeeCollectAmtLess) &&
-					tx.logs[0].args.ethFeeBalanceInWei.valueOf() ===
-						web3.utils.toWei((initEthFee - ethFeeCollectAmtLess).toString()) &&
-					tx.logs[0].args.duoFeeInWei.toNumber() === 0 &&
-					tx.logs[0].args.duoFeeBalanceInWei.valueOf() === web3.utils.toWei(initDuoFee),
+					util.isEqual(
+						tx.logs[0].args.ethFeeInWei.valueOf(),
+						util.toWei(ethFeeCollectAmtLess)
+					) &&
+					util.isEqual(
+						tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
+						util.toWei((initEthFee - ethFeeCollectAmtLess).toString())
+					) &&
+					util.isEqual(tx.logs[0].args.duoFeeInWei.valueOf(), 0) &&
+					util.isEqual(
+						tx.logs[0].args.duoFeeBalanceInWei.valueOf(),
+						util.toWei(initDuoFee)
+					),
 				'worng fee parameter'
 			);
 		});
 
 		it('only feeCollector is allowed to coolecDuotFee', async () => {
 			try {
-				await custodianContract.collectDuoFee.call(web3.utils.toWei('1'), { from: alice });
+				await custodianContract.collectDuoFee.call(util.toWei('1'), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'non fc can withdraw');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
 			}
 		});
 
 		it('should only collect duo fee less than allowed', async () => {
 			try {
-				await custodianContract.collectDuoFee.call(web3.utils.toWei(duoFeeCollectAmtMore), {
+				await custodianContract.collectDuoFee.call(util.toWei(duoFeeCollectAmtMore), {
 					from: fc
 				});
 				assert.isTrue(false, 'can collect fee more than allowed');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'can collect fee more than allowed');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'can collect fee more than allowed');
 			}
 		});
 
 		it('should collect eth fee', async () => {
 			let success = await custodianContract.collectDuoFee.call(
-				web3.utils.toWei(duoFeeCollectAmtLess),
+				util.toWei(duoFeeCollectAmtLess),
 				{
 					from: fc
 				}
 			);
 
 			assert.isTrue(success);
-			let tx = await custodianContract.collectDuoFee(web3.utils.toWei(duoFeeCollectAmtLess), {
+			let tx = await custodianContract.collectDuoFee(util.toWei(duoFeeCollectAmtLess), {
 				from: fc
 			});
 			assert.isTrue(
@@ -584,20 +601,26 @@ contract('Custodian', accounts => {
 
 			assert.isTrue(
 				tx.logs[0].args.addr.valueOf() === fc &&
-					tx.logs[0].args.ethFeeInWei.valueOf() === '0' &&
-					tx.logs[0].args.ethFeeBalanceInWei.valueOf() ===
-						web3.utils.toWei((initEthFee - ethFeeCollectAmtLess).toString()) &&
-					web3.utils.fromWei(tx.logs[0].args.duoFeeInWei.valueOf()) ===
-						duoFeeCollectAmtLess &&
-					tx.logs[0].args.duoFeeBalanceInWei.valueOf() ===
-						web3.utils.toWei((initDuoFee - duoFeeCollectAmtLess).toString()),
+					util.isEqual(tx.logs[0].args.ethFeeInWei.valueOf(), '0') &&
+					util.isEqual(
+						tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
+						util.toWei((initEthFee - ethFeeCollectAmtLess).toString())
+					) &&
+					util.isEqual(
+						util.fromWei(tx.logs[0].args.duoFeeInWei.valueOf()),
+						duoFeeCollectAmtLess
+					) &&
+					util.isEqual(
+						tx.logs[0].args.duoFeeBalanceInWei.valueOf(),
+						util.toWei((initDuoFee - duoFeeCollectAmtLess).toString())
+					),
 				'worng fee parameter'
 			);
 		});
 	});
 
 	describe('updateOracle', () => {
-		let newOracleAddr = '0x1111';
+		let newOracleAddr = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 		before(async () => {
 			await initContracts();
 			await custodianContract.setState(1);
@@ -608,7 +631,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateOracle.call(newOracleAddr, { from: alice });
 				assert.isTrue(false, 'non operator can update address');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -619,7 +642,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update not passed contract');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -631,7 +654,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update non passed contract');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -664,7 +687,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: alice });
 				assert.isTrue(false, 'address not in pool can update address');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -673,7 +696,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: PoolInit[1][0] });
 				assert.isTrue(false, 'hot address can update address');
 			} catch (err) {
-				assert.equal(err.message, VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 

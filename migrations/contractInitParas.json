@@ -32,7 +32,7 @@
 	},
 
 	"Magi": {
-		"pxCoolDown": 3000,
+		"pxFetchCoolDown": 3000,
 		"optCoolDown": 86400
 	},
 	"Custodian": {

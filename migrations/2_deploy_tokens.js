@@ -94,7 +94,7 @@ module.exports = async (deployer, network, accounts) => {
 		pf2,
 		pf3,
 		Esplanade.address,
-		MagiInit.pxCoolDown,
+		MagiInit.pxFetchCoolDown,
 		MagiInit.optCoolDown,
 		{
 			from: creator
