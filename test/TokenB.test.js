@@ -97,7 +97,7 @@ contract('TokenB', accounts => {
 		);
 		let time = await oracleContract.timestamp.call();
 		await oracleContract.setLastPrice(
-			util.toWei(ethInitPrice + '', 'ether'),
+			util.toWei(ethInitPrice),
 			time.valueOf(),
 			pf1
 		);

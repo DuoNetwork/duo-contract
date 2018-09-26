@@ -2,19 +2,13 @@ const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
-const util = require('./util');
-const Web3 = require('web3');
-const web3 = new Web3(
-	new Web3.providers.HttpProvider('http://localhost:' + process.env.GANACHE_PORT)
-);
-
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
 const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const PoolInit = InitParas['Pool'];
-
+const util = require('./util');
 // Event
 const EVENT_TRANSFER = 'Transfer';
 const EVENT_APPROVAL = 'Approval';
@@ -127,18 +121,16 @@ contract('Custodian', accounts => {
 
 		it('navA should equal specified value', async () => {
 			let navAInWei = await custodianContract.navAInWei.call();
-			assert.equal(
-				util.fromWei(navAInWei.valueOf(), 'ether'),
-				'1',
+			assert.isTrue(
+				util.isEqual(util.fromWei(navAInWei), 1),
 				'navAInWei specified incorrect'
 			);
 		});
 
 		it('navB should equal specified value', async () => {
 			let navBInWei = await custodianContract.navBInWei.call();
-			assert.equal(
-				util.fromWei(navBInWei.valueOf(), 'ether'),
-				'1',
+			assert.isTrue(
+				util.isEqual(util.fromWei(navBInWei), 1),
 				'navBInWei specified incorrect'
 			);
 		});
@@ -162,14 +154,9 @@ contract('Custodian', accounts => {
 			before(async () => {
 				await initContracts();
 				await custodianContract.setState(1);
-				await custodianContract.mintTokens(
-					alice,
-					index,
-					util.toWei(initialBalance, 'ether'),
-					{
-						from: creator
-					}
-				);
+				await custodianContract.mintTokens(alice, index, util.toWei(initialBalance), {
+					from: creator
+				});
 			});
 
 			it('should in state trading', async () => {
@@ -180,7 +167,7 @@ contract('Custodian', accounts => {
 			it('should show balance', async () => {
 				let balance = await custodianContract.balanceOf.call(index, alice);
 				assert.isTrue(
-					util.fromWei(balance.valueOf(), 'ether') === initialBalance,
+					util.isEqual(util.fromWei(balance), initialBalance),
 					'balance of alice not shown'
 				);
 			});
@@ -200,7 +187,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					util.toWei(approvalAmt + ''),
+					util.toWei(approvalAmt),
 					{
 						from: alice
 					}
@@ -212,7 +199,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					util.toWei(approvalAmt, 'ether'),
+					util.toWei(approvalAmt),
 					{
 						from: alice
 					}
@@ -222,22 +209,18 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					util.isEqual(tx.logs[0].args.tokenOwner.valueOf(), alice) &&
-						util.isEqual(tx.logs[0].args.spender.valueOf(), bob) &&
-						util.isEqual(
-							tx.logs[0].args.tokens.valueOf(),
-							util.toWei(approvalAmt + '')
-						) &&
-						util.isEqual(tx.logs[0].args.index.valueOf(), index),
+					tx.logs[0].args.tokenOwner === alice &&
+						tx.logs[0].args.spender === bob &&
+						util.isEqual(util.fromWei(tx.logs[0].args.tokens), approvalAmt) &&
+						Number(tx.logs[0].args.index.valueOf()) === index,
 					'incorrect event arguments emitted'
 				);
 			});
 
 			it('should show allowance', async () => {
 				let allowance = await custodianContract.allowance.call(index, alice, bob);
-				assert.equal(
-					util.fromWei(allowance.valueOf(), 'ether'),
-					approvalAmt,
+				assert.isTrue(
+					util.isEqual(util.fromWei(allowance), approvalAmt),
 					'allowance of bob not equal to approvalAmt'
 				);
 			});
@@ -252,7 +235,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					util.toWei(transferAmt, 'ether'),
+					util.toWei(transferAmt),
 					{
 						from: alice
 					}
@@ -263,7 +246,7 @@ contract('Custodian', accounts => {
 					index,
 					DUMMY_ADDR,
 					bob,
-					util.toWei(transferAmt, 'ether'),
+					util.toWei(transferAmt),
 					{
 						from: alice
 					}
@@ -274,13 +257,10 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-						util.isEqual(tx.logs[0].args.to.valueOf(), bob) &&
-						util.isEqual(
-							tx.logs[0].args.value.valueOf(),
-							util.toWei(transferAmt, 'ether')
-						) &&
-						util.isEqual(tx.logs[0].args.index.valueOf(), index),
+					tx.logs[0].args.from === alice &&
+						tx.logs[0].args.to === bob &&
+						util.isEqual(util.fromWei(tx.logs[0].args.value), transferAmt) &&
+						Number(tx.logs[0].args.index.valueOf()) === index,
 					'incorrect event arguments emitted'
 				);
 			});
@@ -300,14 +280,14 @@ contract('Custodian', accounts => {
 			it('should show balance of bob equal to transferAmt', async () => {
 				let balance = await custodianContract.balanceOf.call(index, bob);
 				assert.isTrue(
-					util.fromWei(balance.valueOf(), 'ether') === transferAmt,
+					util.isEqual(util.fromWei(balance), transferAmt),
 					'balance of bob not shown'
 				);
 			});
 
 			it('dummy from address should not be used for transfer', async () => {
 				let balance = await custodianContract.balanceOf.call(index, DUMMY_ADDR);
-				assert.isTrue(util.isEqual(balance.valueOf(), 0), 'dummy from address is used');
+				assert.isTrue(util.isEqual(util.fromWei(balance), 0), 'dummy from address is used');
 			});
 
 			it('should not transfer more than balance', async () => {
@@ -316,7 +296,7 @@ contract('Custodian', accounts => {
 						index,
 						DUMMY_ADDR,
 						bob,
-						util.toWei('10000000'),
+						util.toWei(10000000),
 						{
 							from: alice
 						}
@@ -344,7 +324,7 @@ contract('Custodian', accounts => {
 					DUMMY_ADDR,
 					alice,
 					charles,
-					util.toWei(transferFromAmt, 'ether'),
+					util.toWei(transferFromAmt),
 					{
 						from: bob
 					}
@@ -354,12 +334,9 @@ contract('Custodian', accounts => {
 					'incorrect event emitted'
 				);
 				assert.isTrue(
-					util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-						util.isEqual(tx.logs[0].args.to.valueOf(), charles) &&
-						util.isEqual(
-							tx.logs[0].args.value.valueOf(),
-							util.toWei(transferFromAmt, 'ether')
-						) &&
+					tx.logs[0].args.from === alice &&
+						tx.logs[0].args.to === charles &&
+						util.isEqual(util.fromWei(tx.logs[0].args.value), transferFromAmt) &&
 						util.isEqual(tx.logs[0].args.index.valueOf(), index),
 					'incorrect event arguments emitted'
 				);
@@ -407,28 +384,25 @@ contract('Custodian', accounts => {
 
 			it('allowance for bob should be updated', async () => {
 				let allowance = await custodianContract.allowance.call(index, alice, bob);
-				assert.equal(
-					Number(util.fromWei(allowance.valueOf(), 'ether')),
-					Number(approvalAmt) - Number(transferFromAmt),
+				assert.isTrue(
+					util.isEqual(
+						util.fromWei(allowance),
+						Number(approvalAmt) - Number(transferFromAmt)
+					),
 					'allowance of bob not correct'
 				);
 			});
 
 			it('check balance of charles equal transferFromAmt', async () => {
 				let balance = await custodianContract.balanceOf.call(index, charles);
-				assert.equal(
-					util.fromWei(balance.valueOf(), 'ether'),
-					transferFromAmt,
+				assert.isTrue(
+					util.isEqual(util.fromWei(balance), transferFromAmt),
 					'balance of charles not correct'
 				);
 			});
 
 			it('alice transfer all balance to david and update userIdx correctly', async () => {
-				await custodianContract.mintTokens(
-					alice,
-					1 - index,
-					util.toWei(initialBalance, 'ether')
-				);
+				await custodianContract.mintTokens(alice, 1 - index, util.toWei(initialBalance));
 				let balanceA = await custodianContract.balanceOf.call(index, alice);
 				let balanceB = await custodianContract.balanceOf.call(1 - index, alice);
 				let userIdxDavid = await custodianContract.getExistingUser.call(david);
@@ -479,33 +453,30 @@ contract('Custodian', accounts => {
 		before(async () => {
 			await initContracts();
 			await custodianContract.setState(1);
-			await web3.eth.sendTransaction({
+			await util.sendTransaction({
 				from: creator,
 				to: custodianContract.address,
-				value: util.toWei(initEthFee, 'ether')
+				value: util.toWei(initEthFee)
 			});
 
-			await duoContract.mintTokens(
-				custodianContract.address,
-				util.toWei(initDuoFee, 'ether')
-			);
+			await duoContract.mintTokens(custodianContract.address, util.toWei(initDuoFee));
 		});
 
 		it('balance and fee should be set correct', async () => {
-			let balance = await web3.eth.getBalance(custodianContract.address);
+			let balance = await util.getBalance(custodianContract.address);
 			let ethFee = await custodianContract.ethFeeBalanceInWei.call();
 			let duoBalance = await duoContract.balanceOf(custodianContract.address);
 			assert.isTrue(
-				util.fromWei(balance.valueOf(), 'ether') === initEthFee &&
-					util.fromWei(ethFee.valueOf(), 'ether') === initEthFee &&
-					util.fromWei(duoBalance.valueOf(), 'ether') === initDuoFee,
+				util.isEqual(util.fromWei(balance), initEthFee) &&
+					util.isEqual(util.fromWei(ethFee), initEthFee) &&
+					util.isEqual(util.fromWei(duoBalance), initDuoFee),
 				'balance not correct'
 			);
 		});
 
 		it('only feeCollector is allowed to coolectFee', async () => {
 			try {
-				await custodianContract.collectEthFee.call(util.toWei('1'), { from: alice });
+				await custodianContract.collectEthFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
 				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
@@ -544,27 +515,21 @@ contract('Custodian', accounts => {
 				'worng event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.addr.valueOf() === fc &&
+				tx.logs[0].args.addr === fc &&
+					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), ethFeeCollectAmtLess) &&
 					util.isEqual(
-						tx.logs[0].args.ethFeeInWei.valueOf(),
-						util.toWei(ethFeeCollectAmtLess)
+						util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
+						initEthFee - ethFeeCollectAmtLess
 					) &&
-					util.isEqual(
-						tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
-						util.toWei((initEthFee - ethFeeCollectAmtLess).toString())
-					) &&
-					util.isEqual(tx.logs[0].args.duoFeeInWei.valueOf(), 0) &&
-					util.isEqual(
-						tx.logs[0].args.duoFeeBalanceInWei.valueOf(),
-						util.toWei(initDuoFee)
-					),
+					util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), 0) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.duoFeeBalanceInWei), initDuoFee),
 				'worng fee parameter'
 			);
 		});
 
 		it('only feeCollector is allowed to coolecDuotFee', async () => {
 			try {
-				await custodianContract.collectDuoFee.call(util.toWei('1'), { from: alice });
+				await custodianContract.collectDuoFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
 				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
@@ -600,19 +565,16 @@ contract('Custodian', accounts => {
 			);
 
 			assert.isTrue(
-				tx.logs[0].args.addr.valueOf() === fc &&
-					util.isEqual(tx.logs[0].args.ethFeeInWei.valueOf(), '0') &&
+				tx.logs[0].args.addr === fc &&
+					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
 					util.isEqual(
-						tx.logs[0].args.ethFeeBalanceInWei.valueOf(),
-						util.toWei((initEthFee - ethFeeCollectAmtLess).toString())
+						util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
+						initEthFee - ethFeeCollectAmtLess
 					) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), duoFeeCollectAmtLess) &&
 					util.isEqual(
-						util.fromWei(tx.logs[0].args.duoFeeInWei.valueOf()),
-						duoFeeCollectAmtLess
-					) &&
-					util.isEqual(
-						tx.logs[0].args.duoFeeBalanceInWei.valueOf(),
-						util.toWei((initDuoFee - duoFeeCollectAmtLess).toString())
+						util.fromWei(tx.logs[0].args.duoFeeBalanceInWei),
+						initDuoFee - duoFeeCollectAmtLess
 					),
 				'worng fee parameter'
 			);
@@ -670,7 +632,7 @@ contract('Custodian', accounts => {
 				'incorrect event emitted'
 			);
 			assert.isTrue(
-				tx.logs[0].args.newOracleAddress.valueOf() === oracleContract.address,
+				tx.logs[0].args.newOracleAddress === oracleContract.address,
 				'worng fee parameter'
 			);
 		});
@@ -708,7 +670,7 @@ contract('Custodian', accounts => {
 			await custodianContract.skipCooldown(1);
 			let firstColdAddr = PoolInit[0][0];
 			let updator =
-				tx.logs[0].args.newModerator.valueOf().toLowerCase() === firstColdAddr.toLowerCase()
+				tx.logs[0].args.newModerator.toLowerCase() === firstColdAddr.toLowerCase()
 					? PoolInit[0][1]
 					: firstColdAddr;
 			let status = await custodianContract.updateFeeCollector.call({ from: updator });
