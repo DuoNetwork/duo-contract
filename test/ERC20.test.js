@@ -170,7 +170,7 @@ contract('ERC20Token', accounts => {
 			assert.isTrue(
 				tx.logs[0].args.from === creator &&
 					tx.logs[0].args.to === bob &&
-					util.isEqual(util.fromWei(tx.logs[0].args.tokens.valueOf()), 10),
+					util.isEqual(util.fromWei(tx.logs[0].args.tokens), 10),
 				'wrong args'
 			);
 		});
@@ -202,7 +202,7 @@ contract('ERC20Token', accounts => {
 			assert.isTrue(
 				tx.logs[0].args.from === creator &&
 					tx.logs[0].args.to === bob &&
-					util.isEqual(util.fromWei(tx.logs[0].args.tokens.valueOf()), 50),
+					util.isEqual(util.fromWei(tx.logs[0].args.tokens), 50),
 				'wrong args'
 			);
 		});
