@@ -4,8 +4,6 @@ const Beethoven = artifacts.require('./Beethoven.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
 const DUO = artifacts.require('./DUO.sol');
-const Managed = artifacts.require('./Managed.sol');
-const Custodian = artifacts.require('./Custodian.sol');
 const TokenA = artifacts.require('./TokenA.sol');
 const TokenB = artifacts.require('./TokenB.sol');
 const InitParas = require('./contractInitParas.json');
@@ -15,8 +13,6 @@ const TokenAInit = InitParas['TokenA'];
 const TokenBInit = InitParas['TokenB'];
 const MagiInit = InitParas['Magi'];
 const RoleManagerInit = InitParas['RoleManager'];
-const ManagedInit = InitParas['Managed'];
-const CustodianInit = InitParas['Custodian'];
 
 module.exports = async (deployer, network, accounts) => {
 	let creator, pf1, pf2, pf3, fc;
@@ -29,7 +25,8 @@ module.exports = async (deployer, network, accounts) => {
 		// pf3 = accounts[2];
 		pf3 = '0x00476E55e02673B0E4D2B474071014D5a366Ed4E';
 		fc = '0x0';
-	} else if (network == 'ropsten') {
+	}
+	else if (network == 'ropsten') {
 		// creator = accounts[3];
 		creator = '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E';
 		pf1 = '0x00f125c2C1b08c2516e7A7B789d617ad93Fdf4C0';
@@ -38,7 +35,8 @@ module.exports = async (deployer, network, accounts) => {
 		// pf3 = accounts[2];
 		pf3 = '0x0076c03e1028F92f8391029f15096026bd3bdFd2';
 		fc = '0x0';
-	} else if (network == 'development' || network == 'coverage') {
+	}
+	else if (network == 'development' || network == 'coverage') {
 		creator = accounts[0];
 		pf1 = accounts[1];
 		pf2 = accounts[2];
@@ -46,7 +44,12 @@ module.exports = async (deployer, network, accounts) => {
 		fc = accounts[4];
 	}
 
-	// // 42008
+	// 42008
+	await deployer.deploy(SafeMath, {
+		from: creator
+	});
+	// 74748, 27008
+	await deployer.link(SafeMath, [Beethoven, Magi]);
 
 	// 950268
 	await deployer.deploy(
@@ -58,46 +61,13 @@ module.exports = async (deployer, network, accounts) => {
 			from: creator
 		}
 	);
-	console.log('duo addr:' + DUO.address);
-	console.log(RoleManagerInit.optCoolDown);
 
 	// 2611094
 	await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 		from: creator
 	});
-	console.log('complete deployment');
 
-	console.log('esplanade addr: ' + Esplanade.address);
-	console.log(ManagedInit.optCoolDown);
-	await deployer.deploy(Managed, Esplanade.address, creator, ManagedInit.optCoolDown, {
-		from: creator
-	});
-
-	await deployer.link(Managed, Custodian);
-
-	await deployer.deploy(SafeMath, {
-		from: creator
-	});
-	// // 74748, 27008
-	await deployer.link(SafeMath, Custodian);
-
-	await deployer.deploy(
-		Custodian,
-		DUO.address,
-		Esplanade.address,
-		fc,
-		CustodianInit.comm,
-		CustodianInit.pd,
-		CustodianInit.preResetWaitBlk,
-		CustodianInit.pxFetchCoolDown,
-		// CustodianInit.
-		creator,
-		CustodianInit.optCoolDown
-	);
-	// await deployer.link(SafeMath, Beethoven);
-	await deployer.link(Custodian, Beethoven);
-
-	// // 5788827 for mock
+	// 5788827 for mock
 	await deployer.deploy(
 		Beethoven,
 		DUO.address,
@@ -117,11 +87,7 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.preResetWaitBlk,
 		{ from: creator }
 	);
-
-	await deployer.link(SafeMath, Magi);
-	await deployer.link(Managed, Magi);
-
-	// // 2359562 for mock
+	// 2359562 for mock
 	await deployer.deploy(
 		Magi,
 		creator,
@@ -137,14 +103,21 @@ module.exports = async (deployer, network, accounts) => {
 	);
 
 	// 1094050
-	await deployer.deploy(TokenA, TokenAInit.tokenName, TokenAInit.tokenSymbol, Beethoven.address, {
-		from: creator
-	});
+	await deployer.deploy(
+		TokenA,
+		TokenAInit.tokenName,
+		TokenAInit.tokenSymbol,
+		Beethoven.address,
+		{
+			from: creator
+		}
+	);
 	// 1094370
-	await deployer.deploy(TokenB, TokenBInit.tokenName, TokenBInit.tokenSymbol, Beethoven.address, {
-		from: creator
-	});
-
-	console.log(TokenA.address);
-	console.log(TokenB.address);
+	await deployer.deploy(
+		TokenB,
+		TokenBInit.tokenName,
+		TokenBInit.tokenSymbol,
+		Beethoven.address,
+		{ from: creator }
+	);
 };
