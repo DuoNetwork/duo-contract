@@ -3,7 +3,7 @@ module.exports = {
 	networks: {
 		development: {
 			host: 'localhost',
-			port: 8545,
+			port: 8550,
 			network_id: '*', // Match any network id,
 			gas: 7990000
 		},
@@ -16,7 +16,7 @@ module.exports = {
 		},
 		ropsten: {
 			host: 'localhost',
-			port: 8545,
+			port: 8560,
 			network_id: '*', // Match any network id,
 			from: '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E' //ropsten
 			// gas:5000000

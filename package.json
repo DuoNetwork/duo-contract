@@ -5,10 +5,10 @@
   "description": "DUO Contract",
   "author": "FinBook Pte Ltd",
   "scripts": {
-    "test": "cross-env GANACHE_PORT=8545 truffle.cmd test",
+    "test": "cross-env GANACHE_PORT=8550 truffle.cmd test",
     "coverage": "cross-env SOLIDITY_COVERAGE=true GANACHE_PORT=8555 solidity-coverage",
     "clean": "rimraf build",
-    "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8545 -a 20",
+    "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8550 -a 20",
     "startCoverage": "testrpc-sc --defaultBalanceEther 1000 --gasLimit 0xfffffffffff --port 8555 -a 20",
     "copyAbi": "copyfiles -f .\\build\\contracts\\Custodian.json .\\build\\contracts\\DUO.json .\\build\\contracts\\TokenA.json .\\build\\contracts\\TokenB.json ..\\duo-admin\\src\\static\\",
     "deploy": "truffle.cmd migrate --reset --compile-all",
