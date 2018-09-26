@@ -114,7 +114,11 @@ contract('Magi', accounts => {
 
 		it('pxCoolDown should be set correctly', async () => {
 			let value = await oracleContract.priceUpdateCoolDown.call();
-			assert.equal(value.valueOf(), MagiInit.pxFetchCoolDown, 'pxCoolDown is not set correctly');
+			assert.equal(
+				value.valueOf(),
+				MagiInit.pxFetchCoolDown,
+				'pxCoolDown is not set correctly'
+			);
 		});
 
 		it('optCoolDown should be set correctly', async () => {
@@ -178,7 +182,8 @@ contract('Magi', accounts => {
 			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), startPrice) &&
-					util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), blockTime.valueOf()) &&
+					Number(tx.logs[0].args.timeInSecond.valueOf()) ===
+						Number(blockTime.valueOf()) &&
 					tx.logs[0].args.sender === pf1,
 				'wrong event args'
 			);
@@ -245,8 +250,9 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 580),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), firstPeriod.valueOf()),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf()),
 				'last price time is not updated correctly'
 			);
 			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'sender is not updated correctly');
@@ -264,8 +270,9 @@ contract('Magi', accounts => {
 			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 500) &&
-					util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), firstPeriod.valueOf()) &&
-					tx.logs[0].args.sender.valueOf() === pf1 &&
+					Number(tx.logs[0].args.timeInSecond.valueOf()) ===
+						Number(firstPeriod.valueOf()) &&
+					tx.logs[0].args.sender === pf1 &&
 					Number(tx.logs[0].args.index.valueOf()) === 0,
 				'incorrect event arguments emitted'
 			);
@@ -306,11 +313,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 550),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), secondPeriod.valueOf()),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(secondPeriod.valueOf()),
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'source is not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf1, 'source is not updated correctly');
 		});
 
 		it('should accept first price arrived if second price timed out and sent by the different address as first price', async () => {
@@ -334,11 +342,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 500),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), secondPeriod.valueOf()),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(secondPeriod.valueOf()),
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
 		it('should accept first price arrived if second price is close to it and within cool down', async () => {
@@ -358,11 +367,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 550),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), firstPeriod.valueOf() - 10),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf() - 10),
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
 		it('should wait for third price if first and second do not agree', async () => {
@@ -387,11 +397,9 @@ contract('Magi', accounts => {
 
 			assert.isTrue(
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 700) &&
-					util.isEqual(
-						tx.logs[0].args.timeInSecond.valueOf(),
-						firstPeriod.valueOf() - 280
-					) &&
-					tx.logs[0].args.sender.valueOf() === pf2 &&
+					Number(tx.logs[0].args.timeInSecond.valueOf()) ===
+						Number(firstPeriod.valueOf()) - 280 &&
+					tx.logs[0].args.sender === pf2 &&
 					Number(tx.logs[0].args.index.valueOf()) === 1,
 				'incorrect event arguments emitted'
 			);
@@ -439,11 +447,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 500),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), firstPeriod.valueOf() - 300),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf()) - 300,
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
 		it('should accept median price if third price does not time out', async () => {
@@ -472,11 +481,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 540),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), firstPeriod.valueOf() - 300),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf()) - 300,
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf1, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
 		it('should accept third price arrived if it is from first or second sender and is after cool down', async () => {
@@ -504,11 +514,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 520),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), secondPeriod.valueOf()),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(secondPeriod.valueOf()),
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf2, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf2, 'source not updated correctly');
 		});
 
 		it('should accept second price arrived if third price is from a different sender and is after cool down', async () => {
@@ -534,11 +545,12 @@ contract('Magi', accounts => {
 				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 500),
 				'last price is not updated correctly'
 			);
-			assert.isTrue(
-				util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), secondPeriod.valueOf()),
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(secondPeriod.valueOf()),
 				'last price time is not updated correctly'
 			);
-			assert.equal(tx.logs[0].args.sender.valueOf(), pf2, 'source not updated correctly');
+			assert.equal(tx.logs[0].args.sender, pf2, 'source not updated correctly');
 		});
 
 		it('should not allow price commit during cool down period', async () => {
@@ -779,8 +791,8 @@ contract('Magi', accounts => {
 
 				assert.isTrue(
 					Number(tx.logs[0].args.index.valueOf()) === index &&
-						util.isEqual(tx.logs[0].args.oldValue.valueOf(), oldValue.valueOf()) &&
-						util.isEqual(tx.logs[0].args.newValue.valueOf(), value),
+						Number(tx.logs[0].args.oldValue.valueOf()) === Number(oldValue.valueOf()) &&
+						Number(tx.logs[0].args.newValue.valueOf()) === value,
 					'event argument wrong'
 				);
 			});
