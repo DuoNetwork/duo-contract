@@ -375,6 +375,33 @@ contract('Magi', accounts => {
 			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
+		it('should accept first price arrived if second price timed fall beyond time tolerance and sent by the different address as first price', async () => {
+			// first price
+			await oracleContract.skipCooldown(1);
+			firstPeriod = await oracleContract.timestamp.call();
+			let tx = await oracleContract.commitPrice(util.toWei(580), firstPeriod.valueOf() - 10, {
+				from: pf1
+			});
+			
+			// second price
+			tx = await oracleContract.commitPrice(util.toWei(550), firstPeriod.valueOf() - 300, {
+				from: pf2
+			});
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, EVENT_ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 580),
+				'last price is not updated correctly'
+			);
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf() - 10),
+				'last price time is not updated correctly'
+			);
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
+		});
+
+
 		it('should wait for third price if first and second do not agree', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
@@ -468,6 +495,41 @@ contract('Magi', accounts => {
 				from: pf2
 			});
 			// //third price
+			let tx = await oracleContract.commitPrice(
+				util.toWei(540),
+				firstPeriod.valueOf() - 260,
+				{
+					from: pf3
+				}
+			);
+			assert.equal(tx.logs.length, 1, 'more than one event emitted');
+			assert.equal(tx.logs[0].event, EVENT_ACCEPT_PRICE, 'AcceptPrice Event is not emitted');
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), 540),
+				'last price is not updated correctly'
+			);
+			assert.equal(
+				Number(tx.logs[0].args.timeInSecond.valueOf()),
+				Number(firstPeriod.valueOf()) - 300,
+				'last price time is not updated correctly'
+			);
+			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
+		});
+
+		it('should accept second price if third price is same as secodn', async () => {
+			// first price
+			await oracleContract.skipCooldown(1);
+			firstPeriod = await oracleContract.timestamp.call();
+
+			await oracleContract.commitPrice(util.toWei(600), firstPeriod.valueOf() - 300, {
+				from: pf1
+			});
+			// console.log(tx.logs);
+			// second price
+			await oracleContract.commitPrice(util.toWei(540), firstPeriod.valueOf() - 280, {
+				from: pf2
+			});
+			// // //third price
 			let tx = await oracleContract.commitPrice(
 				util.toWei(540),
 				firstPeriod.valueOf() - 260,
@@ -739,72 +801,87 @@ contract('Magi', accounts => {
 		function setValue(index, value) {
 			before(initContracts);
 
-			it('non operator cannot setValue', async () => {
-				try {
-					await oracleContract.setValue(index, value, { from: alice });
-					assert.isTrue(false, 'non operater can setValue');
-				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
-				}
-			});
+			if(index > 3) {
+				it('should not set for index more than 3', async () => {
+					try{
+						await oracleContract.setValue(index, value, { from: creator });
+					}
+					catch(err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+		
+				});
+			} else {
+				it('non operator cannot setValue', async () => {
+					try {
+						await oracleContract.setValue(index, value, { from: alice });
+						assert.isTrue(false, 'non operater can setValue');
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				});
+	
+				it('value should be updated correctly', async () => {
+					let oldValue;
+					let newValue;
+					let tx;
+					switch (index) {
+						case 0:
+							oldValue = await oracleContract.priceTolInBP.call();
+							tx = await oracleContract.setValue(index, value, { from: creator });
+							newValue = await oracleContract.priceTolInBP.call();
+							break;
+						case 1:
+							oldValue = await oracleContract.priceFeedTolInBP.call();
+							tx = await oracleContract.setValue(index, value, { from: creator });
+							newValue = await oracleContract.priceFeedTolInBP.call();
+							break;
+						case 2:
+							oldValue = await oracleContract.priceFeedTimeTol.call();
+							tx = await oracleContract.setValue(index, value, { from: creator });
+							newValue = await oracleContract.priceFeedTimeTol.call();
+							break;
+						case 3:
+							oldValue = await oracleContract.priceUpdateCoolDown.call();
+							tx = await oracleContract.setValue(index, value, { from: creator });
+							newValue = await oracleContract.priceUpdateCoolDown.call();
+							break;
+						default:
+							try {
+								await oracleContract.setValue(index, value, { from: creator });
+								assert.isTrue(false, 'wrong argument');
+							} catch (err) {
+								assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+							}
+							break;
+					}
+					assert.equal(newValue.valueOf(), value + '', 'wrong value');
+	
+					assert.isTrue(
+						tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+						'wrong events'
+					);
+	
+					assert.isTrue(
+						Number(tx.logs[0].args.index.valueOf()) === index &&
+							Number(tx.logs[0].args.oldValue.valueOf()) === Number(oldValue.valueOf()) &&
+							Number(tx.logs[0].args.newValue.valueOf()) === value,
+						'event argument wrong'
+					);
+				});
+	
+				it('cannot update within cool down', async () => {
+					try {
+						await oracleContract.setValue(index, value, { from: creator });
+						assert.isTrue(false, 'non update within cool down');
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				});
 
-			it('value should be updated correctly', async () => {
-				let oldValue;
-				let newValue;
-				let tx;
-				switch (index) {
-					case 0:
-						oldValue = await oracleContract.priceTolInBP.call();
-						tx = await oracleContract.setValue(index, value, { from: creator });
-						newValue = await oracleContract.priceTolInBP.call();
-						break;
-					case 1:
-						oldValue = await oracleContract.priceFeedTolInBP.call();
-						tx = await oracleContract.setValue(index, value, { from: creator });
-						newValue = await oracleContract.priceFeedTolInBP.call();
-						break;
-					case 2:
-						oldValue = await oracleContract.priceFeedTimeTol.call();
-						tx = await oracleContract.setValue(index, value, { from: creator });
-						newValue = await oracleContract.priceFeedTimeTol.call();
-						break;
-					case 3:
-						oldValue = await oracleContract.priceUpdateCoolDown.call();
-						tx = await oracleContract.setValue(index, value, { from: creator });
-						newValue = await oracleContract.priceUpdateCoolDown.call();
-						break;
-					default:
-						try {
-							await oracleContract.setValue(index, value, { from: creator });
-							assert.isTrue(false, 'wrong argument');
-						} catch (err) {
-							assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
-						}
-						break;
-				}
-				assert.equal(newValue.valueOf(), value + '', 'wrong value');
+			}
 
-				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
-					'wrong events'
-				);
-
-				assert.isTrue(
-					Number(tx.logs[0].args.index.valueOf()) === index &&
-						Number(tx.logs[0].args.oldValue.valueOf()) === Number(oldValue.valueOf()) &&
-						Number(tx.logs[0].args.newValue.valueOf()) === value,
-					'event argument wrong'
-				);
-			});
-
-			it('cannot update within cool down', async () => {
-				try {
-					await oracleContract.setValue(index, value, { from: creator });
-					assert.isTrue(false, 'non update within cool down');
-				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
-				}
-			});
+			
 		}
 
 		describe('set priceTolInBP', () => {
@@ -821,6 +898,10 @@ contract('Magi', accounts => {
 
 		describe('set priceUpdateCoolDown', () => {
 			setValue(3, 400);
+		});
+
+		describe('should not set 4', () => {
+			setValue(4, 400);
 		});
 	});
 });

@@ -339,6 +339,19 @@ contract('Beethoven', accounts => {
 			}
 		});
 
+		it('should not fetch withinCoolDown', async () => {
+			await oracleContract.skipCooldown(1);
+			time = await oracleContract.timestamp.call();
+			await beethovenContract.setTimestamp(time.valueOf() - BeethovenInit.pxFetchCoolDown / 2);
+			await oracleContract.setLastPrice(100, time.valueOf(), pf1);
+			try {
+				await beethovenContract.fetchPrice();
+				assert.isTrue(false, 'can fetch within cool down');
+			} catch (err) {
+				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+			}
+		});
+
 		it('should fetch price', async () => {
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
@@ -392,11 +405,36 @@ contract('Beethoven', accounts => {
 				}
 			});
 
+			it('cannot create with 0', async () => {
+				if (isWithWETH) {
+					await wethContract.approve(beethovenContract.address, util.toWei(amtEth), {
+						from: alice
+					});
+					try {
+						await beethovenContract.createWithWETH.call(
+							util.toWei(0),
+							true,
+							wethContract.address,
+							{ from: alice }
+						);
+						assert.isTrue(false, 'can create with 0');
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				} else {
+					try {
+						await beethovenContract.create.call(true, { from: alice, value: 0 });
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				}
+			});
+
 			if (isWithWETH) {
 				it('cannot create with insufficient allowance', async () => {
 					try {
 						await beethovenContract.createWithWETH.call(
-							util.toWei(amtEth),
+							util.toWei(amtEth * 2),
 							true,
 							wethContract.address,
 							{ from: alice }
@@ -407,8 +445,8 @@ contract('Beethoven', accounts => {
 					}
 				});
 
-				it('cannot create more than allowance', async () => {
-					await wethContract.approve(beethovenContract.address, util.toWei(amtEth), {
+				it('cannot create more than balance', async () => {
+					await wethContract.approve(beethovenContract.address, util.toWei(amtEth * 4), {
 						from: alice
 					});
 					try {
@@ -419,6 +457,23 @@ contract('Beethoven', accounts => {
 							{ from: alice }
 						);
 						assert.isTrue(false, 'can create more than allowance');
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				});
+
+				it('cannot create with wrong weth addr', async () => {
+					await wethContract.approve('0x0', util.toWei(amtEth), {
+						from: alice
+					});
+					try {
+						await beethovenContract.createWithWETH.call(
+							util.toWei(0),
+							true,
+							wethContract.address,
+							{ from: alice }
+						);
+						assert.isTrue(false, 'can create with 0x0');
 					} catch (err) {
 						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 					}
@@ -1788,6 +1843,16 @@ contract('Beethoven', accounts => {
 			} catch (err) {
 				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
+		});
+
+		it('admin should be able to set with idx 5 and bigger index', async () => {
+			try{	await beethovenContract.setValue.call(5, 100, {
+				from: creator
+			});}catch(err){
+				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+			}
+			
+			
 		});
 	});
 });

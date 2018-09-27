@@ -10,7 +10,7 @@ module.exports = {
 			console.log(a);
 			console.log(b);
 		}
-		if (Math.abs(Number(b)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
+		if (Math.abs(Number(a)) > EPSILON && Math.abs(Number(b)) > EPSILON) {
 			return Math.abs(Number(a) - Number(b)) / Number(b) <= EPSILON;
 		} else {
 			return Math.abs(Number(a) - Number(b)) <= EPSILON;

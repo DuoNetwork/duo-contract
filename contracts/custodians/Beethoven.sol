@@ -476,8 +476,7 @@ contract Beethoven is Custodian {
 			require(newValue <= BP_DENOMINATOR);
 			oldValue = redeemCommInBP;
 			redeemCommInBP = newValue;
-		} 
-		else if (idx == 2) {
+		} else if (idx == 2) {
 			oldValue = ethDuoFeeRatio;
 			ethDuoFeeRatio = newValue;
 		} else if (idx == 3) {

@@ -53,6 +53,12 @@ contract CustodianMock is Custodian {
 		users.push(addr);
 	}
 
+	function batchAddUsers(address[] addrs) public {
+		for(uint i = 0; i < addrs.length; i ++) {
+			users.push(addrs[i]);
+		}
+	}
+
 	function getExistingUser(address addr) public view returns (uint) {
 		return existingUsers[addr];
 	}
