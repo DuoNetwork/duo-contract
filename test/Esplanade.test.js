@@ -9,7 +9,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
-const USERS = require('./users.json');
+const users = require('./users.json');
 
 // Event
 const EVENT_TERMINATE_CON_VOTING = 'TerminateContractVoting';
@@ -522,21 +522,21 @@ contract('Esplanade', accounts => {
 	});
 
 	describe('addCustodian', () => {
-
-		function ADD_CUSTODIAN(withMoreUsers) {
-			
+		function addCustodian(withMoreUsers) {
 			beforeEach(async () => {
 				await initContracts();
-				
 			});
+
 			it('non moderator not allowed to add custodian', async () => {
 				try {
-					await roleManagerContract.addCustodian(custodianContract.address, { from: alice });
+					await roleManagerContract.addCustodian(custodianContract.address, {
+						from: alice
+					});
 				} catch (err) {
 					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
-	
+
 			it('can only add within updateWindow', async () => {
 				try {
 					await roleManagerContract.setLastOperationTime();
@@ -547,10 +547,10 @@ contract('Esplanade', accounts => {
 					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
-	
+
 			it('should add custodians', async () => {
-				if(withMoreUsers){
-					for(let user of USERS) {
+				if (withMoreUsers) {
+					for (let user of users) {
 						await custodianContract.addUsers(user);
 					}
 				}
@@ -563,13 +563,13 @@ contract('Esplanade', accounts => {
 						tx.logs[1].event === EVENT_ADD_CUSTODIAN,
 					'wrong events emitted'
 				);
-	
+
 				assert.isTrue(
 					tx.logs[0].args.oldModerator === creator &&
 						tx.logs[0].args.oldModerator !== tx.logs[0].args.newModerator
 				);
 				assert.isTrue(tx.logs[1].args.newCustodianAddr === custodianContract.address);
-	
+
 				let isExist = await roleManagerContract.existingCustodians.call(
 					custodianContract.address
 				);
@@ -577,19 +577,19 @@ contract('Esplanade', accounts => {
 				let status = await roleManagerContract.addrStatus.call(custodianContract.address);
 				assert.isTrue(Number(status.valueOf()) === 3, 'marked as used');
 			});
-	
+
 			it('should add custodians when custodianLenght > 0', async () => {
-				if(withMoreUsers){
-					for(let user of USERS) {
+				if (withMoreUsers) {
+					for (let user of users) {
 						await custodianContract.addUsers(user);
 					}
 				}
 				let tx = await roleManagerContract.addCustodian(custodianContract.address, {
 					from: creator
 				});
-	
+
 				await roleManagerContract.setModerator(newModerator);
-	
+
 				// let netModerator = tx.logs[0].args.newModerator;
 				await roleManagerContract.skipCooldown(1);
 				let newCustodianContract = await Custodian.new(
@@ -609,28 +609,30 @@ contract('Esplanade', accounts => {
 				tx = await roleManagerContract.addCustodian(newCustodianContract.address, {
 					from: newModerator
 				});
-	
+
 				assert.isTrue(
 					tx.logs.length === 2 &&
 						tx.logs[0].event === EVENT_REPLACE_MODERATOR &&
 						tx.logs[1].event === EVENT_ADD_CUSTODIAN,
 					'wrong events emitted'
 				);
-	
+
 				assert.isTrue(
 					tx.logs[0].args.oldModerator === newModerator &&
 						tx.logs[0].args.oldModerator !== tx.logs[0].args.newModerator
 				);
 				assert.isTrue(tx.logs[1].args.newCustodianAddr === newCustodianContract.address);
-	
+
 				let isExist = await roleManagerContract.existingCustodians.call(
 					newCustodianContract.address
 				);
 				assert.isTrue(isExist.valueOf(), 'not set as existing');
-				let status = await roleManagerContract.addrStatus.call(newCustodianContract.address);
+				let status = await roleManagerContract.addrStatus.call(
+					newCustodianContract.address
+				);
 				assert.isTrue(Number(status.valueOf()) === 3, 'marked as used');
 			});
-	
+
 			it('cannot add existing custodians', async () => {
 				try {
 					await roleManagerContract.addCustodian(custodianContract.address, {
@@ -644,16 +646,14 @@ contract('Esplanade', accounts => {
 					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 				}
 			});
-
 		}
 		describe('add while users more than 256', () => {
-			ADD_CUSTODIAN(true);
+			addCustodian(true);
 		});
 
 		describe('add while users less than 256', () => {
-			ADD_CUSTODIAN(false);
+			addCustodian(false);
 		});
-
 	});
 
 	describe('addOtherContracts', () => {
@@ -958,8 +958,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator);
 				let addrToRemove = Pool[index][0];
 				addrToRemove =
-					tx.logs[0].args.newModerator.toLowerCase() ===
-					addrToRemove.toLowerCase()
+					tx.logs[0].args.newModerator.toLowerCase() === addrToRemove.toLowerCase()
 						? Pool[index][1]
 						: addrToRemove;
 				tx = await roleManagerContract.removeAddress(addrToRemove, index, {
@@ -975,8 +974,7 @@ contract('Esplanade', accounts => {
 
 				assert.isTrue(
 					Number(args.poolIndex.valueOf()) === index &&
-						util.toChecksumAddress(args.addr) ===
-							util.toChecksumAddress(addrToRemove),
+						util.toChecksumAddress(args.addr) === util.toChecksumAddress(addrToRemove),
 					'wrong event arguments'
 				);
 				let newModeratorAfterRemove = util.toChecksumAddress(tx.logs[0].args.newModerator);
@@ -1018,8 +1016,7 @@ contract('Esplanade', accounts => {
 
 				let addrToRemove = Pool[index][0];
 				addrToRemove =
-					tx.logs[0].args.newModerator.toLowerCase() ===
-					addrToRemove.toLowerCase()
+					tx.logs[0].args.newModerator.toLowerCase() === addrToRemove.toLowerCase()
 						? Pool[index][1]
 						: addrToRemove;
 
@@ -1031,8 +1028,7 @@ contract('Esplanade', accounts => {
 
 				addrToRemove = Pool[index][2];
 				addrToRemove =
-					tx.logs[0].args.newModerator.toLowerCase() ===
-					addrToRemove.toLowerCase()
+					tx.logs[0].args.newModerator.toLowerCase() === addrToRemove.toLowerCase()
 						? Pool[index][3]
 						: addrToRemove;
 				try {

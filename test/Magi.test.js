@@ -382,7 +382,7 @@ contract('Magi', accounts => {
 			let tx = await oracleContract.commitPrice(util.toWei(580), firstPeriod.valueOf() - 10, {
 				from: pf1
 			});
-			
+
 			// second price
 			tx = await oracleContract.commitPrice(util.toWei(550), firstPeriod.valueOf() - 300, {
 				from: pf2
@@ -400,7 +400,6 @@ contract('Magi', accounts => {
 			);
 			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
-
 
 		it('should wait for third price if first and second do not agree', async () => {
 			// first price
@@ -516,7 +515,7 @@ contract('Magi', accounts => {
 			assert.equal(tx.logs[0].args.sender, pf1, 'source not updated correctly');
 		});
 
-		it('should accept second price if third price is same as secodn', async () => {
+		it('should accept second price if third price is same as second', async () => {
 			// first price
 			await oracleContract.skipCooldown(1);
 			firstPeriod = await oracleContract.timestamp.call();
@@ -801,15 +800,13 @@ contract('Magi', accounts => {
 		function setValue(index, value) {
 			before(initContracts);
 
-			if(index > 3) {
+			if (index > 3) {
 				it('should not set for index more than 3', async () => {
-					try{
+					try {
 						await oracleContract.setValue(index, value, { from: creator });
-					}
-					catch(err) {
+					} catch (err) {
 						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 					}
-		
 				});
 			} else {
 				it('non operator cannot setValue', async () => {
@@ -820,7 +817,7 @@ contract('Magi', accounts => {
 						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 					}
 				});
-	
+
 				it('value should be updated correctly', async () => {
 					let oldValue;
 					let newValue;
@@ -856,20 +853,21 @@ contract('Magi', accounts => {
 							break;
 					}
 					assert.equal(newValue.valueOf(), value + '', 'wrong value');
-	
+
 					assert.isTrue(
 						tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
 						'wrong events'
 					);
-	
+
 					assert.isTrue(
 						Number(tx.logs[0].args.index.valueOf()) === index &&
-							Number(tx.logs[0].args.oldValue.valueOf()) === Number(oldValue.valueOf()) &&
+							Number(tx.logs[0].args.oldValue.valueOf()) ===
+								Number(oldValue.valueOf()) &&
 							Number(tx.logs[0].args.newValue.valueOf()) === value,
 						'event argument wrong'
 					);
 				});
-	
+
 				it('cannot update within cool down', async () => {
 					try {
 						await oracleContract.setValue(index, value, { from: creator });
@@ -878,10 +876,7 @@ contract('Magi', accounts => {
 						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 					}
 				});
-
 			}
-
-			
 		}
 
 		describe('set priceTolInBP', () => {

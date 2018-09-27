@@ -342,7 +342,9 @@ contract('Beethoven', accounts => {
 		it('should not fetch withinCoolDown', async () => {
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
-			await beethovenContract.setTimestamp(time.valueOf() - BeethovenInit.pxFetchCoolDown / 2);
+			await beethovenContract.setTimestamp(
+				time.valueOf() - BeethovenInit.pxFetchCoolDown / 2
+			);
 			await oracleContract.setLastPrice(100, time.valueOf(), pf1);
 			try {
 				await beethovenContract.fetchPrice();
@@ -1845,14 +1847,15 @@ contract('Beethoven', accounts => {
 			}
 		});
 
-		it('admin should be able to set with idx 5 and bigger index', async () => {
-			try{	await beethovenContract.setValue.call(5, 100, {
-				from: creator
-			});}catch(err){
+		it('admin should not be able to set with idx 5 and bigger index', async () => {
+			try {
+				await beethovenContract.setValue.call(5, 100, {
+					from: creator
+				});
+				assert.isTrue(false, 'can set value with invalid index');
+			} catch (err) {
 				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
 			}
-			
-			
 		});
 	});
 });
