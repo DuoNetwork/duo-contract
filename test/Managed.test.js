@@ -147,11 +147,11 @@ contract('Managed', accounts => {
 		});
 
 		it('cold address can update', async () => {
-			await roleManagerContract.setPool(0, 0, alice);
 			custodianContract = await initCustodian();
 			await roleManagerContract.addCustodian(custodianContract.address, {
 				from: creator
 			});
+			await roleManagerContract.setPool(0, 0, alice);
 			await roleManagerContract.skipCooldown(1);
 			let tx = await custodianContract.updateOperator({ from: alice });
 			assert.isTrue(
