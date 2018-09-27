@@ -198,15 +198,13 @@ contract Magi is Managed {
 		require(index < 3);
 		address updater = msg.sender;
 		address newAddr = roleManager.provideAddress(updater, 1);
-		if(index == 0) {
+		if(index == 0) 
 			priceFeed1 = newAddr;
-		} else if(index == 1){
+		else if (index == 1)
 			priceFeed2 = newAddr;
-		} else if(index == 2) {
+		else // index == 2
 			priceFeed3 = newAddr;
-		} else {
-			return false;
-		}
+		
 		emit UpdatePriceFeed(updater, newAddr);
 		return true;
 	}
