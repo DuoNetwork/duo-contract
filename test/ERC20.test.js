@@ -68,6 +68,7 @@ contract('ERC20Token', accounts => {
 				BeethovenInit.iteGasTh,
 				BeethovenInit.ethDuoRate,
 				BeethovenInit.preResetWaitBlk,
+				util.toWei(BeethovenInit.minimumBalance),
 				{
 					from: creator
 				}

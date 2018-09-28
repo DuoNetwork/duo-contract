@@ -59,6 +59,7 @@ contract('Magi', accounts => {
 			BeethovenInit.pxFetchCoolDown,
 			creator,
 			BeethovenInit.optCoolDown,
+			util.toWei(BeethovenInit.minimumBalance),
 			{
 				from: creator
 			}

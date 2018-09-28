@@ -16,7 +16,8 @@ contract CustodianMock is Custodian {
 		uint preResetWaitBlk, 
 		uint pxFetchCoolDown,
 		address opt,
-		uint optCoolDown
+		uint optCoolDown,
+		uint minimumBalance
 	) Custodian (
 		duoTokenAddr,
 		poolAddr,
@@ -26,7 +27,8 @@ contract CustodianMock is Custodian {
 		preResetWaitBlk, 
 		pxFetchCoolDown,
 		opt,
-		optCoolDown
+		optCoolDown,
+		minimumBalance
 	) public {
 	}
 

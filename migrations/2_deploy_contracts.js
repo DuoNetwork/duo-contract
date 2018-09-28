@@ -86,6 +86,7 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.iteGasTh,
 		BeethovenInit.ethDuoRate,
 		BeethovenInit.preResetWaitBlk,
+		web3.utils.toWei(BeethovenInit.minimumBalance + ''),
 		{ from: creator }
 	);
 	// 2575678

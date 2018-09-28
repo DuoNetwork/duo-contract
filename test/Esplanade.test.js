@@ -74,6 +74,7 @@ contract('Esplanade', accounts => {
 			BeethovenInit.pxFetchCoolDown,
 			creator,
 			BeethovenInit.optCoolDown,
+			util.toWei(BeethovenInit.minimumBalance),
 			{
 				from: creator
 			}
@@ -602,6 +603,7 @@ contract('Esplanade', accounts => {
 					BeethovenInit.pxFetchCoolDown,
 					creator,
 					BeethovenInit.optCoolDown,
+					util.toWei(BeethovenInit.minimumBalance),
 					{
 						from: creator
 					}

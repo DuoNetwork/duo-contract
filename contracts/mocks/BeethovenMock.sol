@@ -21,7 +21,8 @@ contract BeethovenMock is Beethoven {
 		uint pxFetchCoolDown,
 		uint iteGasTh,
 		uint ethDuoRate,
-		uint preResetWaitBlk
+		uint preResetWaitBlk,
+		uint minimumBalance
 	) Beethoven (
 		duoTokenAddress,
 		poolAddress,
@@ -37,7 +38,8 @@ contract BeethovenMock is Beethoven {
 		pxFetchCoolDown,
 		iteGasTh,
 		ethDuoRate,
-		preResetWaitBlk
+		preResetWaitBlk,
+		minimumBalance
 	) public {
 	}
 

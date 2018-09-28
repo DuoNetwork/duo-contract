@@ -14,7 +14,6 @@ contract Custodian is Managed {
      */
 	uint constant decimals = 18;
 	uint constant WEI_DENOMINATOR = 1000000000000000000;
-	uint constant MIN_BALANCE = 10000000000000000;
 	enum State {
 		Inception,
 		Trading,
@@ -28,6 +27,7 @@ contract Custodian is Managed {
 	IERC20 duoToken;
 	IOracle oracle;
 	State public state;
+	uint public minBalance = 10000000000000000; // set at constructor
 	address public feeCollector;
 	address public duoTokenAddress;
 	address public oracleAddress;
@@ -104,7 +104,8 @@ contract Custodian is Managed {
 		uint preResetWaitBlk, 
 		uint pxFetchCoolDown,
 		address opt,
-		uint optCoolDown
+		uint optCoolDown,
+		uint minimumBalance
 		) 
 		public
 		Managed(roleManagerAddr, opt, optCoolDown) 
@@ -120,6 +121,7 @@ contract Custodian is Managed {
 		navBInWei = WEI_DENOMINATOR;
 		duoTokenAddress = duoTokenAddr;
 		duoToken = IERC20(duoTokenAddr);
+		minBalance = minimumBalance;
 	}
 
 	/*
@@ -214,7 +216,7 @@ contract Custodian is Managed {
 	function checkUser(address user, uint256 balanceA, uint256 balanceB) internal {
 		uint userIdx = existingUsers[user];
 		if ( userIdx > 0) {
-			if (balanceA < MIN_BALANCE && balanceB < MIN_BALANCE) {
+			if (balanceA < minBalance && balanceB < minBalance) {
 				uint lastIdx = users.length;
 				address lastUser = users[lastIdx - 1];
 				if (userIdx < lastIdx) {
@@ -225,7 +227,7 @@ contract Custodian is Managed {
 				existingUsers[user] = 0;
 				users.length--;					
 			}
-		} else if (balanceA >= MIN_BALANCE || balanceB >= MIN_BALANCE) {
+		} else if (balanceA >= minBalance || balanceB >= minBalance) {
 			users.push(user);
 			existingUsers[user] = users.length;
 		}

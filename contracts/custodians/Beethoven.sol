@@ -61,7 +61,8 @@ contract Beethoven is Custodian {
 		uint pxFetchCoolDown,
 		uint iteGasTh,
 		uint ethDuoRate,
-		uint preResetWaitBlk
+		uint preResetWaitBlk,
+		uint minimumBalance
 		) 
 		public 
 		Custodian ( 
@@ -73,7 +74,8 @@ contract Beethoven is Custodian {
 		preResetWaitBlk, 
 		pxFetchCoolDown,
 		msg.sender,
-		optCoolDown
+		optCoolDown,
+		minimumBalance
 		)
 	{
 		alphaInBP = alpha;

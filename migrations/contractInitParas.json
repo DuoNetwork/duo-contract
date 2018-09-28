@@ -12,7 +12,8 @@
 		"iteGasTh": 65000,
 		"iteGasThSC": 105000,
 		"ethDuoRate": 800,
-		"preResetWaitBlk": 10
+		"preResetWaitBlk": 10,
+		"minimumBalance": 0.01
 	},
 	"DUO": {
 		"initSupply": "100000000",

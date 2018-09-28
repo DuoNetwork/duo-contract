@@ -95,6 +95,7 @@ contract('Beethoven', accounts => {
 			process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
 			BeethovenInit.ethDuoRate,
 			BeethovenInit.preResetWaitBlk,
+			util.toWei(BeethovenInit.minimumBalance),
 			{
 				from: creator
 			}
@@ -196,7 +197,16 @@ contract('Beethoven', accounts => {
 			let preResetWaitingBlocks = await beethovenContract.preResetWaitingBlocks.call();
 			assert.equal(
 				preResetWaitingBlocks.valueOf(),
-				'10',
+				BeethovenInit.preResetWaitBlk + '',
+				'preResetWaitingBlocks set incorrectly'
+			);
+		});
+
+		it('minimumBalance should be set correctly', async () => {
+			let minBalance = await beethovenContract.minBalance.call();
+			assert.equal(
+				util.fromWei(minBalance.valueOf()),
+				BeethovenInit.minimumBalance + '',
 				'preResetWaitingBlocks set incorrectly'
 			);
 		});
