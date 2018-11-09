@@ -425,7 +425,6 @@ contract('Beethoven', accounts => {
 					try {
 						await beethovenContract.createWithWETH.call(
 							util.toWei(0),
-							true,
 							wethContract.address,
 							{ from: alice }
 						);
@@ -435,7 +434,7 @@ contract('Beethoven', accounts => {
 					}
 				} else {
 					try {
-						await beethovenContract.create.call(true, { from: alice, value: 0 });
+						await beethovenContract.create.call({ from: alice, value: 0 });
 					} catch (err) {
 						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
 					}
@@ -447,7 +446,6 @@ contract('Beethoven', accounts => {
 					try {
 						await beethovenContract.createWithWETH.call(
 							util.toWei(amtEth * 2),
-							true,
 							wethContract.address,
 							{ from: alice }
 						);
@@ -464,7 +462,6 @@ contract('Beethoven', accounts => {
 					try {
 						await beethovenContract.createWithWETH.call(
 							util.toWei(amtEth * 4),
-							true,
 							wethContract.address,
 							{ from: alice }
 						);
@@ -481,7 +478,6 @@ contract('Beethoven', accounts => {
 					try {
 						await beethovenContract.createWithWETH.call(
 							util.toWei(0),
-							true,
 							wethContract.address,
 							{ from: alice }
 						);
@@ -501,12 +497,12 @@ contract('Beethoven', accounts => {
 					});
 					tx = await beethovenContract.createWithWETH(
 						util.toWei(amtEth),
-						true,
+
 						wethContract.address,
 						{ from: alice }
 					);
 				} else {
-					tx = await beethovenContract.create(true, {
+					tx = await beethovenContract.create({
 						from: alice,
 						value: util.toWei(amtEth)
 					});
@@ -530,8 +526,8 @@ contract('Beethoven', accounts => {
 						util.isEqual(
 							util.fromWei(tx.logs[0].args.ethFeeInWei),
 							(amtEth * BeethovenInit.comm) / BP_DENOMINATOR + ''
-						) &&
-						util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), '0'),
+						),
+					// util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), '0'),
 					'incorrect event arguments emitted'
 				);
 
@@ -587,103 +583,103 @@ contract('Beethoven', accounts => {
 				);
 			});
 
-			it('should create token A and B payFee with DUO', async () => {
-				let tx;
-				if (isWithWETH) {
-					await wethContract.approve(beethovenContract.address, util.toWei(amtEth), {
-						from: alice
-					});
-					tx = await beethovenContract.createWithWETH(
-						util.toWei(amtEth),
-						false,
-						wethContract.address,
-						{ from: alice }
-					);
-				} else {
-					tx = await beethovenContract.create(false, {
-						from: alice,
-						value: util.toWei(amtEth)
-					});
-				}
+			// it('should create token A and B payFee with DUO', async () => {
+			// 	let tx;
+			// 	if (isWithWETH) {
+			// 		await wethContract.approve(beethovenContract.address, util.toWei(amtEth), {
+			// 			from: alice
+			// 		});
+			// 		tx = await beethovenContract.createWithWETH(
+			// 			util.toWei(amtEth),
+			// 			false,
+			// 			wethContract.address,
+			// 			{ from: alice }
+			// 		);
+			// 	} else {
+			// 		tx = await beethovenContract.create(false, {
+			// 			from: alice,
+			// 			value: util.toWei(amtEth)
+			// 		});
+			// 	}
 
-				assert.isTrue(
-					tx.logs.length === 2 &&
-						tx.logs[0].event === EVENT_CREATE &&
-						tx.logs[1].event === EVENT_TOTAL_SUPPLY,
-					'incorrect event emitted'
-				);
+			// 	assert.isTrue(
+			// 		tx.logs.length === 2 &&
+			// 			tx.logs[0].event === EVENT_CREATE &&
+			// 			tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+			// 		'incorrect event emitted'
+			// 	);
 
-				totalSupplyA += tokenValueAPayFeeDUO;
-				totalSupplyB += tokenValueBPayFeeDUO;
-				assert.isTrue(
-					tx.logs[0].args.sender === alice &&
-						util.isEqual(
-							util.fromWei(tx.logs[0].args.tokenAInWei),
-							tokenValueAPayFeeDUO
-						) &&
-						util.isEqual(
-							util.fromWei(tx.logs[0].args.tokenBInWei),
-							tokenValueBPayFeeDUO
-						) &&
-						util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth) &&
-						util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
-						util.isEqual(
-							util.fromWei(tx.logs[0].args.duoFeeInWei),
-							((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
-						),
-					'incorrect event arguments emitted'
-				);
+			// 	totalSupplyA += tokenValueAPayFeeDUO;
+			// 	totalSupplyB += tokenValueBPayFeeDUO;
+			// 	assert.isTrue(
+			// 		tx.logs[0].args.sender === alice &&
+			// 			util.isEqual(
+			// 				util.fromWei(tx.logs[0].args.tokenAInWei),
+			// 				tokenValueAPayFeeDUO
+			// 			) &&
+			// 			util.isEqual(
+			// 				util.fromWei(tx.logs[0].args.tokenBInWei),
+			// 				tokenValueBPayFeeDUO
+			// 			) &&
+			// 			util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth) &&
+			// 			util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
+			// 			util.isEqual(
+			// 				util.fromWei(tx.logs[0].args.duoFeeInWei),
+			// 				((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
+			// 			),
+			// 		'incorrect event arguments emitted'
+			// 	);
 
-				assert.isTrue(
-					util.isEqual(
-						util.fromWei(tx.logs[1].args.totalSupplyAInWei),
-						totalSupplyA.toString()
-					) &&
-						util.isEqual(
-							util.fromWei(tx.logs[1].args.totalSupplyBInWei),
-							totalSupplyB.toString()
-						),
-					'totalSupply not updated connectly'
-				);
-			});
+			// 	assert.isTrue(
+			// 		util.isEqual(
+			// 			util.fromWei(tx.logs[1].args.totalSupplyAInWei),
+			// 			totalSupplyA.toString()
+			// 		) &&
+			// 			util.isEqual(
+			// 				util.fromWei(tx.logs[1].args.totalSupplyBInWei),
+			// 				totalSupplyB.toString()
+			// 			),
+			// 		'totalSupply not updated connectly'
+			// 	);
+			// });
 
-			it('should update DUO balance of Alice correctly', async () => {
-				let balanceOfAlice = await duoContract.balanceOf.call(alice);
-				assert.isTrue(
-					util.isEqual(
-						preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR,
-						feeOfDUOinWei
-					),
-					'DUO balance of Alice not updated correctly'
-				);
-			});
+			// it('should update DUO balance of Alice correctly', async () => {
+			// 	let balanceOfAlice = await duoContract.balanceOf.call(alice);
+			// 	assert.isTrue(
+			// 		util.isEqual(
+			// 			preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR,
+			// 			feeOfDUOinWei
+			// 		),
+			// 		'DUO balance of Alice not updated correctly'
+			// 	);
+			// });
 
-			it('should update beethoven DUO balance correctly', async () => {
-				let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
-				assert.isTrue(
-					util.isEqual(duoBalance.valueOf() / WEI_DENOMINATOR, feeOfDUOinWei),
-					'beethoven DUO balance not updated correctly'
-				);
-			});
+			// it('should update beethoven DUO balance correctly', async () => {
+			// 	let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
+			// 	assert.isTrue(
+			// 		util.isEqual(duoBalance.valueOf() / WEI_DENOMINATOR, feeOfDUOinWei),
+			// 		'beethoven DUO balance not updated correctly'
+			// 	);
+			// });
 
-			it('should not create token A and B payFee with insufficient DUO allowed', async () => {
-				try {
-					await beethovenContract.create(false, {
-						from: bob,
-						value: util.toWei(1)
-					});
-					assert.isTrue(false, 'able to create without DUO allowed');
-				} catch (err) {
-					assert.equal(
-						err.message,
-						util.VM_REVERT_MSG,
-						'can collect fee more than allowed'
-					);
-				}
-			});
+			// it('should not create token A and B payFee with insufficient DUO allowed', async () => {
+			// 	try {
+			// 		await beethovenContract.create(false, {
+			// 			from: bob,
+			// 			value: util.toWei(1)
+			// 		});
+			// 		assert.isTrue(false, 'able to create without DUO allowed');
+			// 	} catch (err) {
+			// 		assert.equal(
+			// 			err.message,
+			// 			util.VM_REVERT_MSG,
+			// 			'can collect fee more than allowed'
+			// 		);
+			// 	}
+			// });
 
 			it('should not be added into userList with small creation amt', async () => {
-				await beethovenContract.create(true, {
+				await beethovenContract.create({
 					from: charles,
 					value: util.toWei(0.00003)
 				});
@@ -728,7 +724,7 @@ contract('Beethoven', accounts => {
 							util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
 							accumulatedFeeAfterWithdrawal
 						) &&
-						util.isEqual(tx.logs[0].args.duoFeeInWei.valueOf(), '0') &&
+						// util.isEqual(tx.logs[0].args.duoFeeInWei.valueOf(), '0') &&
 						util.isEqual(
 							tx.logs[0].args.duoFeeBalanceInWei.valueOf(),
 							duoFeeBalanceInWei.valueOf()
@@ -777,7 +773,7 @@ contract('Beethoven', accounts => {
 			});
 			await duoContract.transfer(alice, util.toWei(preDUO), { from: creator });
 			await duoContract.transfer(bob, util.toWei(preDUO), { from: creator });
-			await beethovenContract.create(true, { from: alice, value: util.toWei(1) });
+			await beethovenContract.create({ from: alice, value: util.toWei(1) });
 			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
 			let ethFee = await beethovenContract.ethFeeBalanceInWei.call();
@@ -795,7 +791,7 @@ contract('Beethoven', accounts => {
 
 		it('should only redeem token value less than balance', async () => {
 			try {
-				await beethovenContract.redeem(util.toWei(2800), util.toWei(2900), true, {
+				await beethovenContract.redeem(util.toWei(2800), util.toWei(2900), {
 					from: alice
 				});
 				assert.isTrue(false, 'able to redeem more than balance');
@@ -808,11 +804,11 @@ contract('Beethoven', accounts => {
 			let success = await beethovenContract.redeem.call(
 				util.toWei(amtA),
 				util.toWei(amtB),
-				true,
+
 				{ from: alice }
 			);
 			assert.isTrue(success, 'not able to redeem');
-			let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), true, {
+			let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), {
 				from: alice
 			});
 			assert.isTrue(
@@ -829,8 +825,9 @@ contract('Beethoven', accounts => {
 					util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), deductAmtA) &&
 					util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), deductAmtB) &&
 					util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth - fee) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), fee) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), 0),
+					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), fee),
+				//  &&
+				// util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), 0),
 				'incorrect event arguments emitted'
 			);
 
@@ -885,68 +882,68 @@ contract('Beethoven', accounts => {
 			assert.isTrue(util.isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
 		});
 
-		it('should redeem token A and B fee paying with DUO token', async () => {
-			let success = await beethovenContract.redeem.call(
-				util.toWei(amtA),
-				util.toWei(amtB),
-				false,
-				{ from: alice }
-			);
-			assert.isTrue(success, 'not able to redeem');
-			let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), false, {
-				from: alice
-			});
-			assert.isTrue(
-				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_REDEEM &&
-					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
-				'incorrect event emitted'
-			);
-			totalSupplyA = totalSupplyA - deductAmtA;
-			totalSupplyB = totalSupplyB - deductAmtB;
-			assert.isTrue(
-				tx.logs[0].args.sender === alice &&
-					util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), deductAmtA) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), deductAmtB) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
-					util.isEqual(
-						util.fromWei(tx.logs[0].args.duoFeeInWei),
-						((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
-					),
-				'incorrect event arguments emitted'
-			);
+		// it('should redeem token A and B fee paying with DUO token', async () => {
+		// 	let success = await beethovenContract.redeem.call(
+		// 		util.toWei(amtA),
+		// 		util.toWei(amtB),
+		// 		false,
+		// 		{ from: alice }
+		// 	);
+		// 	assert.isTrue(success, 'not able to redeem');
+		// 	let tx = await beethovenContract.redeem(util.toWei(amtA), util.toWei(amtB), false, {
+		// 		from: alice
+		// 	});
+		// 	assert.isTrue(
+		// 		tx.logs.length === 2 &&
+		// 			tx.logs[0].event === EVENT_REDEEM &&
+		// 			tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+		// 		'incorrect event emitted'
+		// 	);
+		// 	totalSupplyA = totalSupplyA - deductAmtA;
+		// 	totalSupplyB = totalSupplyB - deductAmtB;
+		// 	assert.isTrue(
+		// 		tx.logs[0].args.sender === alice &&
+		// 			util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), deductAmtA) &&
+		// 			util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), deductAmtB) &&
+		// 			util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth) &&
+		// 			util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
+		// 			util.isEqual(
+		// 				util.fromWei(tx.logs[0].args.duoFeeInWei),
+		// 				((amtEth * BeethovenInit.comm) / BP_DENOMINATOR) * ethDuoFeeRatio
+		// 			),
+		// 		'incorrect event arguments emitted'
+		// 	);
 
-			let ethCollateral =
-				(await beethovenContract.ethCollateralInWei.call()).valueOf() / WEI_DENOMINATOR;
-			assert.isTrue(
-				util.isEqual(ethCollateral, prevCollateral - amtEth),
-				'eth collateral not set correctly'
-			);
-			prevCollateral = ethCollateral;
+		// 	let ethCollateral =
+		// 		(await beethovenContract.ethCollateralInWei.call()).valueOf() / WEI_DENOMINATOR;
+		// 	assert.isTrue(
+		// 		util.isEqual(ethCollateral, prevCollateral - amtEth),
+		// 		'eth collateral not set correctly'
+		// 	);
+		// 	prevCollateral = ethCollateral;
 
-			assert.isTrue(
-				util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA) &&
-					util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyBInWei), totalSupplyB)
-			);
-		});
+		// 	assert.isTrue(
+		// 		util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA) &&
+		// 			util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyBInWei), totalSupplyB)
+		// 	);
+		// });
 
-		it('should update DUO balance of Alice correctly', async () => {
-			let balanceOfAlice = await duoContract.balanceOf.call(alice);
+		// it('should update DUO balance of Alice correctly', async () => {
+		// 	let balanceOfAlice = await duoContract.balanceOf.call(alice);
 
-			assert.isTrue(
-				util.isEqual(preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR, feeInDUO),
-				'DUO balance of Alice of updated incorrectly'
-			);
-		});
+		// 	assert.isTrue(
+		// 		util.isEqual(preDUO - balanceOfAlice.valueOf() / WEI_DENOMINATOR, feeInDUO),
+		// 		'DUO balance of Alice of updated incorrectly'
+		// 	);
+		// });
 
-		it('should update beethoven DUO balance correctly', async () => {
-			let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
-			assert.isTrue(
-				util.isEqual(duoBalance.valueOf() / WEI_DENOMINATOR, feeInDUO),
-				'beethoven DUO balance not updated correctly'
-			);
-		});
+		// it('should update beethoven DUO balance correctly', async () => {
+		// 	let duoBalance = await duoContract.balanceOf.call(beethovenContract.address);
+		// 	assert.isTrue(
+		// 		util.isEqual(duoBalance.valueOf() / WEI_DENOMINATOR, feeInDUO),
+		// 		'beethoven DUO balance not updated correctly'
+		// 	);
+		// });
 
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
@@ -961,7 +958,7 @@ contract('Beethoven', accounts => {
 			await beethovenContract.redeem(
 				currentBalanceA.valueOf(),
 				currentBalanceB.valueOf(),
-				true,
+
 				{ from: alice }
 			);
 			let userFlag = await beethovenContract.existingUsers.call(alice);
@@ -1074,7 +1071,7 @@ contract('Beethoven', accounts => {
 
 		it('should not allow creation', async () => {
 			try {
-				await beethovenContract.create.call(true, {
+				await beethovenContract.create.call({
 					from: alice,
 					value: util.toWei(1)
 				});
@@ -1086,7 +1083,7 @@ contract('Beethoven', accounts => {
 
 		it('should not allow redemption', async () => {
 			try {
-				await beethovenContract.redeem.call(util.toWei(2800), util.toWei(2900), true, {
+				await beethovenContract.redeem.call(util.toWei(2800), util.toWei(2900), {
 					from: alice
 				});
 
@@ -1305,15 +1302,15 @@ contract('Beethoven', accounts => {
 				await duoContract.transfer(alice, util.toWei(100), { from: creator });
 				await duoContract.transfer(bob, util.toWei(100), { from: creator });
 				await duoContract.transfer(charles, util.toWei(100), { from: creator });
-				await beethovenContract.create(true, {
+				await beethovenContract.create({
 					from: alice,
 					value: util.toWei(1)
 				});
-				await beethovenContract.create(true, {
+				await beethovenContract.create({
 					from: bob,
 					value: util.toWei(1.2)
 				});
-				await beethovenContract.create(true, {
+				await beethovenContract.create({
 					from: charles,
 					value: util.toWei(1.5)
 				});

@@ -124,21 +124,19 @@ contract Beethoven is Custodian {
 	}
 
 	/// @dev create with ETH
-	///	@param payFeeInEth pay fee in ETH or DUO token
-	function create(bool payFeeInEth) 
+	function create() 
 		public 
 		payable 
 		inState(State.Trading) 
 		returns (bool) 
 	{	
-		return createInternal(msg.sender, msg.value, payFeeInEth);
+		return createInternal(msg.sender, msg.value);
 	}
 
 	/// @dev create with ETH
 	///	@param amount amount of WETH to create
-	///	@param payFeeInEth pay fee in ETH or DUO token
 	///	@param wethAddr wrapEth contract address
-	function createWithWETH(uint amount, bool payFeeInEth, address wethAddr)
+	function createWithWETH(uint amount, address wethAddr)
 		public 
 		inState(State.Trading) 
 		returns (bool success) 
@@ -152,16 +150,16 @@ contract Beethoven is Custodian {
         wethToken.withdraw(wethBalance);
 		uint ethIncrement = address(this).balance.sub(beforeEthBalance);
 		require(ethIncrement >= wethBalance);
-		return createInternal(msg.sender, amount, payFeeInEth);
+		return createInternal(msg.sender, amount);
 	}
 
-	function createInternal(address sender, uint ethAmtInWei, bool payFeeInEth) 
+	function createInternal(address sender, uint ethAmtInWei) 
 		internal 
 		returns(bool)
 	{
 		require(ethAmtInWei > 0);
 		uint feeInWei;
-		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, createCommInBP, payFeeInEth);
+		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, createCommInBP);
 		ethCollateralInWei = ethCollateralInWei.add(ethAmtInWei);
 		uint numeritor = ethAmtInWei
 						.mul(resetPriceInWei)
@@ -180,23 +178,20 @@ contract Beethoven is Custodian {
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.add(tokenValueA);
 		totalSupplyB = totalSupplyB.add(tokenValueB);
-		uint ethFeeInWei = payFeeInEth ? feeInWei : 0;
-		uint duoFeeInWei = payFeeInEth ? 0 : feeInWei;
 
 		emit Create(
 			sender, 
 			ethAmtInWei, 
 			tokenValueA, 
 			tokenValueB, 
-			ethFeeInWei,
-			duoFeeInWei
+			feeInWei
 			);
 		emit TotalSupply(totalSupplyA, totalSupplyB);	
 		return true;
 
 	}
 
-	function redeem(uint amtInWeiA, uint amtInWeiB, bool payFeeInEth) 
+	function redeem(uint amtInWeiA, uint amtInWeiB) 
 		public 
 		inState(State.Trading) 
 		returns (bool success) 
@@ -214,7 +209,7 @@ contract Beethoven is Custodian {
 			.div(betaInWei);
 		ethCollateralInWei = ethCollateralInWei.sub(ethAmtInWei);
 		uint feeInWei;
-		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP, payFeeInEth);
+		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP);
 
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiA);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
@@ -227,30 +222,24 @@ contract Beethoven is Custodian {
 			ethAmtInWei, 
 			deductAmtInWeiA, 
 			deductAmtInWeiB, 
-			payFeeInEth ? feeInWei : 0, 
-			payFeeInEth ? 0 : feeInWei);
+			feeInWei
+		);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
 		return true;
 	}
 
 	function deductFee(
 		uint ethAmtInWei, 
-		uint commInBP,
-		bool payFeeInEth) 
-		internal 
+		uint commInBP
+	) 
+		internal pure
 		returns (
 			uint ethAmtAfterFeeInWei, 
 			uint feeInWei) 
 	{
 		require(ethAmtInWei > 0);
 		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
-		if (payFeeInEth) {
-			ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
-		} else {
-			feeInWei = feeInWei.mul(ethDuoFeeRatio);
-			require(duoToken.transferFrom(msg.sender, this, feeInWei));
-			ethAmtAfterFeeInWei = ethAmtInWei;
-		}
+		ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
 	}
 	// end of conversion
 

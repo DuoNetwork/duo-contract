@@ -71,8 +71,8 @@ contract Custodian is Managed {
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
-	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
-	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei, uint duoFeeInWei);
+	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei);
+	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei);
 	event TotalSupply(uint totalSupplyAInWei, uint totalSupplyBInWei);
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);

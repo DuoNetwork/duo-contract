@@ -112,7 +112,7 @@ contract('ERC20Token', accounts => {
 				{ from: creator }
 			);
 			let amtEth = 1;
-			await beethovenContract.create(true, {
+			await beethovenContract.create({
 				from: creator,
 				value: util.toWei(amtEth)
 			});
