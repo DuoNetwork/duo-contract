@@ -1081,6 +1081,8 @@ contract('Beethoven', accounts => {
 			let skipNum = isPeriodicReset
 				? Math.ceil((Number(BeethovenInit.hp) - 1) / Number(BeethovenInit.couponRate)) + 1
 				: 1;
+			let resetTime;
+			let newBetaAfterRst;
 
 			before(async () => {
 				await initContracts(alphaInBP);
@@ -1168,11 +1170,13 @@ contract('Beethoven', accounts => {
 						currentNavA,
 						alphaInBP
 					);
+					newBetaAfterRst = newBeta;
 					return assert.isTrue(
 						util.isEqual(beta, newBeta),
 						'beta is not updated correctly'
 					);
 				} else {
+					newBetaAfterRst =1;
 					return assert.equal(beta, 1, 'beta is not reset to 1');
 				}
 			});
@@ -1282,6 +1286,9 @@ contract('Beethoven', accounts => {
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(charles, newBalanceA);
 				await assertBBalanceForAddress(charles, newBalanceB);
+
+				let resetTimeInBN = await oracleContract.timestamp.call();
+				resetTime = resetTimeInBN.valueOf();
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
@@ -1335,6 +1342,42 @@ contract('Beethoven', accounts => {
 						'resetprice not updated'
 					);
 				}
+			});
+
+			it('should update nav correctly after price commit following a reset', async () => {
+				await oracleContract.skipCooldown(skipNum);
+				time = await oracleContract.timestamp.call();
+				await beethovenContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(
+					util.toWei(price + '', 'ether'),
+					time.valueOf(),
+					pf1
+				);
+
+				await beethovenContract.fetchPrice();
+
+				let navAinWei = await beethovenContract.navAInWei.call();
+				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
+			
+				let navBinWei = await beethovenContract.navBInWei.call();
+				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
+
+				let currentTime = await oracleContract.timestamp.call();
+				let numOfPeriods = Math.floor((Number(currentTime.valueOf()) - Number(resetTime))/Number(BeethovenInit.pd));
+				let newNavA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
+				assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
+
+			
+				let newNavB;
+				let navParent =
+					(price / price / newBetaAfterRst) * (1 + (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR);
+		
+				let navAAdj = (newNavA * (alphaInBP || BeethovenInit.alphaInBP)) / BP_DENOMINATOR;
+				if (navParent <= navAAdj)
+					newNavB = 0;
+				else newNavB = navParent - navAAdj;
+
+				assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
 			});
 		}
 

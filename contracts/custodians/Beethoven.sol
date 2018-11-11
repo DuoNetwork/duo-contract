@@ -433,9 +433,9 @@ contract Beethoven is Custodian {
 		if (localResetAddrIndex >= users.length) {
 			if (resetState != ResetState.PeriodicReset) {
 				resetPriceInWei = lastPriceInWei;
-				resetPriceTimeInSecond = lastPriceTimeInSecond;
 				navBInWei = WEI_DENOMINATOR;
 			}
+			resetPriceTimeInSecond = lastPriceTimeInSecond;
 			
 			navAInWei = WEI_DENOMINATOR;
 			nextResetAddrIndex = 0;
