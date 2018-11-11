@@ -11,7 +11,6 @@
 		"pxFetchCoolDown": 3000,
 		"iteGasTh": 65000,
 		"iteGasThSC": 105000,
-		"ethDuoRate": 800,
 		"preResetWaitBlk": 10,
 		"minimumBalance": 0.01
 	},

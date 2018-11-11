@@ -71,7 +71,6 @@ module.exports = async (deployer, network, accounts) => {
 	// 6709109
 	await deployer.deploy(
 		Beethoven,
-		DUO.address,
 		Esplanade.address,
 		fc,
 		BeethovenInit.alphaInBP,
@@ -84,7 +83,6 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.optCoolDown,
 		BeethovenInit.pxFetchCoolDown,
 		BeethovenInit.iteGasTh,
-		BeethovenInit.ethDuoRate,
 		BeethovenInit.preResetWaitBlk,
 		web3.utils.toWei(BeethovenInit.minimumBalance + ''),
 		{ from: creator }

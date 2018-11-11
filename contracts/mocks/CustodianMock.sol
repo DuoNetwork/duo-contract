@@ -8,7 +8,6 @@ contract CustodianMock is Custodian {
 	address public roleManagerAddr;
 
 	constructor(
-		address duoTokenAddr,
 		address poolAddr,
 		address fc,
 		uint comm,
@@ -19,7 +18,6 @@ contract CustodianMock is Custodian {
 		uint optCoolDown,
 		uint minimumBalance
 	) Custodian (
-		duoTokenAddr,
 		poolAddr,
 		fc,
 		comm,

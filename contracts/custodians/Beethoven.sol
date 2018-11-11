@@ -27,7 +27,6 @@ contract Beethoven is Custodian {
 	uint public limitUpperInWei; 
 	uint public limitLowerInWei;
 	uint public iterationGasThreshold;
-	uint public ethDuoFeeRatio;
 
 	// reset intermediate values
 	uint bAdj;
@@ -47,7 +46,6 @@ contract Beethoven is Custodian {
      * Constructor
      */
 	constructor(
-		address duoTokenAddr,
 		address roleManagerAddr,
 		address fc,
 		uint alpha,
@@ -60,13 +58,11 @@ contract Beethoven is Custodian {
 		uint optCoolDown,
 		uint pxFetchCoolDown,
 		uint iteGasTh,
-		uint ethDuoRate,
 		uint preResetWaitBlk,
 		uint minimumBalance
 		) 
 		public 
 		Custodian ( 
-		duoTokenAddr,
 		roleManagerAddr,
 		fc,
 		comm,
@@ -84,7 +80,6 @@ contract Beethoven is Custodian {
 		limitUpperInWei = hu; 
 		limitLowerInWei = hd;
 		iterationGasThreshold = iteGasTh; // 65000;
-		ethDuoFeeRatio = ethDuoRate; // 800;
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
@@ -468,12 +463,9 @@ contract Beethoven is Custodian {
 			oldValue = redeemCommInBP;
 			redeemCommInBP = newValue;
 		} else if (idx == 2) {
-			oldValue = ethDuoFeeRatio;
-			ethDuoFeeRatio = newValue;
-		} else if (idx == 3) {
 			oldValue = iterationGasThreshold;
 			iterationGasThreshold = newValue;
-		} else if (idx == 4) {
+		} else if (idx == 3) {
 			oldValue = preResetWaitingBlocks;
 			preResetWaitingBlocks = newValue;
 		} else {

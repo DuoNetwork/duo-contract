@@ -7,7 +7,6 @@ contract BeethovenMock is Beethoven {
 	uint public timestamp = now;
 
 	constructor(
-		address duoTokenAddress,
 		address poolAddress,
 		address fc,
 		uint alpha,
@@ -20,11 +19,9 @@ contract BeethovenMock is Beethoven {
 		uint optCoolDown,
 		uint pxFetchCoolDown,
 		uint iteGasTh,
-		uint ethDuoRate,
 		uint preResetWaitBlk,
 		uint minimumBalance
 	) Beethoven (
-		duoTokenAddress,
 		poolAddress,
 		fc,
 		alpha,
@@ -37,7 +34,6 @@ contract BeethovenMock is Beethoven {
 		optCoolDown,
 		pxFetchCoolDown,
 		iteGasTh,
-		ethDuoRate,
 		preResetWaitBlk,
 		minimumBalance
 	) public {

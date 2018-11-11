@@ -1,10 +1,8 @@
 const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const Esplanade = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
-const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
@@ -28,7 +26,7 @@ const STATE_VOTING_CONTRACT = '2';
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
 contract('Esplanade', accounts => {
-	let custodianContract, duoContract, roleManagerContract, oracleContract;
+	let custodianContract, roleManagerContract, oracleContract;
 	let newCustodianContract;
 
 	const creator = accounts[0];
@@ -46,15 +44,6 @@ contract('Esplanade', accounts => {
 	const newModerator2 = accounts[12];
 
 	const initContracts = async () => {
-		duoContract = await DUO.new(
-			util.toWei(DuoInit.initSupply),
-			DuoInit.tokenName,
-			DuoInit.tokenSymbol,
-			{
-				from: creator
-			}
-		);
-
 		roleManagerContract = await Esplanade.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
@@ -65,7 +54,6 @@ contract('Esplanade', accounts => {
 
 	const initCustodian = async () => {
 		return await Custodian.new(
-			duoContract.address,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,
@@ -594,7 +582,6 @@ contract('Esplanade', accounts => {
 				// let netModerator = tx.logs[0].args.newModerator;
 				await roleManagerContract.skipCooldown(1);
 				let newCustodianContract = await Custodian.new(
-					duoContract.address,
 					roleManagerContract.address,
 					fc,
 					BeethovenInit.comm,

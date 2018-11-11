@@ -1,12 +1,10 @@
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Beethoven = artifacts.require('../contracts/mocks/BeethovenMock');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
 const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
-const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const TokenAInit = InitParas['TokenA'];
@@ -22,7 +20,6 @@ const APPROVAL = 'Approval';
 contract('ERC20Token', accounts => {
 	function TOKEN_TEST(tokenName) {
 		let tokenAContract, tokenBContract;
-		let duoContract;
 		let beethovenContract;
 		let oracleContract;
 		let roleManagerContract;
@@ -40,20 +37,11 @@ contract('ERC20Token', accounts => {
 		let tokenContract;
 
 		before(async () => {
-			duoContract = await DUO.new(
-				util.toWei(DuoInit.initSupply),
-				DuoInit.tokenName,
-				DuoInit.tokenSymbol,
-				{
-					from: creator
-				}
-			);
 
 			roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 				from: creator
 			});
 			beethovenContract = await Beethoven.new(
-				duoContract.address,
 				roleManagerContract.address,
 				fc,
 				BeethovenInit.alphaInBP,
@@ -66,7 +54,6 @@ contract('ERC20Token', accounts => {
 				BeethovenInit.optCoolDown,
 				BeethovenInit.pxFetchCoolDown,
 				BeethovenInit.iteGasTh,
-				BeethovenInit.ethDuoRate,
 				BeethovenInit.preResetWaitBlk,
 				util.toWei(BeethovenInit.minimumBalance),
 				{

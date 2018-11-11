@@ -1,6 +1,5 @@
 pragma solidity ^0.4.24;
 import { SafeMath } from "../common/SafeMath.sol";
-import { IERC20 } from "../interfaces/IERC20.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Managed } from "../common/Managed.sol";
 
@@ -24,12 +23,10 @@ contract Custodian is Managed {
 	/*
      * Storage
      */
-	IERC20 duoToken;
 	IOracle oracle;
 	State public state;
 	uint public minBalance = 10000000000000000; // set at constructor
 	address public feeCollector;
-	address public duoTokenAddress;
 	address public oracleAddress;
 	address public aTokenAddress;
 	address public bTokenAddress;
@@ -71,14 +68,14 @@ contract Custodian is Managed {
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
-	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei);
-	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint ethFeeInWei);
+	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
+	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
 	event TotalSupply(uint totalSupplyAInWei, uint totalSupplyBInWei);
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
 	event Approval(address indexed tokenOwner, address indexed spender, uint tokens, uint index);
 	// operation events
-	event CollectFee(address addr, uint ethFeeInWei, uint ethFeeBalanceInWei, uint duoFeeInWei, uint duoFeeBalanceInWei);
+	event CollectFee(address addr, uint feeInWei, uint feeBalanceInWei);
 	event UpdateOracle(address newOracleAddress);
 	event UpdateFeeCollector(address updater, address newFeeCollector);
 
@@ -86,7 +83,6 @@ contract Custodian is Managed {
      *  Constructor
      */
 	/// @dev Contract constructor sets operation cool down and set address pool status.
-	///	@param duoTokenAddr duotoken address
 	///	@param roleManagerAddr roleManagerContract Address
 	///	@param fc feeCollector address
 	///	@param comm commission rate
@@ -96,7 +92,6 @@ contract Custodian is Managed {
 	///	@param opt operator
 	///	@param optCoolDown operation cooldown
 	constructor(
-		address duoTokenAddr,
 		address roleManagerAddr,
 		address fc,
 		uint comm,
@@ -119,8 +114,6 @@ contract Custodian is Managed {
 		priceFetchCoolDown = pxFetchCoolDown;
 		navAInWei = WEI_DENOMINATOR;
 		navBInWei = WEI_DENOMINATOR;
-		duoTokenAddress = duoTokenAddr;
-		duoToken = IERC20(duoTokenAddr);
 		minBalance = minimumBalance;
 	}
 
@@ -133,7 +126,7 @@ contract Custodian is Managed {
 		return users.length;
 	}
 
-	function ethFeeBalanceInWei() public view returns(uint) {
+	function feeBalanceInWei() public view returns(uint) {
 		return address(this).balance.sub(ethCollateralInWei);
 	}
 
@@ -237,26 +230,15 @@ contract Custodian is Managed {
 	/*
      * Operation Functions
      */
-	function collectEthFee(uint amountInWei) 
+	function collectFee(uint amountInWei) 
 		public 
 		only(feeCollector) 
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		uint feeBalance = ethFeeBalanceInWei().sub(amountInWei);
+		uint feeBalance = feeBalanceInWei().sub(amountInWei);
 		feeCollector.transfer(amountInWei);
-		emit CollectFee(feeCollector, amountInWei, feeBalance, 0, duoToken.balanceOf(this));
-		return true;
-	}
-
-	function collectDuoFee(uint amountInWei) 
-		public 
-		only(feeCollector) 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
-		duoToken.transfer(feeCollector, amountInWei);
-		emit CollectFee(feeCollector, 0, address(this).balance.sub(ethCollateralInWei), amountInWei, duoToken.balanceOf(this));
+		emit CollectFee(feeCollector, amountInWei, feeBalance);
 		return true;
 	}
 

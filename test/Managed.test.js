@@ -1,10 +1,8 @@
 const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
-const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const Managed = artifacts.require('../contracts/common/Managed.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
-const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const ManagedInit = InitParas['Managed'];
@@ -32,16 +30,7 @@ contract('Managed', accounts => {
 	};
 
 	const initCustodian = async () => {
-		let duoContract = await DUO.new(
-			util.toWei(DuoInit.initSupply),
-			DuoInit.tokenName,
-			DuoInit.tokenSymbol,
-			{
-				from: creator
-			}
-		);
 		return await Custodian.new(
-			duoContract.address,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,

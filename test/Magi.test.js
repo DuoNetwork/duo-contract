@@ -1,10 +1,8 @@
 const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
-const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
@@ -20,7 +18,7 @@ const ethInitPrice = 582;
 let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
 contract('Magi', accounts => {
-	let custodianContract, duoContract, roleManagerContract, oracleContract;
+	let custodianContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
 	const fc = accounts[1];
@@ -32,15 +30,6 @@ contract('Magi', accounts => {
 	const newModerator = accounts[11];
 
 	const initContracts = async () => {
-		duoContract = await DUO.new(
-			util.toWei(DuoInit.initSupply),
-			DuoInit.tokenName,
-			DuoInit.tokenSymbol,
-			{
-				from: creator
-			}
-		);
-
 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
@@ -50,7 +39,6 @@ contract('Magi', accounts => {
 
 	const initCustodian = async () => {
 		return await Custodian.new(
-			duoContract.address,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,

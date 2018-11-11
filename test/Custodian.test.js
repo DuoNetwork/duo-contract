@@ -1,10 +1,8 @@
 const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const DUO = artifacts.require('../contracts/mocks/DUOMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['Beethoven'];
-const DuoInit = InitParas['DUO'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const PoolInit = InitParas['Pool'];
@@ -21,7 +19,7 @@ const STATE_TRADING = '1';
 const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 
 contract('Custodian', accounts => {
-	let custodianContract, duoContract, roleManagerContract, oracleContract;
+	let custodianContract, roleManagerContract, oracleContract;
 
 	const creator = accounts[0];
 	const fc = accounts[1];
@@ -34,21 +32,11 @@ contract('Custodian', accounts => {
 	const david = accounts[8];
 
 	const initContracts = async () => {
-		duoContract = await DUO.new(
-			util.toWei(DuoInit.initSupply),
-			DuoInit.tokenName,
-			DuoInit.tokenSymbol,
-			{
-				from: creator
-			}
-		);
-
 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
 
 		custodianContract = await Custodian.new(
-			duoContract.address,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,
@@ -444,40 +432,33 @@ contract('Custodian', accounts => {
 	});
 
 	describe('collectFee', () => {
-		const initEthFee = '10';
-		const ethFeeCollectAmtMore = '20';
-		const ethFeeCollectAmtLess = '1';
+		const initFee = '10';
+		const feeCollectAmtMore = '20';
+		const feeCollectAmtLess = '1';
 
-		const initDuoFee = '10';
-		const duoFeeCollectAmtMore = '20';
-		const duoFeeCollectAmtLess = '1';
 		before(async () => {
 			await initContracts();
 			await custodianContract.setState(1);
 			await util.sendTransaction({
 				from: creator,
 				to: custodianContract.address,
-				value: util.toWei(initEthFee)
+				value: util.toWei(initFee)
 			});
-
-			await duoContract.mintTokens(custodianContract.address, util.toWei(initDuoFee));
 		});
 
 		it('balance and fee should be set correct', async () => {
 			let balance = await util.getBalance(custodianContract.address);
-			let ethFee = await custodianContract.ethFeeBalanceInWei.call();
-			let duoBalance = await duoContract.balanceOf(custodianContract.address);
+			let ethFee = await custodianContract.feeBalanceInWei.call();
 			assert.isTrue(
-				util.isEqual(util.fromWei(balance), initEthFee) &&
-					util.isEqual(util.fromWei(ethFee), initEthFee) &&
-					util.isEqual(util.fromWei(duoBalance), initDuoFee),
+				util.isEqual(util.fromWei(balance), initFee) &&
+					util.isEqual(util.fromWei(ethFee), initFee),
 				'balance not correct'
 			);
 		});
 
 		it('only feeCollector is allowed to coolectFee', async () => {
 			try {
-				await custodianContract.collectEthFee.call(util.toWei(1), { from: alice });
+				await custodianContract.collectFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
 				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
@@ -486,7 +467,7 @@ contract('Custodian', accounts => {
 
 		it('should only collect fee less than allowed', async () => {
 			try {
-				await custodianContract.collectEthFee.call(util.toWei(ethFeeCollectAmtMore), {
+				await custodianContract.collectFee.call(util.toWei(feeCollectAmtMore), {
 					from: fc
 				});
 				assert.isTrue(false, 'can collect fee more than allowed');
@@ -499,16 +480,16 @@ contract('Custodian', accounts => {
 			}
 		});
 
-		it('should collect eth fee', async () => {
-			let success = await custodianContract.collectEthFee.call(
-				util.toWei(ethFeeCollectAmtLess),
+		it('should collect fee', async () => {
+			let success = await custodianContract.collectFee.call(
+				util.toWei(feeCollectAmtLess),
 				{
 					from: fc
 				}
 			);
 
 			assert.isTrue(success);
-			let tx = await custodianContract.collectEthFee(util.toWei(ethFeeCollectAmtLess), {
+			let tx = await custodianContract.collectFee(util.toWei(feeCollectAmtLess), {
 				from: fc
 			});
 			assert.isTrue(
@@ -517,66 +498,10 @@ contract('Custodian', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.addr === fc &&
-					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), ethFeeCollectAmtLess) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.feeInWei), feeCollectAmtLess) &&
 					util.isEqual(
-						util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
-						initEthFee - ethFeeCollectAmtLess
-					) &&
-					// util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), 0) &&
-					util.isEqual(util.fromWei(tx.logs[0].args.duoFeeBalanceInWei), initDuoFee),
-				'worng fee parameter'
-			);
-		});
-
-		it('only feeCollector is allowed to coolecDuotFee', async () => {
-			try {
-				await custodianContract.collectDuoFee.call(util.toWei(1), { from: alice });
-				assert.isTrue(false, 'non fc can withDrawFee');
-			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
-			}
-		});
-
-		it('should only collect duo fee less than allowed', async () => {
-			try {
-				await custodianContract.collectDuoFee.call(util.toWei(duoFeeCollectAmtMore), {
-					from: fc
-				});
-				assert.isTrue(false, 'can collect fee more than allowed');
-			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'can collect fee more than allowed');
-			}
-		});
-
-		it('should collect eth fee', async () => {
-			let success = await custodianContract.collectDuoFee.call(
-				util.toWei(duoFeeCollectAmtLess),
-				{
-					from: fc
-				}
-			);
-
-			assert.isTrue(success);
-			let tx = await custodianContract.collectDuoFee(util.toWei(duoFeeCollectAmtLess), {
-				from: fc
-			});
-			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
-				'worng event emitted'
-			);
-
-			assert.isTrue(
-				tx.logs[0].args.addr === fc &&
-					util.isEqual(util.fromWei(tx.logs[0].args.ethFeeInWei), 0) &&
-					util.isEqual(
-						util.fromWei(tx.logs[0].args.ethFeeBalanceInWei),
-						initEthFee - ethFeeCollectAmtLess
-					) &&
-					// util.isEqual(util.fromWei(tx.logs[0].args.duoFeeInWei), duoFeeCollectAmtLess)
-					// &&
-					util.isEqual(
-						util.fromWei(tx.logs[0].args.duoFeeBalanceInWei),
-						initDuoFee - duoFeeCollectAmtLess
+						util.fromWei(tx.logs[0].args.feeBalanceInWei),
+						initFee - feeCollectAmtLess
 					),
 				'worng fee parameter'
 			);
