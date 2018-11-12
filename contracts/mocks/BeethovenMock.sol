@@ -62,5 +62,4 @@ contract BeethovenMock is Beethoven {
 	function getNextResetAddrIndex() public view returns (uint) {
 		return nextResetAddrIndex;
 	}
-
 }

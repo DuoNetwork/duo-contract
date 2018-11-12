@@ -19,14 +19,14 @@ contract Beethoven is Custodian {
 		PeriodicReset
 	}
 
-	ResetState public resetState;
-	uint public alphaInBP;
-	uint public betaInWei = WEI_DENOMINATOR;
-	uint public periodCouponInWei; 
-	uint public limitPeriodicInWei; 
-	uint public limitUpperInWei; 
-	uint public limitLowerInWei;
-	uint public iterationGasThreshold;
+	ResetState resetState;
+	uint alphaInBP;
+	uint betaInWei = WEI_DENOMINATOR;
+	uint periodCouponInWei; 
+	uint limitPeriodicInWei; 
+	uint limitUpperInWei; 
+	uint limitLowerInWei;
+	uint iterationGasThreshold;
 
 	// reset intermediate values
 	uint bAdj;
@@ -475,9 +475,53 @@ contract Beethoven is Custodian {
 		emit SetValue(idx, oldValue, newValue);
 		return true;
 	}
-	// end of operator functions	
+	// end of operator functions
 
-	function getUserSize() public view returns (uint) {
-		return users.length;
+	function getStates() public view returns (uint[27]) {
+		return [
+			// managed
+			lastOperationTime,
+			operationCoolDown,
+			// custodian
+			uint(state),
+			minBalance,
+			totalSupplyA,
+			totalSupplyB,
+			ethCollateralInWei,
+			navAInWei,
+			navBInWei,
+			lastPriceInWei,
+			lastPriceTimeInSecond,
+			resetPriceInWei,
+			resetPriceTimeInSecond,
+			createCommInBP,
+			redeemCommInBP,
+			period,
+			preResetWaitingBlocks,
+			priceFetchCoolDown,
+			nextResetAddrIndex,
+			// beethovan
+			uint(resetState),
+			alphaInBP,
+			betaInWei,
+			periodCouponInWei, 
+			limitPeriodicInWei, 
+			limitUpperInWei, 
+			limitLowerInWei,
+			iterationGasThreshold
+		];
+	}
+
+	function getAddresses() public view returns (address[6]) {
+		return [
+			// managed
+			roleManagerAddress,
+			operator,
+			// custodian
+			feeCollector,
+			oracleAddress,
+			aTokenAddress,
+			bTokenAddress
+		];
 	}
 }

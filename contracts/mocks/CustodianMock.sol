@@ -84,4 +84,42 @@ contract CustodianMock is Custodian {
 		return IMultiSigManager(roleManagerAddr).provideAddress(msg.sender, poolIndex);
 	}
 
+	function getStates() public view returns (uint[19]) {
+		return [
+			// managed
+			lastOperationTime,
+			operationCoolDown,
+			// custodian
+			uint(state),
+			minBalance,
+			totalSupplyA,
+			totalSupplyB,
+			ethCollateralInWei,
+			navAInWei,
+			navBInWei,
+			lastPriceInWei,
+			lastPriceTimeInSecond,
+			resetPriceInWei,
+			resetPriceTimeInSecond,
+			createCommInBP,
+			redeemCommInBP,
+			period,
+			preResetWaitingBlocks,
+			priceFetchCoolDown,
+			nextResetAddrIndex
+		];
+	}
+
+	function getAddresses() public view returns (address[6]) {
+		return [
+			// managed
+			roleManagerAddress,
+			operator,
+			// custodian
+			feeCollector,
+			oracleAddress,
+			aTokenAddress,
+			bTokenAddress
+		];
+	}
 }

@@ -24,34 +24,34 @@ contract Custodian is Managed {
      * Storage
      */
 	IOracle oracle;
-	State public state;
-	uint public minBalance = 10000000000000000; // set at constructor
-	address public feeCollector;
-	address public oracleAddress;
-	address public aTokenAddress;
-	address public bTokenAddress;
-	uint public totalSupplyA;
-	uint public totalSupplyB;
+	address feeCollector;
+	address oracleAddress;
+	address aTokenAddress;
+	address bTokenAddress;
 	mapping(address => uint)[2] public balanceOf;
 	mapping (address => mapping (address => uint))[2] public allowance;
 	address[] public users;
 	mapping (address => uint) public existingUsers;
-	uint public ethCollateralInWei;
-	uint public navAInWei;
-	uint public navBInWei;
-	uint public lastPriceInWei;
-	uint public lastPriceTimeInSecond;
-	uint public resetPriceInWei;
-	uint public resetPriceTimeInSecond;
-	uint public createCommInBP;
-	uint public redeemCommInBP;
-	uint public period;
-	uint public preResetWaitingBlocks;
-	uint public priceFetchCoolDown;
+	State state;
+	uint minBalance = 10000000000000000; // set at constructor
+	uint totalSupplyA;
+	uint totalSupplyB;
+	uint ethCollateralInWei;
+	uint navAInWei;
+	uint navBInWei;
+	uint lastPriceInWei;
+	uint lastPriceTimeInSecond;
+	uint resetPriceInWei;
+	uint resetPriceTimeInSecond;
+	uint createCommInBP;
+	uint redeemCommInBP;
+	uint period;
+	uint preResetWaitingBlocks;
+	uint priceFetchCoolDown;
 	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
-	uint public nextResetAddrIndex;
+	uint nextResetAddrIndex;
 
 	/*
      *  Modifiers
