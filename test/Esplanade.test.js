@@ -25,7 +25,7 @@ const STATE_VOTING_CONTRACT = '2';
 
 const CONTRACT_CANDIDTDE = '0xa8Cac43aA0C2B61BA4e0C10DC85bCa02662E1Bee';
 
-contract('Esplanade', accounts => {
+contract.only('Esplanade', accounts => {
 	let custodianContract, roleManagerContract, oracleContract;
 	let newCustodianContract;
 
@@ -565,6 +565,11 @@ contract('Esplanade', accounts => {
 				assert.isTrue(isExist.valueOf(), 'not set as existing');
 				let status = await roleManagerContract.addrStatus.call(custodianContract.address);
 				assert.isTrue(Number(status.valueOf()) === 3, 'marked as used');
+				const custodianPoolSize = await roleManagerContract.getContractPoolSizes.call();
+				assert.isTrue(
+					Number(custodianPoolSize[0].valueOf()) === 1,
+					'custodian pool is not updated'
+				);
 			});
 
 			it('should add custodians when custodianLenght > 0', async () => {
@@ -707,6 +712,11 @@ contract('Esplanade', accounts => {
 			assert.isTrue(isExist.valueOf(), 'not set as existing');
 			let status = await roleManagerContract.addrStatus.call(oracleContract.address);
 			assert.isTrue(Number(status.valueOf()) === 3, 'not marked as used');
+			const custodianPoolSize = await roleManagerContract.getContractPoolSizes.call();
+			assert.isTrue(
+				Number(custodianPoolSize[1].valueOf()) === 1,
+				'custodian pool is not updated'
+			);
 		});
 
 		it('cannot add existing contracts', async () => {
