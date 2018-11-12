@@ -477,7 +477,7 @@ contract Beethoven is Custodian {
 	}
 	// end of operator functions
 
-	function getStates() public view returns (uint[27]) {
+	function getStates() public view returns (uint[29]) {
 		return [
 			// managed
 			lastOperationTime,
@@ -500,6 +500,8 @@ contract Beethoven is Custodian {
 			preResetWaitingBlocks,
 			priceFetchCoolDown,
 			nextResetAddrIndex,
+			totalUsers(),
+			feeBalanceInWei(),
 			// beethovan
 			uint(resetState),
 			alphaInBP,

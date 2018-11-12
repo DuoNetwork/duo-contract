@@ -84,7 +84,7 @@ contract CustodianMock is Custodian {
 		return IMultiSigManager(roleManagerAddr).provideAddress(msg.sender, poolIndex);
 	}
 
-	function getStates() public view returns (uint[19]) {
+	function getStates() public view returns (uint[21]) {
 		return [
 			// managed
 			lastOperationTime,
@@ -106,7 +106,9 @@ contract CustodianMock is Custodian {
 			period,
 			preResetWaitingBlocks,
 			priceFetchCoolDown,
-			nextResetAddrIndex
+			nextResetAddrIndex,
+			totalUsers(),
+			feeBalanceInWei()
 		];
 	}
 
