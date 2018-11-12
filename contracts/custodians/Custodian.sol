@@ -51,7 +51,7 @@ contract Custodian is Managed {
 	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
-	uint nextResetAddrIndex;
+	uint public nextResetAddrIndex;
 
 	/*
      *  Modifiers
