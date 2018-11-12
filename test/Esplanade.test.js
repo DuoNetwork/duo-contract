@@ -136,7 +136,7 @@ contract('Esplanade', accounts => {
 		});
 
 		it('pool address status should be marked accordingly', async () => {
-			let length = await roleManagerContract.getPoolSize.call().valueOf()[0];
+			let length = await roleManagerContract.getAddressPoolSizes.call().valueOf()[0];
 			for (let i = 0; i < length; i++) {
 				let poolAddr = await roleManagerContract.addrPool.call(0, i);
 				assert.equal(
@@ -145,7 +145,7 @@ contract('Esplanade', accounts => {
 					'cold status is not correct'
 				);
 			}
-			length = await roleManagerContract.getPoolSize.call().valueOf()[1];
+			length = await roleManagerContract.getAddressPoolSizes.call().valueOf()[1];
 			for (let i = 0; i < length; i++) {
 				let poolAddr = await roleManagerContract.addrPool.call(1, i);
 				assert.equal(
@@ -823,7 +823,7 @@ contract('Esplanade', accounts => {
 			});
 
 			it('pool size should be 10 and pool candidate is valid eth address and pool candidate has no duplication', async () => {
-				let poolSize = await roleManagerContract.getPoolSize.call();
+				let poolSize = await roleManagerContract.getAddressPoolSizes.call();
 				assert.isTrue(
 					Number(poolSize[0].valueOf()) ===
 						(index === 0 ? Pool[0].length : Pool[0].length - 2) &&
@@ -970,7 +970,7 @@ contract('Esplanade', accounts => {
 				let validatedPool = Pool[0].map(addr => util.toChecksumAddress(addr));
 
 				assert.isTrue(validatedPool.includes(newModeratorAfterRemove));
-				let poolSize = await roleManagerContract.getPoolSize.call().valueOf();
+				let poolSize = await roleManagerContract.getAddressPoolSizes.call().valueOf();
 				let length = poolSize[0];
 				for (let i = 1; i < length; i++) {
 					let poolAddr = await roleManagerContract.addrPool.call(0, i);
@@ -1121,7 +1121,7 @@ contract('Esplanade', accounts => {
 				let validatedPool = Pool[index].map(addr => util.toChecksumAddress(addr));
 				assert.isTrue(validatedPool.includes(util.toChecksumAddress(addr)));
 
-				let poolSize = await roleManagerContract.getPoolSize.call();
+				let poolSize = await roleManagerContract.getAddressPoolSizes.call();
 				assert.isTrue(
 					Number(poolSize[index].valueOf()) === 10 - (index === 0 ? 3 : 1),
 					'poolSize not updated corrctly'
@@ -1149,7 +1149,7 @@ contract('Esplanade', accounts => {
 				let validatedPool = Pool[index].map(addr => util.toChecksumAddress(addr));
 				assert.isTrue(validatedPool.includes(util.toChecksumAddress(addr)));
 
-				let poolSize = await roleManagerContract.getPoolSize.call();
+				let poolSize = await roleManagerContract.getAddressPoolSizes.call();
 				assert.isTrue(
 					Number(poolSize[index].valueOf()) === 10 - (index === 0 ? 4 : 1),
 					'poolSize not updated corrctly'

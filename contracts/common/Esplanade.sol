@@ -422,8 +422,13 @@ contract Esplanade {
 		return now;
 	}
 
-	/// @dev get Pool Size
-	function getPoolSize() public view returns (uint, uint) {
+	/// @dev get addressPool size
+	function getAddressPoolSizes() public view returns (uint, uint) {
 		return (addrPool[COLD_POOL_IDX].length, addrPool[HOT_POOL_IDX].length);
+	}
+
+	/// @dev get contract pool size
+	function getContractPoolSizes() public view returns (uint, uint) {
+		return (custodianPool.length, otherContractPool.length);
 	}
 }
