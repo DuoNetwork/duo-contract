@@ -19,7 +19,7 @@ contract Beethoven is Custodian {
 		PeriodicReset
 	}
 
-	ResetState resetState;
+	ResetState public resetState;
 	uint public alphaInBP;
 	uint public betaInWei = WEI_DENOMINATOR;
 	uint public periodCouponInWei; 
