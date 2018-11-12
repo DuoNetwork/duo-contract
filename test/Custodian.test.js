@@ -17,6 +17,46 @@ const STATE_INCEPT_RESET = '0';
 const STATE_TRADING = '1';
 
 const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
+const CUSTODIAN_STATE = {
+	LAST_OPERATION_TIME: 0,
+	OPERATION_COOLDOWN: 1,
+	STATE: 2,
+	MIN_BALANCE: 3,
+	ETH_COLLATERAL_INWEI: 4,
+	NAVA_INWEI: 5,
+	NAVB_INWEI: 6,
+	LAST_PRICE_INWEI: 7,
+	LAST_PRICETIME_INSECOND: 8,
+	RESET_PRICE_INWEI: 9,
+	RESET_PRICETIME_INSECOND: 10,
+	CREATE_COMMINBP: 11,
+	REDEEM_COMMINBP: 12,
+	PERIOD: 13,
+	PRERESET_WAITING_BLOCKS: 14,
+	PRICE_FETCH_COOLDOWN: 15,
+	NEXT_RESET_ADDR_INDEX: 16,
+	TOTAL_USERS: 17,
+	FEE_BALANCE_INWEI: 18
+};
+
+const CUSTODIAN_ADDR = {
+	ROLE_MANAGER: 0,
+	OPERATOR: 1,
+	FEE_COLLECTOR: 2,
+	ORACLE_ADDR: 3,
+	A_TOKEN_ADDR: 4,
+	B_TOKEN_ADDR: 5
+};
+
+const getState = async (contract, index) => {
+	let _states = await contract.getStates.call();
+	return _states[index];
+};
+
+const getAddr = async (contract, index) => {
+	let _addresses = await contract.getAddresses.call();
+	return _addresses[index];
+};
 
 contract('Custodian', accounts => {
 	let custodianContract, roleManagerContract, oracleContract;
@@ -66,32 +106,35 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let state = await custodianContract.state.call();
+			let state = await getState(custodianContract, CUSTODIAN_STATE.STATE);
 			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
 		it('feeCollector should equal specified value', async () => {
-			let fc = await custodianContract.feeCollector.call();
+			let fc = await getAddr(custodianContract, CUSTODIAN_ADDR.FEE_COLLECTOR);
 			assert.equal(fc.valueOf(), fc, 'feeCollector specified incorrect');
 		});
 
 		it('createCommInBP should equal specified value', async () => {
-			let comm = await custodianContract.createCommInBP.call();
+			let comm = await getState(custodianContract, CUSTODIAN_STATE.CREATE_COMMINBP);
 			assert.equal(comm.valueOf(), BeethovenInit.comm, 'createCommInBP specified incorrect');
 		});
 
 		it('redeemCommInBP should equal specified value', async () => {
-			let comm = await custodianContract.redeemCommInBP.call();
+			let comm = await getState(custodianContract, CUSTODIAN_STATE.REDEEM_COMMINBP);
 			assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP specified incorrect');
 		});
 
 		it('period should equal specified value', async () => {
-			let pd = await custodianContract.period.call();
+			let pd = await getState(custodianContract, CUSTODIAN_STATE.PERIOD);
 			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period specified incorrect');
 		});
 
 		it('preResetWaitingBlks should equal specified value', async () => {
-			let preResetWaitBlk = await custodianContract.preResetWaitingBlocks.call();
+			let preResetWaitBlk = await getState(
+				custodianContract,
+				CUSTODIAN_STATE.PRERESET_WAITING_BLOCKS
+			);
 			assert.equal(
 				preResetWaitBlk.valueOf(),
 				BeethovenInit.preResetWaitBlk,
@@ -100,7 +143,10 @@ contract('Custodian', accounts => {
 		});
 
 		it('priceFetchCoolDown should equal specified value', async () => {
-			let pxFetchCoolDown = await custodianContract.priceFetchCoolDown.call();
+			let pxFetchCoolDown = await getState(
+				custodianContract,
+				CUSTODIAN_STATE.PRICE_FETCH_COOLDOWN
+			);
 			assert.equal(
 				pxFetchCoolDown.valueOf(),
 				BeethovenInit.pxFetchCoolDown,
@@ -109,7 +155,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('navA should equal specified value', async () => {
-			let navAInWei = await custodianContract.navAInWei.call();
+			let navAInWei = await getState(custodianContract, CUSTODIAN_STATE.NAVA_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(navAInWei), 1),
 				'navAInWei specified incorrect'
@@ -117,7 +163,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('navB should equal specified value', async () => {
-			let navBInWei = await custodianContract.navBInWei.call();
+			let navBInWei = await await getState(custodianContract, CUSTODIAN_STATE.NAVB_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(navBInWei), 1),
 				'navBInWei specified incorrect'
@@ -129,7 +175,7 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('userLenght should be 0', async () => {
-			let userSize = await custodianContract.totalUsers.call();
+			let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
 	});
@@ -149,7 +195,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should in state trading', async () => {
-				let state = await custodianContract.state.call();
+				let state = await getState(custodianContract, CUSTODIAN_STATE.STATE);
 				assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
 			});
 
@@ -164,7 +210,7 @@ contract('Custodian', accounts => {
 			it('alice userIdx should be updated', async () => {
 				let userIdx = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(util.isEqual(userIdx.valueOf(), 1), 'alice is not updated');
-				let userSize = await custodianContract.totalUsers.call();
+				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 1),
 					'user size not updated correctly'
@@ -259,7 +305,7 @@ contract('Custodian', accounts => {
 				assert.isTrue(util.isEqual(userIdxAlice.valueOf(), 1), 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
 				assert.isTrue(util.isEqual(userIdxBob.valueOf(), 2), 'bob userIdx is not updated');
-				let userSize = await custodianContract.totalUsers.call();
+				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 2),
 					'user size not updated correctly'
@@ -341,7 +387,7 @@ contract('Custodian', accounts => {
 					util.isEqual(userIdxCharles.valueOf(), 3),
 					'charles userIdx is not updated'
 				);
-				let userSize = await custodianContract.totalUsers.call();
+				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 3),
 					'user size not updated correctly'
@@ -417,7 +463,7 @@ contract('Custodian', accounts => {
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.equal(userIdxDavid.valueOf(), '1', 'david is not updated');
 
-				let userSize = await custodianContract.totalUsers.call();
+				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.equal(userSize.valueOf(), '3', 'user size not updated correctly');
 			});
 		}
@@ -448,7 +494,7 @@ contract('Custodian', accounts => {
 
 		it('balance and fee should be set correct', async () => {
 			let balance = await util.getBalance(custodianContract.address);
-			let ethFee = await custodianContract.feeBalanceInWei.call();
+			let ethFee = await getState(custodianContract, CUSTODIAN_STATE.FEE_BALANCE_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(balance), initFee) &&
 					util.isEqual(util.fromWei(ethFee), initFee),
@@ -481,12 +527,9 @@ contract('Custodian', accounts => {
 		});
 
 		it('should collect fee', async () => {
-			let success = await custodianContract.collectFee.call(
-				util.toWei(feeCollectAmtLess),
-				{
-					from: fc
-				}
-			);
+			let success = await custodianContract.collectFee.call(util.toWei(feeCollectAmtLess), {
+				from: fc
+			});
 
 			assert.isTrue(success);
 			let tx = await custodianContract.collectFee(util.toWei(feeCollectAmtLess), {

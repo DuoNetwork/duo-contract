@@ -34,8 +34,8 @@ contract Custodian is Managed {
 	mapping (address => uint) public existingUsers;
 	State state;
 	uint minBalance = 10000000000000000; // set at constructor
-	uint totalSupplyA;
-	uint totalSupplyB;
+	uint public totalSupplyA;
+	uint public totalSupplyB;
 	uint ethCollateralInWei;
 	uint navAInWei;
 	uint navBInWei;

@@ -8,6 +8,40 @@ const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
 
+const CST = {
+	BTV_STATE: {
+		LAST_OPERATION_TIME: 0,
+		OPERATION_COOLDOWN: 1,
+		STATE: 2,
+		MIN_BALANCE: 3,
+		TOTAL_SUPPLYA: 4,
+		TOTAL_SUPPLYB: 5,
+		ETH_COLLATERAL_INWEI: 6,
+		NAVA_INWEI: 7,
+		NAVB_INWEI: 8,
+		LAST_PRICE_INWEI: 9,
+		LAST_PRICETIME_INSECOND: 10,
+		RESET_PRICE_INWEI: 11,
+		RESET_PRICETIME_INSECOND: 12,
+		CREATE_COMMINBP: 13,
+		REDEEM_COMMINBP: 14,
+		PERIOD: 15,
+		PRERESET_WAITING_BLOCKS: 16,
+		PRICE_FETCH_COOLDOWN: 17,
+		NEXT_RESET_ADDR_INDEX: 18,
+		TOTAL_USERS: 19,
+		FEE_BALANCE_INWEI: 20,
+		RESET_STATE: 21,
+		ALPHA_INBP: 22,
+		BETA_INWEI: 23,
+		PERIOD_COUPON_INWEI: 24,
+		LIMIT_PERIODIC_INWEI: 25,
+		LIMIT_UPPER_INWEI: 26,
+		LIMIT_LOWER_INWEI: 27,
+		ITERATION_GAS_THRESHOLD: 28
+	}
+};
+
 // Event
 const EVENT_ACCEPT_PX = 'AcceptPrice';
 const EVENT_START_TRADING = 'StartTrading';
@@ -33,14 +67,19 @@ const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 const A_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 const B_ADDR = '0x424325334C3537A6248E09E1Dc392C003d8706Db';
 
+const getState = async (beethovenContract, index) => {
+	let _states = await beethovenContract.getStates.call();
+	return _states[index];
+};
+
 const assertState = async (beethovenContract, state) => {
-	let _state = await beethovenContract.state.call();
+	let _state = await getState(beethovenContract, CST.BTV_STATE.STATE);
 	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
 const assertResetState = async (beethovenContract, state) => {
-	let _state = await beethovenContract.resetState.call();
-	assert.isTrue(_state.valueOf() === state);
+	let _state = await getState(beethovenContract, CST.BTV_STATE.RESET_STATE);
+	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
 contract('Beethoven', accounts => {
@@ -106,17 +145,20 @@ contract('Beethoven', accounts => {
 		before(initContracts);
 
 		it('alpha should be set correctly', async () => {
-			let alpha = await beethovenContract.alphaInBP.call();
+			let alpha = await getState(beethovenContract, CST.BTV_STATE.ALPHA_INBP);
 			assert.equal(alpha.valueOf(), BeethovenInit.alphaInBP, 'alpha set incorrectly');
 		});
 
 		it('period should be set correctly', async () => {
-			let pd = await beethovenContract.period.call();
+			let pd = await getState(beethovenContract, CST.BTV_STATE.PERIOD);
 			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period set incorrectly');
 		});
 
 		it('limitPeriodicInWei should be set correctly', async () => {
-			let limitPeriodicInWei = await beethovenContract.limitPeriodicInWei.call();
+			let limitPeriodicInWei = await getState(
+				beethovenContract,
+				CST.BTV_STATE.LIMIT_PERIODIC_INWEI
+			);
 			assert.equal(
 				util.fromWei(limitPeriodicInWei),
 				BeethovenInit.hp + '',
@@ -125,7 +167,10 @@ contract('Beethoven', accounts => {
 		});
 
 		it('limitUpperInWei should be set correctly', async () => {
-			let limitUpperInWei = await beethovenContract.limitUpperInWei.call();
+			let limitUpperInWei = await getState(
+				beethovenContract,
+				CST.BTV_STATE.LIMIT_UPPER_INWEI
+			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(limitUpperInWei), BeethovenInit.hu),
 				'limitUpperInWei set incorrectly'
@@ -133,7 +178,10 @@ contract('Beethoven', accounts => {
 		});
 
 		it('limitLowerInWei should be set correctly', async () => {
-			let limitLowerInWei = await beethovenContract.limitLowerInWei.call();
+			let limitLowerInWei = await getState(
+				beethovenContract,
+				CST.BTV_STATE.LIMIT_LOWER_INWEI
+			);
 			assert.equal(
 				util.fromWei(limitLowerInWei),
 				BeethovenInit.hd + '',
@@ -142,7 +190,10 @@ contract('Beethoven', accounts => {
 		});
 
 		it('iterationGasThreshold should be set correctly', async () => {
-			let iterationGasThreshold = await beethovenContract.iterationGasThreshold.call();
+			let iterationGasThreshold = await getState(
+				beethovenContract,
+				CST.BTV_STATE.ITERATION_GAS_THRESHOLD
+			);
 			assert.equal(
 				iterationGasThreshold.valueOf(),
 				process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
@@ -151,7 +202,7 @@ contract('Beethoven', accounts => {
 		});
 
 		it('createCommInBP should be set correctly', async () => {
-			let createCommInBP = await beethovenContract.createCommInBP.call();
+			let createCommInBP = await getState(beethovenContract, CST.BTV_STATE.CREATE_COMMINBP);
 			assert.equal(
 				createCommInBP.valueOf(),
 				BeethovenInit.comm + '',
@@ -160,7 +211,7 @@ contract('Beethoven', accounts => {
 		});
 
 		it('redeemCommInBP should be set correctly', async () => {
-			let comm = await beethovenContract.redeemCommInBP.call();
+			let comm = await getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
 			assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP set incorrectly');
 		});
 
@@ -170,7 +221,10 @@ contract('Beethoven', accounts => {
 		});
 
 		it('preResetWaitingBlocks should be set correctly', async () => {
-			let preResetWaitingBlocks = await beethovenContract.preResetWaitingBlocks.call();
+			let preResetWaitingBlocks = await getState(
+				beethovenContract,
+				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+			);
 			assert.equal(
 				preResetWaitingBlocks.valueOf(),
 				BeethovenInit.preResetWaitBlk + '',
@@ -179,7 +233,7 @@ contract('Beethoven', accounts => {
 		});
 
 		it('minimumBalance should be set correctly', async () => {
-			let minBalance = await beethovenContract.minBalance.call();
+			let minBalance = await getState(beethovenContract, CST.BTV_STATE.MIN_BALANCE);
 			assert.equal(
 				util.fromWei(minBalance.valueOf()),
 				BeethovenInit.minimumBalance + '',
@@ -193,7 +247,7 @@ contract('Beethoven', accounts => {
 		let time;
 
 		it('state should be Inception before starting', async () => {
-			let state = await beethovenContract.state.call();
+			let state = await getState(beethovenContract, CST.BTV_STATE.STATE);
 			assert.equal(state.valueOf(), STATE_INCEPTION, 'state is not inception');
 		});
 
@@ -254,8 +308,11 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
-			let lastPrice = await beethovenContract.lastPriceInWei.call();
-			let lastPriceTime = await beethovenContract.lastPriceTimeInSecond.call();
+			let lastPrice = await getState(beethovenContract, CST.BTV_STATE.LAST_PRICE_INWEI);
+			let lastPriceTime = await getState(
+				beethovenContract,
+				CST.BTV_STATE.LAST_PRICETIME_INSECOND
+			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(lastPrice), ethInitPrice),
 
@@ -268,8 +325,11 @@ contract('Beethoven', accounts => {
 				'lastPrice time not updated correctly'
 			);
 
-			let resetPrice = await beethovenContract.resetPriceInWei.call();
-			let resetPriceTime = await beethovenContract.resetPriceTimeInSecond.call();
+			let resetPrice = await getState(beethovenContract, CST.BTV_STATE.RESET_PRICE_INWEI);
+			let resetPriceTime = await getState(
+				beethovenContract,
+				CST.BTV_STATE.RESET_PRICETIME_INSECOND
+			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(resetPrice), ethInitPrice),
 
@@ -283,7 +343,7 @@ contract('Beethoven', accounts => {
 		});
 
 		it('state should be trading', async () => {
-			let state = await beethovenContract.state.call();
+			let state = await getState(beethovenContract, CST.BTV_STATE.STATE);
 			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
 		});
 	});
@@ -519,7 +579,7 @@ contract('Beethoven', accounts => {
 			});
 
 			it('feeAccumulated should be updated', async () => {
-				let ethFee = await beethovenContract.feeBalanceInWei.call();
+				let ethFee = await getState(beethovenContract, CST.BTV_STATE.FEE_BALANCE_INWEI);
 				let fee = (1 * BeethovenInit.comm) / BP_DENOMINATOR;
 				assert.isTrue(
 					util.fromWei(ethFee) === fee.toString(),
@@ -570,7 +630,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should collect fee', async () => {
-				let feeBalanceInWei = await beethovenContract.feeBalanceInWei.call();
+				let feeBalanceInWei = await getState(
+					beethovenContract,
+					CST.BTV_STATE.FEE_BALANCE_INWEI
+				);
 				accumulatedFeeAfterWithdrawal = Number(util.fromWei(feeBalanceInWei)) - 0.0001;
 				let success = await beethovenContract.collectFee.call(util.toWei(0.0001), {
 					from: fc
@@ -596,7 +659,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should update fee balance correctly', async () => {
-				let feeBalanceInWei = await beethovenContract.feeBalanceInWei.call();
+				let feeBalanceInWei = await getState(
+					beethovenContract,
+					CST.BTV_STATE.FEE_BALANCE_INWEI
+				);
 				assert.isTrue(
 					util.isEqual(util.fromWei(feeBalanceInWei), accumulatedFeeAfterWithdrawal),
 					'fee not updated correctly'
@@ -634,13 +700,14 @@ contract('Beethoven', accounts => {
 			await beethovenContract.create({ from: alice, value: util.toWei(1) });
 			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
-			let ethFee = await beethovenContract.feeBalanceInWei.call();
+			let ethFee = await getState(beethovenContract, CST.BTV_STATE.FEE_BALANCE_INWEI);
 			prevFeeAccumulated = ethFee.valueOf();
 			prevCollateral =
-				(await beethovenContract.ethCollateralInWei.call()).valueOf() / WEI_DENOMINATOR;
-			totalSupplyA = await beethovenContract.totalSupplyA.call();
+				(await getState(beethovenContract, CST.BTV_STATE.ETH_COLLATERAL_INWEI)).valueOf() /
+				WEI_DENOMINATOR;
+			totalSupplyA = await getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYA);
 			totalSupplyA = totalSupplyA.valueOf() / WEI_DENOMINATOR;
-			totalSupplyB = await beethovenContract.totalSupplyB.call();
+			totalSupplyB = await getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYB);
 			totalSupplyB = totalSupplyB.valueOf() / WEI_DENOMINATOR;
 		});
 
@@ -685,7 +752,8 @@ contract('Beethoven', accounts => {
 			);
 
 			let ethCollateral =
-				(await beethovenContract.ethCollateralInWei.call()).valueOf() / WEI_DENOMINATOR;
+				(await getState(beethovenContract, CST.BTV_STATE.ETH_COLLATERAL_INWEI)).valueOf() /
+				WEI_DENOMINATOR;
 			assert.isTrue(
 				util.isEqual(ethCollateral, prevCollateral - amtEth),
 				'eth collateral not set correctly'
@@ -731,14 +799,14 @@ contract('Beethoven', accounts => {
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(util.isEqual(userFlag.valueOf(), '1'), 'user not in the user list');
-			let userSize = await beethovenContract.getUserSize.call();
+			let userSize = await getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
 			assert.isTrue(util.isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
 		});
 
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(userFlag.valueOf() == '1', 'user not in the user list');
-			let userSize = await beethovenContract.getUserSize.call();
+			let userSize = await getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
 			assert.equal(userSize.valueOf(), 1, 'user size not updated correctly');
 		});
 
@@ -753,7 +821,7 @@ contract('Beethoven', accounts => {
 			);
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(util.isEqual(userFlag.valueOf(), 0), 'user still in the userList');
-			let userSize = await beethovenContract.getUserSize.call();
+			let userSize = await getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
 			assert.isTrue(util.isEqual(userSize.valueOf(), 0), 'user size not updated correctly');
 		});
 	});
@@ -855,7 +923,7 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should be in state preReset', async () => {
-			let state = await beethovenContract.state.call();
+			let state = await getState(beethovenContract, CST.BTV_STATE.STATE);
 			assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is wrong');
 		});
 
@@ -956,7 +1024,10 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
-			let preResetWaitBlk = await beethovenContract.preResetWaitingBlocks.call();
+			let preResetWaitBlk = await getState(
+				beethovenContract,
+				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+			);
 
 			for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
 				await beethovenContract.startPreReset();
@@ -1149,15 +1220,15 @@ contract('Beethoven', accounts => {
 
 				await beethovenContract.fetchPrice();
 
-				let navAinWei = await beethovenContract.navAInWei.call();
+				let navAinWei = await getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
-				let navBinWei = await beethovenContract.navBInWei.call();
+				let navBinWei = await getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
 
-				let betaInWei = await beethovenContract.betaInWei.call();
+				let betaInWei = await getState(beethovenContract, CST.BTV_STATE.BETA_INWEI);
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await beethovenContract.startPreReset();
-				let betaInWeiAfter = await beethovenContract.betaInWei.call();
+				let betaInWeiAfter = await getState(beethovenContract, CST.BTV_STATE.BETA_INWEI);
 				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
 			});
 
@@ -1176,7 +1247,7 @@ contract('Beethoven', accounts => {
 						'beta is not updated correctly'
 					);
 				} else {
-					newBetaAfterRst =1;
+					newBetaAfterRst = 1;
 					return assert.equal(beta, 1, 'beta is not reset to 1');
 				}
 			});
@@ -1187,7 +1258,7 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should have three users', async () => {
-				let userSize = await beethovenContract.getUserSize.call();
+				let userSize = await getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
 				assert.equal(userSize.valueOf(), 3, 'num of users incorrect');
 			});
 
@@ -1292,8 +1363,8 @@ contract('Beethoven', accounts => {
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
-				let totalA = await beethovenContract.totalSupplyA.call();
-				let totalB = await beethovenContract.totalSupplyB.call();
+				let totalA = await getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYA);
+				let totalB = await getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYB);
 				assert.isTrue(
 					util.isEqual(
 						totalA.valueOf() / WEI_DENOMINATOR,
@@ -1320,8 +1391,8 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should update nav', async () => {
-				let navA = await beethovenContract.navAInWei.call();
-				let navB = await beethovenContract.navBInWei.call();
+				let navA = await getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
+				let navB = await getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
 
 				assert.equal(util.fromWei(navA), '1', 'nav A not reset to 1');
 				assert.isTrue(
@@ -1334,7 +1405,10 @@ contract('Beethoven', accounts => {
 
 			it('should update reset price', async () => {
 				if (!isPeriodicReset) {
-					let resetPriceInWei = await beethovenContract.resetPriceInWei.call();
+					let resetPriceInWei = await getState(
+						beethovenContract,
+						CST.BTV_STATE.RESET_PRICE_INWEI
+					);
 
 					assert.equal(
 						resetPriceInWei.valueOf() / WEI_DENOMINATOR,
@@ -1346,7 +1420,7 @@ contract('Beethoven', accounts => {
 
 			it('should update nav correctly after price commit following a reset', async () => {
 				await oracleContract.skipCooldown(skipNum);
-				time = await oracleContract.timestamp.call();
+				let time = await oracleContract.timestamp.call();
 				await beethovenContract.setTimestamp(time.valueOf());
 				await oracleContract.setLastPrice(
 					util.toWei(price + '', 'ether'),
@@ -1356,25 +1430,26 @@ contract('Beethoven', accounts => {
 
 				await beethovenContract.fetchPrice();
 
-				let navAinWei = await beethovenContract.navAInWei.call();
+				let navAinWei = await getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
-			
-				let navBinWei = await beethovenContract.navBInWei.call();
+
+				let navBinWei = await getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
 
 				let currentTime = await oracleContract.timestamp.call();
-				let numOfPeriods = Math.floor((Number(currentTime.valueOf()) - Number(resetTime))/Number(BeethovenInit.pd));
+				let numOfPeriods = Math.floor(
+					(Number(currentTime.valueOf()) - Number(resetTime)) / Number(BeethovenInit.pd)
+				);
 				let newNavA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
 				assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
 
-			
 				let newNavB;
 				let navParent =
-					(price / price / newBetaAfterRst) * (1 + (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR);
-		
+					(price / price / newBetaAfterRst) *
+					(1 + (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR);
+
 				let navAAdj = (newNavA * (alphaInBP || BeethovenInit.alphaInBP)) / BP_DENOMINATOR;
-				if (navParent <= navAAdj)
-					newNavB = 0;
+				if (navParent <= navAAdj) newNavB = 0;
 				else newNavB = navParent - navAAdj;
 
 				assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
@@ -1523,7 +1598,7 @@ contract('Beethoven', accounts => {
 		it('admin should be able to set createCommission', async () => {
 			let success = await beethovenContract.setValue.call(0, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
-			let createCommInBP = await beethovenContract.createCommInBP.call();
+			let createCommInBP = await getState(beethovenContract, CST.BTV_STATE.CREATE_COMMINBP);
 			let preValue = createCommInBP.valueOf();
 			let tx = await beethovenContract.setValue(0, 50, { from: creator });
 			assert.isTrue(
@@ -1562,7 +1637,7 @@ contract('Beethoven', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set redeemCommInBP');
-			let redeemCommInBP = await beethovenContract.redeemCommInBP.call();
+			let redeemCommInBP = await getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
 			let preValue = redeemCommInBP.valueOf();
 			let tx = await beethovenContract.setValue(1, 100, { from: creator });
 			assert.isTrue(
@@ -1601,7 +1676,10 @@ contract('Beethoven', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set gas threshhold');
-			let iterationGasThreshold = await beethovenContract.iterationGasThreshold.call();
+			let iterationGasThreshold = await getState(
+				beethovenContract,
+				CST.BTV_STATE.ITERATION_GAS_THRESHOLD
+			);
 			let preValue = iterationGasThreshold.valueOf();
 			let tx = await beethovenContract.setValue(2, 100, { from: creator });
 			assert.isTrue(
@@ -1630,7 +1708,10 @@ contract('Beethoven', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set pre reset waiting block');
-			let preResetWaitingBlocks = await beethovenContract.preResetWaitingBlocks.call();
+			let preResetWaitingBlocks = await getState(
+				beethovenContract,
+				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+			);
 			let preValue = preResetWaitingBlocks.valueOf();
 			let tx = await beethovenContract.setValue(3, 100, { from: creator });
 			assert.isTrue(
