@@ -502,7 +502,7 @@ contract Beethoven is Custodian {
 			nextResetAddrIndex,
 			totalUsers(),
 			feeBalanceInWei(),
-			// beethovan
+			// beethoven
 			uint(resetState),
 			alphaInBP,
 			betaInWei,
