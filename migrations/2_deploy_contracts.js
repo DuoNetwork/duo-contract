@@ -1,6 +1,7 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
+const BeethovenTerm = artifacts.require('./BeethovenTerm.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
 const DUO = artifacts.require('./DUO.sol');
@@ -76,6 +77,23 @@ module.exports = async (deployer, network, accounts) => {
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
 		web3.utils.toWei(BeethovenInit.hp),
+		web3.utils.toWei(BeethovenInit.hu),
+		web3.utils.toWei(BeethovenInit.hd),
+		BeethovenInit.comm,
+		BeethovenInit.pd,
+		BeethovenInit.optCoolDown,
+		BeethovenInit.pxFetchCoolDown,
+		BeethovenInit.iteGasTh,
+		BeethovenInit.preResetWaitBlk,
+		web3.utils.toWei(BeethovenInit.minimumBalance + ''),
+		{ from: creator }
+	);
+	await deployer.deploy(
+		BeethovenTerm,
+		Esplanade.address,
+		fc,
+		BeethovenInit.alphaInBP,
+		web3.utils.toWei(BeethovenInit.couponRate),
 		web3.utils.toWei(BeethovenInit.hu),
 		web3.utils.toWei(BeethovenInit.hd),
 		BeethovenInit.comm,
