@@ -32,11 +32,12 @@ const CUSTODIAN_STATE = {
 	CREATE_COMMINBP: 11,
 	REDEEM_COMMINBP: 12,
 	PERIOD: 13,
-	PRERESET_WAITING_BLOCKS: 14,
-	PRICE_FETCH_COOLDOWN: 15,
-	NEXT_RESET_ADDR_INDEX: 16,
-	TOTAL_USERS: 17,
-	FEE_BALANCE_INWEI: 18
+	MATURITY_IN_SECOND: 14,
+	PRERESET_WAITING_BLOCKS: 15,
+	PRICE_FETCH_COOLDOWN: 16,
+	NEXT_RESET_ADDR_INDEX: 17,
+	TOTAL_USERS: 18,
+	FEE_BALANCE_INWEI: 19
 };
 
 const CUSTODIAN_ADDR = {
@@ -77,6 +78,8 @@ contract('Custodian', accounts => {
 		});
 
 		custodianContract = await Custodian.new(
+			'contract code',
+			Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,

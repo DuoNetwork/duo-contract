@@ -31,6 +31,8 @@ contract('Managed', accounts => {
 
 	const initCustodian = async () => {
 		return await Custodian.new(
+			'contract code',
+			0,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,

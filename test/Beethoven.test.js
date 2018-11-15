@@ -26,24 +26,26 @@ const CST = {
 		CREATE_COMMINBP: 13,
 		REDEEM_COMMINBP: 14,
 		PERIOD: 15,
-		PRERESET_WAITING_BLOCKS: 16,
-		PRICE_FETCH_COOLDOWN: 17,
-		NEXT_RESET_ADDR_INDEX: 18,
-		TOTAL_USERS: 19,
-		FEE_BALANCE_INWEI: 20,
-		RESET_STATE: 21,
-		ALPHA_INBP: 22,
-		BETA_INWEI: 23,
-		PERIOD_COUPON_INWEI: 24,
-		LIMIT_PERIODIC_INWEI: 25,
-		LIMIT_UPPER_INWEI: 26,
-		LIMIT_LOWER_INWEI: 27,
-		ITERATION_GAS_THRESHOLD: 28
+		MATURITY_IN_SECOND: 16,
+		PRERESET_WAITING_BLOCKS: 17,
+		PRICE_FETCH_COOLDOWN: 18,
+		NEXT_RESET_ADDR_INDEX: 19,
+		TOTAL_USERS: 20,
+		FEE_BALANCE_INWEI: 21,
+		RESET_STATE: 22,
+		ALPHA_INBP: 23,
+		BETA_INWEI: 24,
+		PERIOD_COUPON_INWEI: 25,
+		LIMIT_PERIODIC_INWEI: 26,
+		LIMIT_UPPER_INWEI: 27,
+		LIMIT_LOWER_INWEI: 28,
+		ITERATION_GAS_THRESHOLD: 29
 	}
 };
 
 // Event
 const EVENT_ACCEPT_PX = 'AcceptPrice';
+const EVENT_MATURIED = 'Matured';
 const EVENT_START_TRADING = 'StartTrading';
 const EVENT_CREATE = 'Create';
 const EVENT_REDEEM = 'Redeem';
@@ -56,6 +58,7 @@ const STATE_INCEPTION = '0';
 const STATE_TRADING = '1';
 const STATE_PRE_RESET = '2';
 const STATE_RESET = '3';
+const STATE_MATURITY = '4';
 
 const STATE_UPWARD_RESET = '0';
 const STATE_DOWNWARD_RESET = '1';
@@ -67,6 +70,9 @@ const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 const A_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
 const B_ADDR = '0x424325334C3537A6248E09E1Dc392C003d8706Db';
 
+const PERTETUAL_NAME = 'beethoven perpetual';
+const TERM_NAME = 'beethoven term6';
+
 const getState = async (beethovenContract, index) => {
 	let _states = await beethovenContract.getStates.call();
 	return _states[index];
@@ -74,7 +80,7 @@ const getState = async (beethovenContract, index) => {
 
 const assertState = async (beethovenContract, state) => {
 	let _state = await getState(beethovenContract, CST.BTV_STATE.STATE);
-	assert.isTrue(util.isEqual(_state.valueOf(), state));
+	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
 };
 
 const assertResetState = async (beethovenContract, state) => {
@@ -100,12 +106,14 @@ contract('Beethoven', accounts => {
 	const WEI_DENOMINATOR = 1e18;
 	const BP_DENOMINATOR = 10000;
 
-	const initContracts = async (alphaInBP = 0) => {
+	const initContracts = async (alphaInBP = 0, name, maturity) => {
 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
 
 		beethovenContract = await Beethoven.new(
+			name,
+			maturity,
 			roleManagerContract.address,
 			fc,
 			alphaInBP ? alphaInBP : BeethovenInit.alphaInBP,
@@ -142,108 +150,148 @@ contract('Beethoven', accounts => {
 	};
 
 	describe('constructor', () => {
-		before(initContracts);
+		function constructorTest(alphaInBP, name, maturity) {
+			before(() => initContracts(alphaInBP, name, maturity));
 
-		it('alpha should be set correctly', async () => {
-			let alpha = await getState(beethovenContract, CST.BTV_STATE.ALPHA_INBP);
-			assert.equal(alpha.valueOf(), BeethovenInit.alphaInBP, 'alpha set incorrectly');
+			it('contract code should be set correctly', async () => {
+				let contractCode = await beethovenContract.contractCode.call();
+				assert.equal(contractCode.valueOf(), name, 'alpha set incorrectly');
+			});
+
+			it('maturity should be set correctly', async () => {
+				let contractMaturity = await getState(
+					beethovenContract,
+					CST.BTV_STATE.MATURITY_IN_SECOND
+				);
+				assert.isTrue(
+					util.isEqual(contractMaturity.valueOf(), maturity),
+					'alpha set incorrectly'
+				);
+			});
+
+			it('alpha should be set correctly', async () => {
+				let alpha = await getState(beethovenContract, CST.BTV_STATE.ALPHA_INBP);
+				assert.isTrue(
+					util.isEqual(alpha.valueOf(), alphaInBP ? alphaInBP : BeethovenInit.alphaInBP),
+					'alpha set incorrectly'
+				);
+			});
+
+			it('period should be set correctly', async () => {
+				let pd = await getState(beethovenContract, CST.BTV_STATE.PERIOD);
+				assert.equal(pd.valueOf(), BeethovenInit.pd, 'period set incorrectly');
+			});
+
+			it('limitPeriodicInWei should be set correctly', async () => {
+				let limitPeriodicInWei = await getState(
+					beethovenContract,
+					CST.BTV_STATE.LIMIT_PERIODIC_INWEI
+				);
+				assert.equal(
+					util.fromWei(limitPeriodicInWei),
+					BeethovenInit.hp + '',
+					'limitPeriodicInWei set incorrectly'
+				);
+			});
+
+			it('limitUpperInWei should be set correctly', async () => {
+				let limitUpperInWei = await getState(
+					beethovenContract,
+					CST.BTV_STATE.LIMIT_UPPER_INWEI
+				);
+				assert.isTrue(
+					util.isEqual(util.fromWei(limitUpperInWei), BeethovenInit.hu),
+					'limitUpperInWei set incorrectly'
+				);
+			});
+
+			it('limitLowerInWei should be set correctly', async () => {
+				let limitLowerInWei = await getState(
+					beethovenContract,
+					CST.BTV_STATE.LIMIT_LOWER_INWEI
+				);
+				assert.equal(
+					util.fromWei(limitLowerInWei),
+					BeethovenInit.hd + '',
+					'limitLowerInWei set incorrectly'
+				);
+			});
+
+			it('iterationGasThreshold should be set correctly', async () => {
+				let iterationGasThreshold = await getState(
+					beethovenContract,
+					CST.BTV_STATE.ITERATION_GAS_THRESHOLD
+				);
+				assert.equal(
+					iterationGasThreshold.valueOf(),
+					process.env.SOLIDITY_COVERAGE
+						? BeethovenInit.iteGasThSC
+						: BeethovenInit.iteGasTh,
+					'iterationGasThreshold set incorrectly'
+				);
+			});
+
+			it('createCommInBP should be set correctly', async () => {
+				let createCommInBP = await getState(
+					beethovenContract,
+					CST.BTV_STATE.CREATE_COMMINBP
+				);
+				assert.equal(
+					createCommInBP.valueOf(),
+					BeethovenInit.comm + '',
+					'createCommInBP set incorrectly'
+				);
+			});
+
+			it('redeemCommInBP should be set correctly', async () => {
+				let comm = await getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
+				assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP set incorrectly');
+			});
+
+			it('bAdj should be set correctly', async () => {
+				let bAdj = await beethovenContract.getBadj.call();
+				assert.equal(util.fromWei(bAdj), '2', 'bAdj set incorrectly');
+			});
+
+			it('preResetWaitingBlocks should be set correctly', async () => {
+				let preResetWaitingBlocks = await getState(
+					beethovenContract,
+					CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+				);
+				assert.equal(
+					preResetWaitingBlocks.valueOf(),
+					BeethovenInit.preResetWaitBlk + '',
+					'preResetWaitingBlocks set incorrectly'
+				);
+			});
+
+			it('minimumBalance should be set correctly', async () => {
+				let minBalance = await getState(beethovenContract, CST.BTV_STATE.MIN_BALANCE);
+				assert.equal(
+					util.fromWei(minBalance.valueOf()),
+					BeethovenInit.minimumBalance + '',
+					'preResetWaitingBlocks set incorrectly'
+				);
+			});
+		}
+
+		//case 1: Perpetual tEST
+		describe('Perpetual case 1', () => {
+			constructorTest(0, PERTETUAL_NAME, 0);
 		});
 
-		it('period should be set correctly', async () => {
-			let pd = await getState(beethovenContract, CST.BTV_STATE.PERIOD);
-			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period set incorrectly');
-		});
-
-		it('limitPeriodicInWei should be set correctly', async () => {
-			let limitPeriodicInWei = await getState(
-				beethovenContract,
-				CST.BTV_STATE.LIMIT_PERIODIC_INWEI
-			);
-			assert.equal(
-				util.fromWei(limitPeriodicInWei),
-				BeethovenInit.hp + '',
-				'limitPeriodicInWei set incorrectly'
-			);
-		});
-
-		it('limitUpperInWei should be set correctly', async () => {
-			let limitUpperInWei = await getState(
-				beethovenContract,
-				CST.BTV_STATE.LIMIT_UPPER_INWEI
-			);
-			assert.isTrue(
-				util.isEqual(util.fromWei(limitUpperInWei), BeethovenInit.hu),
-				'limitUpperInWei set incorrectly'
-			);
-		});
-
-		it('limitLowerInWei should be set correctly', async () => {
-			let limitLowerInWei = await getState(
-				beethovenContract,
-				CST.BTV_STATE.LIMIT_LOWER_INWEI
-			);
-			assert.equal(
-				util.fromWei(limitLowerInWei),
-				BeethovenInit.hd + '',
-				'limitLowerInWei set incorrectly'
-			);
-		});
-
-		it('iterationGasThreshold should be set correctly', async () => {
-			let iterationGasThreshold = await getState(
-				beethovenContract,
-				CST.BTV_STATE.ITERATION_GAS_THRESHOLD
-			);
-			assert.equal(
-				iterationGasThreshold.valueOf(),
-				process.env.SOLIDITY_COVERAGE ? BeethovenInit.iteGasThSC : BeethovenInit.iteGasTh,
-				'iterationGasThreshold set incorrectly'
-			);
-		});
-
-		it('createCommInBP should be set correctly', async () => {
-			let createCommInBP = await getState(beethovenContract, CST.BTV_STATE.CREATE_COMMINBP);
-			assert.equal(
-				createCommInBP.valueOf(),
-				BeethovenInit.comm + '',
-				'createCommInBP set incorrectly'
-			);
-		});
-
-		it('redeemCommInBP should be set correctly', async () => {
-			let comm = await getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
-			assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP set incorrectly');
-		});
-
-		it('bAdj should be set correctly', async () => {
-			let bAdj = await beethovenContract.getBadj.call();
-			assert.equal(util.fromWei(bAdj), '2', 'bAdj set incorrectly');
-		});
-
-		it('preResetWaitingBlocks should be set correctly', async () => {
-			let preResetWaitingBlocks = await getState(
-				beethovenContract,
-				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
-			);
-			assert.equal(
-				preResetWaitingBlocks.valueOf(),
-				BeethovenInit.preResetWaitBlk + '',
-				'preResetWaitingBlocks set incorrectly'
-			);
-		});
-
-		it('minimumBalance should be set correctly', async () => {
-			let minBalance = await getState(beethovenContract, CST.BTV_STATE.MIN_BALANCE);
-			assert.equal(
-				util.fromWei(minBalance.valueOf()),
-				BeethovenInit.minimumBalance + '',
-				'preResetWaitingBlocks set incorrectly'
+		//case 2: Term tEST
+		describe('Term case 2', () => {
+			constructorTest(
+				0,
+				TERM_NAME,
+				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
 			);
 		});
 	});
 
 	describe('startCustodian', () => {
-		before(initContracts);
+		before(() => initContracts(0, PERTETUAL_NAME, 0));
 		let time;
 
 		it('state should be Inception before starting', async () => {
@@ -349,71 +397,156 @@ contract('Beethoven', accounts => {
 	});
 
 	describe('fetchPrice', () => {
-		let time;
-		beforeEach(async () => {
-			await initContracts();
-			time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
+		function fetchPriceTest(alphaInBP, name, maturity) {
+			let time;
+			let initTime;
+			beforeEach(async () => {
+				await initContracts(alphaInBP, name, maturity);
+				time = await oracleContract.timestamp.call();
+				initTime = time;
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+					from: creator
+				});
 			});
-		});
 
-		it('should not fetch price 0', async () => {
-			await oracleContract.skipCooldown(1);
-			time = await oracleContract.timestamp.call();
-			await beethovenContract.setTimestamp(time.valueOf());
-			await oracleContract.setLastPrice(0, time.valueOf(), pf1);
-			try {
-				await beethovenContract.fetchPrice();
-				assert.isTrue(false, 'fetched price 0');
-			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+			it('should not fetch price 0', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await beethovenContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(0, time.valueOf(), pf1);
+				try {
+					await beethovenContract.fetchPrice();
+					assert.isTrue(false, 'fetched price 0');
+				} catch (err) {
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should not fetch price with future time', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await beethovenContract.setTimestamp(time.valueOf() - 1);
+				await oracleContract.setLastPrice(100, time.valueOf(), pf1);
+				try {
+					await beethovenContract.fetchPrice();
+					assert.isTrue(false, 'fetched with future time');
+				} catch (err) {
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should not fetch withinCoolDown', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await beethovenContract.setTimestamp(
+					time.valueOf() - BeethovenInit.pxFetchCoolDown / 2
+				);
+				await oracleContract.setLastPrice(100, time.valueOf(), pf1);
+				try {
+					await beethovenContract.fetchPrice();
+					assert.isTrue(false, 'can fetch within cool down');
+				} catch (err) {
+					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should fetch price', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await beethovenContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				let tx = await beethovenContract.fetchPrice();
+				assert.isTrue(
+					tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX,
+					'wrong event'
+				);
+				assert.isTrue(
+					util.isEqual(
+						util.fromWei(tx.logs[0].args.priceInWei),
+						ethInitPrice.toString()
+					) && util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), time.valueOf()),
+					'wrong event args'
+				);
+			});
+
+			// test for maturity
+			if (maturity > 0) {
+				it('should transit to maturity', async () => {
+					await oracleContract.skipCooldown(6 * 30 * 24 + 1);
+					time = await oracleContract.timestamp.call();
+					await beethovenContract.setTimestamp(time.valueOf());
+					await oracleContract.setLastPrice(
+						util.toWei(ethInitPrice),
+						time.valueOf(),
+						pf1
+					);
+					let tx = await beethovenContract.fetchPrice();
+
+					let navAinWei = await getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
+					let currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
+
+					let navBinWei = await getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
+					let currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
+
+					let currentTime = await oracleContract.timestamp.call();
+					let numOfPeriods = Math.floor(
+						(Number(currentTime.valueOf()) - Number(initTime.valueOf())) /
+							Number(BeethovenInit.pd)
+					);
+					let newNavA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
+					assert.isTrue(
+						util.isEqual(currentNavA, newNavA, true),
+						'NavA is updated wrongly'
+					);
+
+					let newNavB;
+					let navParent = 1 + (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
+
+					let navAAdj =
+						(newNavA * (alphaInBP || BeethovenInit.alphaInBP)) / BP_DENOMINATOR;
+					if (navParent <= navAAdj) newNavB = 0;
+					else newNavB = navParent - navAAdj;
+
+					assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
+
+					assert.isTrue(
+						tx.logs.length === 2 &&
+							tx.logs[1].event === EVENT_ACCEPT_PX &&
+							tx.logs[0].event === EVENT_MATURIED,
+						'wrong event'
+					);
+					assert.isTrue(
+						util.isEqual(
+							util.fromWei(tx.logs[1].args.priceInWei),
+							ethInitPrice.toString()
+						) && util.isEqual(tx.logs[1].args.timeInSecond.valueOf(), time.valueOf()),
+						'wrong event args'
+					);
+
+					await assertState(beethovenContract, STATE_MATURITY);
+
+					try {
+						await beethovenContract.fetchPrice();
+						assert.isTrue(false, 'fetched price 0');
+					} catch (err) {
+						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					}
+				});
 			}
+		}
+
+		//case 1: Perpetual tEST
+		describe('Perpetual case 1', () => {
+			fetchPriceTest(0, PERTETUAL_NAME, 0);
 		});
 
-		it('should not fetch price with future time', async () => {
-			await oracleContract.skipCooldown(1);
-			time = await oracleContract.timestamp.call();
-			await beethovenContract.setTimestamp(time.valueOf() - 1);
-			await oracleContract.setLastPrice(100, time.valueOf(), pf1);
-			try {
-				await beethovenContract.fetchPrice();
-				assert.isTrue(false, 'fetched with future time');
-			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
-			}
-		});
-
-		it('should not fetch withinCoolDown', async () => {
-			await oracleContract.skipCooldown(1);
-			time = await oracleContract.timestamp.call();
-			await beethovenContract.setTimestamp(
-				time.valueOf() - BeethovenInit.pxFetchCoolDown / 2
-			);
-			await oracleContract.setLastPrice(100, time.valueOf(), pf1);
-			try {
-				await beethovenContract.fetchPrice();
-				assert.isTrue(false, 'can fetch within cool down');
-			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
-			}
-		});
-
-		it('should fetch price', async () => {
-			await oracleContract.skipCooldown(1);
-			time = await oracleContract.timestamp.call();
-			await beethovenContract.setTimestamp(time.valueOf());
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			let tx = await beethovenContract.fetchPrice();
-			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX,
-				'wrong event'
-			);
-			assert.isTrue(
-				util.isEqual(util.fromWei(tx.logs[0].args.priceInWei), ethInitPrice.toString()) &&
-					util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), time.valueOf()),
-				'wrong event args'
+		//case 2: Term tEST
+		describe('Term case 2', () => {
+			fetchPriceTest(
+				0,
+				TERM_NAME,
+				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
 			);
 		});
 	});
@@ -429,7 +562,7 @@ contract('Beethoven', accounts => {
 			let accumulatedFeeAfterWithdrawal;
 			let totalSupplyA, totalSupplyB;
 			before(async () => {
-				await initContracts();
+				await initContracts(0, PERTETUAL_NAME, 0);
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
@@ -691,7 +824,7 @@ contract('Beethoven', accounts => {
 		let totalSupplyA, totalSupplyB;
 
 		before(async () => {
-			await initContracts();
+			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
@@ -826,9 +959,92 @@ contract('Beethoven', accounts => {
 		});
 	});
 
+	describe('redempAll', () => {
+		let prevBalanceA, prevBalanceB, navA, navB;
+
+		before(async () => {
+			await initContracts(
+				0,
+				TERM_NAME,
+				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
+			);
+			let time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
+				from: creator
+			});
+			await beethovenContract.create({ from: alice, value: util.toWei(1) });
+			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
+			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
+		});
+
+		it('should not redeemAll in non maturity state', async () => {
+			try {
+				await beethovenContract.redeemAll({
+					from: alice
+				});
+				assert.isTrue(false, 'able to redeem in trading state');
+			} catch (err) {
+				assert.equal(err.message, util.VM_REVERT_MSG, 'able to redeem in trading state');
+			}
+		});
+
+		it('should not redeemAll in balance is 0 state', async () => {
+			await oracleContract.skipCooldown(6 * 30 * 24 + 1);
+			let time = await oracleContract.timestamp.call();
+			await beethovenContract.setTimestamp(time.valueOf());
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+			await beethovenContract.fetchPrice();
+			navA = util.fromWei(await getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI));
+			navB = util.fromWei(await getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI));
+
+			try {
+				await beethovenContract.redeemAll({
+					from: bob
+				});
+				assert.isTrue(false, 'able to redeemAll with 0 balance');
+			} catch (err) {
+				assert.equal(err.message, util.VM_REVERT_MSG, 'able to redeemAll with 0 balance');
+			}
+		});
+
+		it('should redeemAll', async () => {
+			let tx = await beethovenContract.redeemAll({
+				from: alice
+			});
+
+			assert.isTrue(
+				tx.logs.length === 2 &&
+					tx.logs[0].event === EVENT_REDEEM &&
+					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+				'wrong event'
+			);
+
+			let ethAmt =
+				(util.fromWei(prevBalanceA) * navA + util.fromWei(prevBalanceB) * navB) /
+				ethInitPrice;
+			let redeemedAmt = ethAmt * (1 - BeethovenInit.comm / 10000);
+			let fee = (ethAmt * BeethovenInit.comm) / 10000;
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), redeemedAmt, true) &&
+					util.isEqual(tx.logs[0].args.sender.valueOf(), alice) &&
+					util.isEqual(tx.logs[0].args.tokenAInWei.valueOf(), prevBalanceA.valueOf()) &&
+					util.isEqual(tx.logs[0].args.tokenBInWei.valueOf(), prevBalanceB.valueOf()) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.feeInWei.valueOf()), fee),
+				'wrong event args'
+			);
+
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei.valueOf()), 0) &&
+					util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyBInWei.valueOf()), 0),
+				'wrong event args'
+			);
+		});
+	});
+
 	describe('nav calculation', () => {
 		before(async () => {
-			await initContracts();
+			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
@@ -906,7 +1122,7 @@ contract('Beethoven', accounts => {
 
 	describe('pre reset', () => {
 		before(async () => {
-			await initContracts();
+			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
@@ -1156,7 +1372,7 @@ contract('Beethoven', accounts => {
 			let newBetaAfterRst;
 
 			before(async () => {
-				await initContracts(alphaInBP);
+				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
@@ -1583,7 +1799,7 @@ contract('Beethoven', accounts => {
 
 	describe('setValue', () => {
 		before(async () => {
-			await initContracts();
+			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {

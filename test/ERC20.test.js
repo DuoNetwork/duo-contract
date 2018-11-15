@@ -42,6 +42,8 @@ contract('ERC20Token', accounts => {
 				from: creator
 			});
 			beethovenContract = await Beethoven.new(
+				'contract code',
+				0,
 				roleManagerContract.address,
 				fc,
 				BeethovenInit.alphaInBP,

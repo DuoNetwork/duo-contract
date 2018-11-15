@@ -54,6 +54,8 @@ contract('Esplanade', accounts => {
 
 	const initCustodian = async () => {
 		return await Custodian.new(
+			'Contract Code',
+			0,
 			roleManagerContract.address,
 			fc,
 			BeethovenInit.comm,
@@ -587,6 +589,8 @@ contract('Esplanade', accounts => {
 				// let netModerator = tx.logs[0].args.newModerator;
 				await roleManagerContract.skipCooldown(1);
 				let newCustodianContract = await Custodian.new(
+					'contract code',
+					0,
 					roleManagerContract.address,
 					fc,
 					BeethovenInit.comm,
