@@ -1,10 +1,10 @@
 {
-	"Beethoven": {
-		"name": "beethoven pertetual",
-		"maturity": 0,
+	"Beethoven6M": {
+		"name": "B-M19",
+		"maturity": 1530187200,
 		"alphaInBP": 10000,
-		"couponRate": "0.000017",
-		"hp": "1.035",
+		"couponRate": "0.000006",
+		"hp": "0",  
 		"hu": "2.0",
 		"hd": "0.25",
 		"comm": 100,
@@ -14,21 +14,47 @@
 		"iteGasTh": 65000,
 		"iteGasThSC": 105000,
 		"preResetWaitBlk": 10,
-		"minimumBalance": 0.01
+		"minimumBalance": 0.01,
+		"TokenA": {
+			"tokenName": "B-M19-I0",
+			"tokenSymbol": "B-M19-I0"
+		},
+		"TokenB": {
+			"tokenName": "B-M19-L2",
+			"tokenSymbol": "B-M19-L2"
+		}
+	},
+	"BeethovenPPT": {
+		"name": "B-PPT",
+		"maturity": 0,
+		"alphaInBP": 10000,
+		"couponRate": "0.000006",
+		"hp": "1.013",  
+		"hu": "2.0",
+		"hd": "0.25",
+		"comm": 100,
+		"pd": 3600,
+		"optCoolDown": 86400,
+		"pxFetchCoolDown": 3000,
+		"iteGasTh": 65000,
+		"iteGasThSC": 105000,
+		"preResetWaitBlk": 10,
+		"minimumBalance": 0.01,
+		"TokenA": {
+			"tokenName": "B-PPT-I0",
+			"tokenSymbol": "B-PPT-I0"
+		},
+		"TokenB": {
+			"tokenName": "B-PPT-L2",
+			"tokenSymbol": "B-PPT-L2"
+		}
 	},
 	"DUO": {
 		"initSupply": "100000000",
 		"tokenName": "Test DUO Network Token",
 		"tokenSymbol": "DUO"
 	},
-	"TokenA": {
-		"tokenName": "Test TokenA",
-		"tokenSymbol": "TKA"
-	},
-	"TokenB": {
-		"tokenName": "Test TokenB",
-		"tokenSymbol": "TKB"
-	},
+	
 	"RoleManager": {
 		"optCoolDown": 86400
 	},
