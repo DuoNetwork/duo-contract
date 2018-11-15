@@ -85,6 +85,7 @@ contract BeethovenBase is Custodian {
      * Public Functions
      */
 	/// @dev startCustodian
+	/// @param maturityInSecond maturity period, for example, one mongh contract would be 30  * 24 * 60 * 60
 	///	@param aAddr contract address of Class A
 	///	@param bAddr contract address of Class B
 	///	@param oracleAddr contract address of Oracle
@@ -99,7 +100,6 @@ contract BeethovenBase is Custodian {
 		only(operator)
 		returns (bool success) 
 	{	
-		
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		oracleAddress = oracleAddr;
