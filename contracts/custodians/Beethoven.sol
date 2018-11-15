@@ -87,12 +87,12 @@ contract BeethovenBase is Custodian {
      * Public Functions
      */
 	/// @dev startCustodian
-	/// @param maturityPeriodInSecond maturity period, for example, one mongh contract would be 30  * 24 * 60 * 60
+	/// @param maturity marutity time
 	///	@param aAddr contract address of Class A
 	///	@param bAddr contract address of Class B
 	///	@param oracleAddr contract address of Oracle
 	function startCustodian(
-		uint maturityPeriodInSecond,
+		uint maturity,
 		address aAddr,
 		address bAddr,
 		address oracleAddr
@@ -114,7 +114,7 @@ contract BeethovenBase is Custodian {
 		resetPriceTimeInSecond = timeInSecond;
 		roleManager = IMultiSigManager(roleManagerAddress);
 		state = State.Trading;
-		maturityInSecond = maturityPeriodInSecond + timeInSecond;
+		maturityInSecond = maturity;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
 		return true;
