@@ -6,7 +6,7 @@ import { Custodian } from "./Custodian.sol";
 
 /// @title Beethoven - dual class token contract
 /// @author duo.network
-contract BeethovenBase is Custodian {
+contract Beethoven is Custodian {
 	/*
      * Storage
      */

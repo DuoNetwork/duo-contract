@@ -1,8 +1,8 @@
 pragma solidity ^0.4.24;
 
-import { BeethovenBase } from "../custodians/BeethovenBase.sol";
+import { Beethoven } from "../custodians/Beethoven.sol";
 
-contract BeethovenMock is BeethovenBase {
+contract BeethovenMock is Beethoven {
 
 	uint public timestamp = now;
 
@@ -23,7 +23,7 @@ contract BeethovenMock is BeethovenBase {
 		uint iteGasTh,
 		uint preResetWaitBlk,
 		uint minimumBalance
-	) BeethovenBase (
+	) Beethoven (
 		name,
 		maturity,
 		poolAddress,

@@ -1,6 +1,6 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
-const BeethovenBase = artifacts.require('./BeethovenBase.sol');
+const Beethoven = artifacts.require('./Beethoven.sol');
 // const BeethovenTerm = artifacts.require('./BeethovenTerm.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
@@ -51,7 +51,7 @@ module.exports = async (deployer, network, accounts) => {
 	await deployer.deploy(SafeMath, {
 		from: creator
 	});
-	await deployer.link(SafeMath, [BeethovenBase, Magi]);
+	await deployer.link(SafeMath, [Beethoven, Magi]);
 
 	// 950268
 	await deployer.deploy(
@@ -89,7 +89,7 @@ module.exports = async (deployer, network, accounts) => {
 	// 	{ from: creator }
 	// );
 	await deployer.deploy(
-		BeethovenBase,
+		Beethoven,
 		BeethovenInit.name,
 		BeethovenInit.maturity,
 		Esplanade.address,
@@ -128,7 +128,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenA,
 		TokenAInit.tokenName,
 		TokenAInit.tokenSymbol,
-		BeethovenBase.address,
+		Beethoven.address,
 		{
 			from: creator
 		}
@@ -138,7 +138,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenB,
 		TokenBInit.tokenName,
 		TokenBInit.tokenSymbol,
-		BeethovenBase.address,
+		Beethoven.address,
 		{ from: creator }
 	);
 };
