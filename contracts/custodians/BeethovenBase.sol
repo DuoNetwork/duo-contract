@@ -43,7 +43,7 @@ contract BeethovenBase is Custodian {
      * Constructor
      */
 	constructor(
-		string name,
+		string code,
 		uint maturity,
 		address roleManagerAddr,
 		address fc,
@@ -62,7 +62,7 @@ contract BeethovenBase is Custodian {
 		) 
 		public 
 		Custodian ( 
-		name,
+		code,
 		maturity,
 		roleManagerAddr,
 		fc,

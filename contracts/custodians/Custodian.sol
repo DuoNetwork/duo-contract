@@ -25,7 +25,7 @@ contract Custodian is Managed {
      * Storage
      */
 	IOracle oracle;
-	string public contractName;
+	string public contractCode;
 	address feeCollector;
 	address oracleAddress;
 	address aTokenAddress;
@@ -87,7 +87,7 @@ contract Custodian is Managed {
      *  Constructor
      */
 	/// @dev Contract constructor sets operation cool down and set address pool status.
-	///	@param name contract name
+	///	@param code contract name
 	///	@param maturity marutiry time in second
 	///	@param roleManagerAddr roleManagerContract Address
 	///	@param fc feeCollector address
@@ -99,7 +99,7 @@ contract Custodian is Managed {
 	///	@param optCoolDown operation cooldown
 	///	@param minimumBalance niminum balance required
 	constructor(
-		string name,
+		string code,
 		uint maturity,
 		address roleManagerAddr,
 		address fc,
@@ -114,7 +114,7 @@ contract Custodian is Managed {
 		public
 		Managed(roleManagerAddr, opt, optCoolDown) 
 	{
-		contractName = name;
+		contractCode = code;
 		maturityInSecond = maturity;
 		state = State.Inception;
 		feeCollector = fc;
