@@ -102,6 +102,7 @@ contract CustodianMock is Custodian {
 			createCommInBP,
 			redeemCommInBP,
 			period,
+			maturityInSecond,
 			preResetWaitingBlocks,
 			priceFetchCoolDown,
 			nextResetAddrIndex,

@@ -3,13 +3,10 @@ import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
-// import { SafeMath } from "../common/SafeMath.sol";
 
 /// @title Beethoven - dual class token contract
 /// @author duo.network
-contract Beethoven is Custodian {
-	// using SafeMath for uint;
-
+contract BeethovenBase is Custodian {
 	/*
      * Storage
      */
@@ -23,7 +20,7 @@ contract Beethoven is Custodian {
 	uint alphaInBP;
 	uint betaInWei = WEI_DENOMINATOR;
 	uint periodCouponInWei; 
-	uint limitPeriodicInWei; 
+	uint limitPeriodicInWei; // set to 0 to disable periodic reset
 	uint limitUpperInWei; 
 	uint limitLowerInWei;
 	uint iterationGasThreshold;
@@ -92,6 +89,7 @@ contract Beethoven is Custodian {
 	///	@param bAddr contract address of Class B
 	///	@param oracleAddr contract address of Oracle
 	function startCustodian(
+		uint maturity,
 		address aAddr,
 		address bAddr,
 		address oracleAddr
@@ -101,6 +99,7 @@ contract Beethoven is Custodian {
 		only(operator)
 		returns (bool success) 
 	{	
+		maturityInSecond = maturity;
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		oracleAddress = oracleAddr;
@@ -202,6 +201,31 @@ contract Beethoven is Custodian {
 			.mul(WEI_DENOMINATOR)
 			.div(resetPriceInWei)
 			.div(betaInWei);
+		return redeemInternal(sender, ethAmtInWei, deductAmtInWeiA, deductAmtInWeiB);
+	}
+
+	function redeemAll() public inState(State.Matured) returns (bool success) {
+		address sender = msg.sender;
+		uint balanceAInWei = balanceOf[0][sender];
+		uint balanceBInWei = balanceOf[1][sender];
+		require(balanceAInWei > 0 || balanceBInWei > 0);
+		uint ethAmtInWei = balanceAInWei
+			.mul(navAInWei)
+			.add(balanceBInWei
+				.mul(navBInWei))
+			.div(lastPriceInWei);
+		return redeemInternal(sender, ethAmtInWei, balanceAInWei, balanceBInWei);
+	}
+
+	function redeemInternal(
+		address sender, 
+		uint ethAmtInWei, 
+		uint deductAmtInWeiA, 
+		uint deductAmtInWeiB) 
+		internal 
+		returns(bool) 
+	{
+		require(ethAmtInWei > 0);
 		ethCollateralInWei = ethCollateralInWei.sub(ethAmtInWei);
 		uint feeInWei;
 		(ethAmtInWei,  feeInWei) = deductFee(ethAmtInWei, redeemCommInBP);
@@ -252,7 +276,10 @@ contract Beethoven is Custodian {
 			resetPriceInWei, 
 			resetPriceTimeInSecond, 
 			betaInWei);
-		if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || navAInWei >= limitPeriodicInWei) {
+		if (maturityInSecond > 0 && timeInSecond > maturityInSecond) {
+			state = State.Matured;
+			emit Matured(navAInWei, navBInWei);
+		} else if (navBInWei >= limitUpperInWei || navBInWei <= limitLowerInWei || (limitPeriodicInWei > 0 && navAInWei >= limitPeriodicInWei)) {
 			state = State.PreReset;
 			lastPreResetBlockNo = block.number;
 			emit StartPreReset();
@@ -332,7 +359,7 @@ contract Beethoven is Custodian {
 							.mul(newBFromBPerB))
 						.div(WEI_DENOMINATOR)
 				);
-			} else if(navBInWei <= limitLowerInWei) {
+			} else if (navBInWei <= limitLowerInWei) {
 				state = State.Reset;
 				resetState = ResetState.DownwardReset;
 				betaInWei = WEI_DENOMINATOR;
@@ -346,7 +373,7 @@ contract Beethoven is Custodian {
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
 				totalSupplyA = totalSupplyA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
 				totalSupplyB = totalSupplyB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
-			} else { // navAInWei >= limitPeriodicInWei
+			} else { // limitPeriodicInWei > 0 && navAInWei >= limitPeriodicInWei
 				state = State.Reset;
 				resetState = ResetState.PeriodicReset;
 				uint num = alphaInBP
@@ -497,6 +524,7 @@ contract Beethoven is Custodian {
 			createCommInBP,
 			redeemCommInBP,
 			period,
+			maturityInSecond,
 			preResetWaitingBlocks,
 			priceFetchCoolDown,
 			nextResetAddrIndex,

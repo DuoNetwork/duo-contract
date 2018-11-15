@@ -17,7 +17,8 @@ contract Custodian is Managed {
 		Inception,
 		Trading,
 		PreReset,
-		Reset
+		Reset,
+		Matured
 	}
 
 	/*
@@ -46,6 +47,7 @@ contract Custodian is Managed {
 	uint createCommInBP;
 	uint redeemCommInBP;
 	uint period;
+	uint maturityInSecond; // set to 0 for perpetuals
 	uint preResetWaitingBlocks;
 	uint priceFetchCoolDown;
 	
@@ -67,6 +69,7 @@ contract Custodian is Managed {
 	event StartTrading(uint navAInWei, uint navBInWei);
 	event StartPreReset();
 	event StartReset(uint nextIndex, uint total);
+	event Matured(uint navAInWei, uint navBInWei);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond, uint navAInWei, uint navBInWei);
 	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
 	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
