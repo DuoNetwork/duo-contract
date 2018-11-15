@@ -25,6 +25,7 @@ contract Custodian is Managed {
      * Storage
      */
 	IOracle oracle;
+	string public contractName;
 	address feeCollector;
 	address oracleAddress;
 	address aTokenAddress;
@@ -95,6 +96,7 @@ contract Custodian is Managed {
 	///	@param opt operator
 	///	@param optCoolDown operation cooldown
 	constructor(
+		string name,
 		address roleManagerAddr,
 		address fc,
 		uint comm,
@@ -108,6 +110,7 @@ contract Custodian is Managed {
 		public
 		Managed(roleManagerAddr, opt, optCoolDown) 
 	{
+		contractName = name;
 		state = State.Inception;
 		feeCollector = fc;
 		createCommInBP = comm;
