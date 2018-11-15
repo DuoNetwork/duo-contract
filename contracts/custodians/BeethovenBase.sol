@@ -506,7 +506,7 @@ contract BeethovenBase is Custodian {
 	}
 	// end of operator functions
 
-	function getStates() public view returns (uint[29]) {
+	function getStates() public view returns (uint[30]) {
 		return [
 			// managed
 			lastOperationTime,

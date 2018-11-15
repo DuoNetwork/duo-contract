@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import { BeethovenBase } from "../custodians/Beethoven.sol";
+import { BeethovenBase } from "../custodians/BeethovenBase.sol";
 
 contract BeethovenMock is BeethovenBase {
 

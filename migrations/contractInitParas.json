@@ -1,5 +1,7 @@
 {
 	"Beethoven": {
+		"name": "beethoven pertetual",
+		"maturity": 0,
 		"alphaInBP": 10000,
 		"couponRate": "0.000017",
 		"hp": "1.035",

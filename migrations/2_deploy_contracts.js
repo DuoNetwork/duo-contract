@@ -1,7 +1,7 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
-const Beethoven = artifacts.require('./Beethoven.sol');
-const BeethovenTerm = artifacts.require('./BeethovenTerm.sol');
+const BeethovenBase = artifacts.require('./BeethovenBase.sol');
+// const BeethovenTerm = artifacts.require('./BeethovenTerm.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
 const DUO = artifacts.require('./DUO.sol');
@@ -51,7 +51,7 @@ module.exports = async (deployer, network, accounts) => {
 	await deployer.deploy(SafeMath, {
 		from: creator
 	});
-	await deployer.link(SafeMath, [Beethoven, Magi]);
+	await deployer.link(SafeMath, [BeethovenBase, Magi]);
 
 	// 950268
 	await deployer.deploy(
@@ -70,30 +70,33 @@ module.exports = async (deployer, network, accounts) => {
 	});
 
 	// 6709109
+	// await deployer.deploy(
+	// 	Beethoven,
+	// 	Esplanade.address,
+	// 	fc,
+	// 	BeethovenInit.alphaInBP,
+	// 	web3.utils.toWei(BeethovenInit.couponRate),
+	// 	web3.utils.toWei(BeethovenInit.hp),
+	// 	web3.utils.toWei(BeethovenInit.hu),
+	// 	web3.utils.toWei(BeethovenInit.hd),
+	// 	BeethovenInit.comm,
+	// 	BeethovenInit.pd,
+	// 	BeethovenInit.optCoolDown,
+	// 	BeethovenInit.pxFetchCoolDown,
+	// 	BeethovenInit.iteGasTh,
+	// 	BeethovenInit.preResetWaitBlk,
+	// 	web3.utils.toWei(BeethovenInit.minimumBalance + ''),
+	// 	{ from: creator }
+	// );
 	await deployer.deploy(
-		Beethoven,
+		BeethovenBase,
+		BeethovenInit.name,
+		BeethovenInit.maturity,
 		Esplanade.address,
 		fc,
 		BeethovenInit.alphaInBP,
 		web3.utils.toWei(BeethovenInit.couponRate),
 		web3.utils.toWei(BeethovenInit.hp),
-		web3.utils.toWei(BeethovenInit.hu),
-		web3.utils.toWei(BeethovenInit.hd),
-		BeethovenInit.comm,
-		BeethovenInit.pd,
-		BeethovenInit.optCoolDown,
-		BeethovenInit.pxFetchCoolDown,
-		BeethovenInit.iteGasTh,
-		BeethovenInit.preResetWaitBlk,
-		web3.utils.toWei(BeethovenInit.minimumBalance + ''),
-		{ from: creator }
-	);
-	await deployer.deploy(
-		BeethovenTerm,
-		Esplanade.address,
-		fc,
-		BeethovenInit.alphaInBP,
-		web3.utils.toWei(BeethovenInit.couponRate),
 		web3.utils.toWei(BeethovenInit.hu),
 		web3.utils.toWei(BeethovenInit.hd),
 		BeethovenInit.comm,
@@ -125,7 +128,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenA,
 		TokenAInit.tokenName,
 		TokenAInit.tokenSymbol,
-		Beethoven.address,
+		BeethovenBase.address,
 		{
 			from: creator
 		}
@@ -135,7 +138,7 @@ module.exports = async (deployer, network, accounts) => {
 		TokenB,
 		TokenBInit.tokenName,
 		TokenBInit.tokenSymbol,
-		Beethoven.address,
+		BeethovenBase.address,
 		{ from: creator }
 	);
 };
