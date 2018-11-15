@@ -87,6 +87,8 @@ contract Custodian is Managed {
      *  Constructor
      */
 	/// @dev Contract constructor sets operation cool down and set address pool status.
+	///	@param name contract name
+	///	@param maturityInSecond marutiry time in second
 	///	@param roleManagerAddr roleManagerContract Address
 	///	@param fc feeCollector address
 	///	@param comm commission rate
@@ -95,8 +97,10 @@ contract Custodian is Managed {
 	///	@param pxFetchCoolDown price fetching cool down
 	///	@param opt operator
 	///	@param optCoolDown operation cooldown
+	///	@param minBalance niminum balance required
 	constructor(
 		string name,
+		uint maturity,
 		address roleManagerAddr,
 		address fc,
 		uint comm,
@@ -111,6 +115,7 @@ contract Custodian is Managed {
 		Managed(roleManagerAddr, opt, optCoolDown) 
 	{
 		contractName = name;
+		maturityInSecond = maturity;
 		state = State.Inception;
 		feeCollector = fc;
 		createCommInBP = comm;
