@@ -89,7 +89,7 @@ contract BeethovenBase is Custodian {
 	///	@param bAddr contract address of Class B
 	///	@param oracleAddr contract address of Oracle
 	function startCustodian(
-		uint maturity,
+		uint maturityInSecond,
 		address aAddr,
 		address bAddr,
 		address oracleAddr
@@ -99,7 +99,7 @@ contract BeethovenBase is Custodian {
 		only(operator)
 		returns (bool success) 
 	{	
-		maturityInSecond = maturity;
+		
 		aTokenAddress = aAddr;
 		bTokenAddress = bAddr;
 		oracleAddress = oracleAddr;
@@ -112,6 +112,7 @@ contract BeethovenBase is Custodian {
 		resetPriceTimeInSecond = timeInSecond;
 		roleManager = IMultiSigManager(roleManagerAddress);
 		state = State.Trading;
+		maturityInSecond = maturityInSecond + timeInSecond;
 		emit AcceptPrice(priceInWei, timeInSecond, WEI_DENOMINATOR, WEI_DENOMINATOR);
 		emit StartTrading(navAInWei, navBInWei);
 		return true;
