@@ -7,8 +7,8 @@ const Magi = artifacts.require('./Magi.sol');
 const TokenA = artifacts.require('./TokenA.sol');
 const TokenB = artifacts.require('./TokenB.sol');
 const InitParas = require('./contractInitParas.json');
-// const Beethoven6MInit = InitParas['Beethoven6M'];
-const BeethovenPPTMInit = InitParas['BeethovenPPT'];
+const Beethoven6MInit = InitParas['Beethoven6M'];
+// const BeethovenPPTMInit = InitParas['BeethovenPPT'];
 // const DuoInit = InitParas['DUO'];
 // const MagiInit = InitParas['Magi'];
 // const RoleManagerInit = InitParas['RoleManager'];
@@ -85,22 +85,22 @@ module.exports = async (deployer, network, accounts) => {
 	// );
 	await deployer.deploy(
 		Beethoven,
-		BeethovenPPTMInit.name,
-		BeethovenPPTMInit.maturity,
+		Beethoven6MInit.name,
+		Beethoven6MInit.maturity,
 		'0xD728681490d63582047A6Cd2fC80B1343C6AbA20', // Esplanade.address, 
 		fc,
-		BeethovenPPTMInit.alphaInBP,
-		web3.utils.toWei(BeethovenPPTMInit.couponRate),
-		web3.utils.toWei(BeethovenPPTMInit.hp),  // 1.013 for perpetual 0 for Term
-		web3.utils.toWei(BeethovenPPTMInit.hu),
-		web3.utils.toWei(BeethovenPPTMInit.hd),
-		BeethovenPPTMInit.comm,
-		BeethovenPPTMInit.pd,
-		BeethovenPPTMInit.optCoolDown,
-		BeethovenPPTMInit.pxFetchCoolDown,
-		BeethovenPPTMInit.iteGasTh,
-		BeethovenPPTMInit.preResetWaitBlk,
-		web3.utils.toWei(BeethovenPPTMInit.minimumBalance + ''),
+		Beethoven6MInit.alphaInBP,
+		web3.utils.toWei(Beethoven6MInit.couponRate),
+		web3.utils.toWei(Beethoven6MInit.hp),  // 1.013 for perpetual 0 for Term
+		web3.utils.toWei(Beethoven6MInit.hu),
+		web3.utils.toWei(Beethoven6MInit.hd),
+		Beethoven6MInit.comm,
+		Beethoven6MInit.pd,
+		Beethoven6MInit.optCoolDown,
+		Beethoven6MInit.pxFetchCoolDown,
+		Beethoven6MInit.iteGasTh,
+		Beethoven6MInit.preResetWaitBlk,
+		web3.utils.toWei(Beethoven6MInit.minimumBalance + ''),
 		{ from: creator }
 	);
 	// 2575678
@@ -121,8 +121,8 @@ module.exports = async (deployer, network, accounts) => {
 	// // 1094050
 	await deployer.deploy(
 		TokenA,
-		BeethovenPPTMInit.TokenA.tokenName,
-		BeethovenPPTMInit.TokenA.tokenSymbol,
+		Beethoven6MInit.TokenA.tokenName,
+		Beethoven6MInit.TokenA.tokenSymbol,
 		Beethoven.address,
 		{
 			from: creator
@@ -131,8 +131,8 @@ module.exports = async (deployer, network, accounts) => {
 	// 1094370
 	await deployer.deploy(
 		TokenB,
-		BeethovenPPTMInit.TokenB.tokenName,
-		BeethovenPPTMInit.TokenB.tokenSymbol,
+		Beethoven6MInit.TokenB.tokenName,
+		Beethoven6MInit.TokenB.tokenSymbol,
 		Beethoven.address,
 		{ from: creator }
 	);
