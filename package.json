@@ -19,13 +19,13 @@
   "devDependencies": {
     "copyfiles": "^2.1.0",
     "cross-env": "^5.2.0",
-    "eslint": "^5.6.0",
+    "eslint": "^5.9.0",
     "eslint-plugin-mocha": "^5.2.0",
-    "ganache-cli": "^6.1.8",
+    "ganache-cli": "^6.2.3",
     "rimraf": "^2.6.2",
     "solidity-coverage": "^0.5.11",
     "solium": "^1.1.8",
-    "truffle": "^5.0.0-beta.0"
+    "truffle": "^5.0.0-beta.2"
   },
   "dependencies": {
     "web3": "^1.0.0-beta.36"
