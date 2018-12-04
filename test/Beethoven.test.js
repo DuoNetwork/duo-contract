@@ -3,7 +3,7 @@ const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
-const BeethovenInit = InitParas['Beethoven'];
+const BeethovenInit = InitParas['BeethovenPPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
@@ -631,7 +631,7 @@ contract('Beethoven', accounts => {
 				});
 
 				it('cannot create with wrong weth addr', async () => {
-					await wethContract.approve('0x0', util.toWei(amtEth), {
+					await wethContract.approve(bob, util.toWei(amtEth), {
 						from: alice
 					});
 					try {

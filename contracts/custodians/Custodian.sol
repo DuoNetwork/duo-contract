@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { SafeMath } from "../common/SafeMath.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Managed } from "../common/Managed.sol";
@@ -26,7 +26,7 @@ contract Custodian is Managed {
      */
 	IOracle oracle;
 	string public contractCode;
-	address feeCollector;
+	address payable feeCollector;
 	address oracleAddress;
 	address aTokenAddress;
 	address bTokenAddress;
@@ -99,10 +99,10 @@ contract Custodian is Managed {
 	///	@param optCoolDown operation cooldown
 	///	@param minimumBalance niminum balance required
 	constructor(
-		string code,
+		string memory code,
 		uint maturity,
 		address roleManagerAddr,
-		address fc,
+		address payable fc,
 		uint comm,
 		uint pd,
 		uint preResetWaitBlk, 
@@ -155,7 +155,7 @@ contract Custodian is Managed {
 		returns (bool success) 
 	{
 		// Prevent transfer to 0x0 address. Use burn() instead
-		require(to != 0x0);
+		require(to != address(0));
 		// Check if the sender has enough
 		require(balanceOf[index][from] >= tokens);
 

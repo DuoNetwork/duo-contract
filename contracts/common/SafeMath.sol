@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 library SafeMath {
 	function mul(uint a, uint b) internal pure returns (uint) {
@@ -31,9 +31,9 @@ library SafeMath {
 
 	function gt(uint a, uint b) internal pure returns(bytes1) {
 		bytes1 c;
-		c = 0x0;
+		c = 0x00;
 		if (a > b) {
-			c = 0x1;
+			c = 0x01;
 		}
 		return c;
 	}

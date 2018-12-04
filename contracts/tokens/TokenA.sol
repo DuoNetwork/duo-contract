@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { ICustodian } from "../interfaces/ICustodian.sol";
 
 contract TokenA {
@@ -14,8 +14,8 @@ contract TokenA {
 	 * Initializes contract with initial supply tokens to the creator of the contract
 	 */
 	constructor(
-		string tokenName,
-		string tokenSymbol,
+		string memory tokenName,
+		string memory tokenSymbol,
 		address custodianAddr
 	) public 
 	{

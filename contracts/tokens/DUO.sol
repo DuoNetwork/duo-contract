@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 contract DUO {
 	// Public variables of the token
@@ -23,8 +23,8 @@ contract DUO {
 	 */
 	constructor(
 		uint initialSupply,
-		string tokenName,
-		string tokenSymbol
+		string memory tokenName,
+		string memory tokenSymbol
 	) public 
 	{
 		totalSupply = initialSupply;  // Update total supply with the decimal amount
@@ -38,7 +38,7 @@ contract DUO {
 	 */
 	function transfer(address from, address to, uint value) internal {
 		// Prevent transfer to 0x0 address. Use burn() instead
-		require(to != 0x0);
+		require(to != address(0));
 		// Check if the sender has enough
 		require(balanceOf[from] >= value);
 		// Check for overflows

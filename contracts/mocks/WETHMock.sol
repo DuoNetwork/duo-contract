@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 /// @title Mock implementation of WETH - Wrap of ETH, issue WETH 1:1 to ETH
 /// @author duo.network
@@ -18,7 +18,7 @@ contract WETHMock {
 	/**
 	 * Fall back funciton, deposit with ETH
 	 */
-    function() public payable {
+    function() external payable {
         deposit();
     }
 
@@ -49,7 +49,7 @@ contract WETHMock {
 	 */
 	function transfer(address from, address to, uint value) internal {
 		// Prevent transfer to 0x0 address. Use burn() instead
-		require(to != 0x0);
+		require(to != address(0));
 		// Check if the sender has enough
 		require(balanceOf[from] >= value);
 		// Check for overflows

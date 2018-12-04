@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { ICustodian } from "../interfaces/ICustodian.sol";
 
 
@@ -31,7 +31,7 @@ contract Esplanade {
 	address public moderator;
 	// 0 is cold
 	// 1 is hot
-	address[][] public addrPool =[   
+	address [][] public addrPool =[   
 		[
 			0x415DE7Edfe2c9bBF8449e33Ff88c9be698483CC0,
 			0xd066FbAc54838c1d3c3113fc4390B9F99fEb7678,
@@ -150,8 +150,8 @@ contract Esplanade {
 		addrStatus[moderator] = USED_STATUS;
 		for (uint i = 0; i < addrPool[COLD_POOL_IDX].length; i++) 
 			addrStatus[addrPool[COLD_POOL_IDX][i]] = IN_COLD_POOL_STATUS;
-		for (i = 0; i < addrPool[HOT_POOL_IDX].length; i++) 
-			addrStatus[addrPool[HOT_POOL_IDX][i]] = IN_HOT_POOL_STATUS;
+		for (uint j = 0; j < addrPool[HOT_POOL_IDX].length; j++) 
+			addrStatus[addrPool[HOT_POOL_IDX][j]] = IN_HOT_POOL_STATUS;
 		operatorCoolDown = optCoolDown;
 	}
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";

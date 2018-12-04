@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 import { DUO } from "../tokens/DUO.sol";
 
@@ -6,8 +6,8 @@ contract DUOMock is DUO {
 
 	constructor(
 		uint initialSupply,
-		string tokenName,
-		string tokenSymbol
+		string memory tokenName,
+		string memory tokenSymbol
 	) DUO (
 		initialSupply,
 		tokenName,

@@ -4,11 +4,9 @@ const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
 const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
 const InitParas = require('../migrations/contractInitParas.json');
-const BeethovenInit = InitParas['Beethoven'];
+const BeethovenInit = InitParas['BeethovenPPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
-const TokenAInit = InitParas['TokenA'];
-const TokenBInit = InitParas['TokenB'];
 const util = require('./util');
 const ethInitPrice = 582;
 const BP_DENOMINATOR = 10000;
@@ -64,16 +62,16 @@ contract('ERC20Token', accounts => {
 			);
 
 			tokenAContract = await TokenA.new(
-				TokenAInit.tokenName,
-				TokenAInit.tokenSymbol,
+				BeethovenInit.TokenA.tokenName,
+				BeethovenInit.TokenA.tokenSymbol,
 				beethovenContract.address,
 				{
 					from: creator
 				}
 			);
 			tokenBContract = await TokenB.new(
-				TokenBInit.tokenName,
-				TokenBInit.tokenSymbol,
+				BeethovenInit.TokenB.tokenName,
+				BeethovenInit.TokenB.tokenSymbol,
 				beethovenContract.address,
 				{
 					from: creator

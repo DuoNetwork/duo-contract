@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 import { Beethoven } from "../custodians/Beethoven.sol";
 
@@ -7,10 +7,10 @@ contract BeethovenMock is Beethoven {
 	uint public timestamp = now;
 
 	constructor(
-		string name,
+		string memory name,
 		uint maturity,
 		address poolAddress,
-		address fc,
+		address payable fc,
 		uint alpha,
 		uint r,
 		uint hp,

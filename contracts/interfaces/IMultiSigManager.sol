@@ -1,7 +1,7 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 interface IMultiSigManager {
-	function provideAddress(address origin, uint poolIndex) external returns (address);
+	function provideAddress(address origin, uint poolIndex) external returns (address payable);
 	function passedContract(address) external returns (bool);
 	function moderator() external returns(address);
 }

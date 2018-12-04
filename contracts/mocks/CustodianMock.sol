@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 import { Custodian } from "../custodians/Custodian.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
@@ -8,10 +8,10 @@ contract CustodianMock is Custodian {
 	address public roleManagerAddr;
 
 	constructor(
-		string name,
+		string memory name,
 		uint maturity,
 		address poolAddr,
-		address fc,
+		address payable fc,
 		uint comm,
 		uint pd,
 		uint preResetWaitBlk, 
@@ -46,7 +46,7 @@ contract CustodianMock is Custodian {
 		}
 	}
 
-	function() public payable {}
+	function() external payable {}
 
 	function mintTokens(address addr, uint index, uint amount) public {
 		balanceOf[index][addr] += amount;
@@ -57,7 +57,7 @@ contract CustodianMock is Custodian {
 		users.push(addr);
 	}
 
-	function batchAddUsers(address[] addrs) public {
+	function batchAddUsers(address[] memory addrs) public {
 		for(uint i = 0; i < addrs.length; i ++) {
 			users.push(addrs[i]);
 		}
@@ -88,7 +88,7 @@ contract CustodianMock is Custodian {
 		return IMultiSigManager(roleManagerAddr).provideAddress(msg.sender, poolIndex);
 	}
 
-	function getStates() public view returns (uint[20]) {
+	function getStates() public view returns (uint[20] memory) {
 		return [
 			// managed
 			lastOperationTime,
@@ -115,7 +115,7 @@ contract CustodianMock is Custodian {
 		];
 	}
 
-	function getAddresses() public view returns (address[6]) {
+	function getAddresses() public view returns (address[6] memory) {
 		return [
 			// managed
 			roleManagerAddress,

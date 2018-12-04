@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
@@ -37,16 +37,16 @@ contract Beethoven is Custodian {
      */
 	event SetValue(uint index, uint oldValue, uint newValue);
 
-	function() public payable {}
+	function() external payable {}
 	
 	/*
      * Constructor
      */
 	constructor(
-		string code,
+		string memory code,
 		uint maturity,
 		address roleManagerAddr,
-		address fc,
+		address payable fc,
 		uint alpha,
 		uint r,
 		uint hp,
@@ -137,7 +137,7 @@ contract Beethoven is Custodian {
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		require(amount > 0 && wethAddr != 0x0);
+		require(amount > 0 && wethAddr != address(0));
 		IWETH wethToken = IWETH(wethAddr);
 		wethToken.transferFrom(msg.sender, address(this), amount);
 		uint wethBalance = wethToken.balanceOf(address(this));
@@ -195,7 +195,7 @@ contract Beethoven is Custodian {
 		uint adjAmtInWeiA = amtInWeiA.mul(BP_DENOMINATOR).div(alphaInBP);
 		uint deductAmtInWeiB = adjAmtInWeiA < amtInWeiB ? adjAmtInWeiA : amtInWeiB;
 		uint deductAmtInWeiA = deductAmtInWeiB.mul(alphaInBP).div(BP_DENOMINATOR);
-		address sender = msg.sender;
+		address payable sender = msg.sender;
 		require(balanceOf[0][sender] >= deductAmtInWeiA && balanceOf[1][sender] >= deductAmtInWeiB);
 		uint ethAmtInWei = deductAmtInWeiA
 			.add(deductAmtInWeiB)
@@ -207,7 +207,7 @@ contract Beethoven is Custodian {
 	}
 
 	function redeemAll() public inState(State.Matured) returns (bool success) {
-		address sender = msg.sender;
+		address payable sender = msg.sender;
 		uint balanceAInWei = balanceOf[0][sender];
 		uint balanceBInWei = balanceOf[1][sender];
 		require(balanceAInWei > 0 || balanceBInWei > 0);
@@ -220,7 +220,7 @@ contract Beethoven is Custodian {
 	}
 
 	function redeemInternal(
-		address sender, 
+		address payable sender, 
 		uint ethAmtInWei, 
 		uint deductAmtInWeiA, 
 		uint deductAmtInWeiB) 
@@ -506,7 +506,7 @@ contract Beethoven is Custodian {
 	}
 	// end of operator functions
 
-	function getStates() public view returns (uint[30]) {
+	function getStates() public view returns (uint[30] memory) {
 		return [
 			// managed
 			lastOperationTime,
@@ -544,7 +544,7 @@ contract Beethoven is Custodian {
 		];
 	}
 
-	function getAddresses() public view returns (address[6]) {
+	function getAddresses() public view returns (address[6] memory) {
 		return [
 			// managed
 			roleManagerAddress,

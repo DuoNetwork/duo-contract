@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 
 contract Managed {
@@ -42,7 +42,7 @@ contract Managed {
 		require(roleManager.passedContract(newManagerAddr));
 		roleManagerAddress = newManagerAddr;
 		roleManager = IMultiSigManager(roleManagerAddress);
-		require(roleManager.moderator() != 0x0);
+		require(roleManager.moderator() != address(0));
 		emit UpdateRoleManager(newManagerAddr);
 		return true;
 	}

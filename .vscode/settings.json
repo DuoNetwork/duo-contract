@@ -7,6 +7,8 @@
 	"vsicons.presets.angular": false,
 	//"eslint.run": "onSave"
 	"solidity.validationDelay": 500,
+	"solidity.enabledAsYouTypeCompilationErrorCheck": true,
+	"solidity.compileUsingLocalVersion": "..\\v0.5.1+commit.c8a2cb62",
 	"solidity.compileUsingRemoteVersion": "latest",
 	"solidity.soliumRules": {
 		"imports-on-top": 0,
