@@ -65,6 +65,8 @@
 			"maturity": 0,
 			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
 			"alphaInBP": 5000,
+			"couponRate": "0",
+			"hp": "0",  
 			"hu": "1.75",
 			"hd": "0.25",
 			"comm": 100,

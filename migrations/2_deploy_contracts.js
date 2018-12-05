@@ -102,8 +102,6 @@ module.exports = async (deployer, network, accounts) => {
 			MOZART_INIT_PARAS = InitParas.MOZART['6M'];
 		}
 
-		console.log('######################');
-		console.log(MOZART_INIT_PARAS.hu);
 		// 74748
 		await deployer.deploy(SafeMath, {
 			from: creator

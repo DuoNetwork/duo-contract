@@ -10,17 +10,6 @@ contract Beethoven is DualClassCustodian {
 	/*
      * Storage
      */
-	enum ResetState {
-		UpwardReset,
-		DownwardReset,
-		PeriodicReset
-	}
-
-	ResetState resetState;
-	uint periodCouponInWei; 
-	uint limitPeriodicInWei; // set to 0 to disable periodic reset
-
-
 	// reset intermediate values
 	uint bAdj;
 
@@ -52,6 +41,8 @@ contract Beethoven is DualClassCustodian {
 			roleManagerAddr,
 			fc,
 			alpha,
+			r,
+			hp,
 			hu,
 			hd,
 			comm,
@@ -63,13 +54,6 @@ contract Beethoven is DualClassCustodian {
 			minimumBalance
 		)
 	{
-		alphaInBP = alpha;
-		periodCouponInWei = r; 
-		limitPeriodicInWei = hp; 
-		limitUpperInWei = hu; 
-		limitLowerInWei = hd;
-		iterationGasThreshold = iteGasTh; // 65000;
-		betaInWei = WEI_DENOMINATOR;
 		bAdj = alphaInBP.add(BP_DENOMINATOR).mul(WEI_DENOMINATOR).div(BP_DENOMINATOR);
 	}
 
@@ -288,42 +272,4 @@ contract Beethoven is DualClassCustodian {
 		}
 	}
 	// end of reset function
-
-	function getStates() public view returns (uint[30] memory) {
-		return [
-			// managed
-			lastOperationTime,
-			operationCoolDown,
-			// custodian
-			uint(state),
-			minBalance,
-			totalSupplyA,
-			totalSupplyB,
-			ethCollateralInWei,
-			navAInWei,
-			navBInWei,
-			lastPriceInWei,
-			lastPriceTimeInSecond,
-			resetPriceInWei,
-			resetPriceTimeInSecond,
-			createCommInBP,
-			redeemCommInBP,
-			period,
-			maturityInSecond,
-			preResetWaitingBlocks,
-			priceFetchCoolDown,
-			nextResetAddrIndex,
-			totalUsers(),
-			feeBalanceInWei(),
-			// beethoven
-			uint(resetState),
-			alphaInBP,
-			betaInWei,
-			periodCouponInWei, 
-			limitPeriodicInWei, 
-			limitUpperInWei, 
-			limitLowerInWei,
-			iterationGasThreshold
-		];
-	}
 }

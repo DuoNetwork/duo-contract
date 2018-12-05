@@ -16,12 +16,22 @@ contract DualClassCustodian is Custodian {
 	uint limitUpperInWei; 
 	uint limitLowerInWei;
 	uint iterationGasThreshold;
+	uint periodCouponInWei; 
+	uint limitPeriodicInWei; 
 
 	// reset intermediate values
 	uint newAFromAPerA;
 	uint newAFromBPerB;
 	uint newBFromAPerA;
 	uint newBFromBPerB;
+
+	enum ResetState {
+		UpwardReset,
+		DownwardReset,
+		PeriodicReset
+	}
+
+	ResetState resetState;
 
 	/*
      * Events
@@ -39,6 +49,8 @@ contract DualClassCustodian is Custodian {
 		address roleManagerAddr,
 		address payable fc,
 		uint alpha,
+		uint r,
+		uint hp,
 		uint hu,
 		uint hd,
 		uint comm,
@@ -65,6 +77,9 @@ contract DualClassCustodian is Custodian {
 		)
 	{
 		alphaInBP = alpha;
+		betaInWei = WEI_DENOMINATOR;
+		periodCouponInWei = r;
+		limitPeriodicInWei = hp;
 		limitUpperInWei = hu; 
 		limitLowerInWei = hd;
 		iterationGasThreshold = iteGasTh; // 65000;
@@ -250,6 +265,7 @@ contract DualClassCustodian is Custodian {
 	}
 	// end of conversion
 
+
 	// start of operator functions
 	function setValue(uint idx, uint newValue) public only(operator) inState(State.Trading) inUpdateWindow() returns (bool success) {
 		uint oldValue;
@@ -275,6 +291,44 @@ contract DualClassCustodian is Custodian {
 		return true;
 	}
 	// end of operator functions
+
+	function getStates() public view returns (uint[30] memory) {
+		return [
+			// managed
+			lastOperationTime,
+			operationCoolDown,
+			// custodian
+			uint(state),
+			minBalance,
+			totalSupplyA,
+			totalSupplyB,
+			ethCollateralInWei,
+			navAInWei,
+			navBInWei,
+			lastPriceInWei,
+			lastPriceTimeInSecond,
+			resetPriceInWei,
+			resetPriceTimeInSecond,
+			createCommInBP,
+			redeemCommInBP,
+			period,
+			maturityInSecond,
+			preResetWaitingBlocks,
+			priceFetchCoolDown,
+			nextResetAddrIndex,
+			totalUsers(),
+			feeBalanceInWei(),
+			// beethoven
+			uint(resetState),
+			alphaInBP,
+			betaInWei,
+			periodCouponInWei, 
+			limitPeriodicInWei, 
+			limitUpperInWei, 
+			limitLowerInWei,
+			iterationGasThreshold
+		];
+	}
 
 	function getAddresses() public view returns (address[6] memory) {
 		return [
