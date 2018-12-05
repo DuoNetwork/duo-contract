@@ -27,6 +27,10 @@ module.exports = {
 	},
 	getBalance: (addr) => web3.eth.getBalance(addr),
 	sendTransaction: (param) => web3.eth.sendTransaction(param),
+	getState : async (contract, index) => {
+		let _states = await contract.getStates.call();
+		return _states[index];
+	},
 	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert',
 	VM_INVALID_OPCODE_MSG : 'Returned error: VM Exception while processing transaction: invalid opcode'
 };

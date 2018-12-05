@@ -2,7 +2,7 @@ const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
-const BeethovenInit = InitParas['BeethovenPPT'];
+const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const PoolInit = InitParas['Pool'];
@@ -47,11 +47,6 @@ const CUSTODIAN_ADDR = {
 	ORACLE_ADDR: 3,
 	A_TOKEN_ADDR: 4,
 	B_TOKEN_ADDR: 5
-};
-
-const getState = async (contract, index) => {
-	let _states = await contract.getStates.call();
-	return _states[index];
 };
 
 const getAddr = async (contract, index) => {
@@ -109,7 +104,7 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('state should be Inception', async () => {
-			let state = await getState(custodianContract, CUSTODIAN_STATE.STATE);
+			let state = await util.getState(custodianContract, CUSTODIAN_STATE.STATE);
 			assert.equal(state.valueOf(), STATE_INCEPT_RESET, 'state is not inception');
 		});
 
@@ -119,22 +114,22 @@ contract('Custodian', accounts => {
 		});
 
 		it('createCommInBP should equal specified value', async () => {
-			let comm = await getState(custodianContract, CUSTODIAN_STATE.CREATE_COMMINBP);
+			let comm = await util.getState(custodianContract, CUSTODIAN_STATE.CREATE_COMMINBP);
 			assert.equal(comm.valueOf(), BeethovenInit.comm, 'createCommInBP specified incorrect');
 		});
 
 		it('redeemCommInBP should equal specified value', async () => {
-			let comm = await getState(custodianContract, CUSTODIAN_STATE.REDEEM_COMMINBP);
+			let comm = await util.getState(custodianContract, CUSTODIAN_STATE.REDEEM_COMMINBP);
 			assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP specified incorrect');
 		});
 
 		it('period should equal specified value', async () => {
-			let pd = await getState(custodianContract, CUSTODIAN_STATE.PERIOD);
+			let pd = await util.getState(custodianContract, CUSTODIAN_STATE.PERIOD);
 			assert.equal(pd.valueOf(), BeethovenInit.pd, 'period specified incorrect');
 		});
 
 		it('preResetWaitingBlks should equal specified value', async () => {
-			let preResetWaitBlk = await getState(
+			let preResetWaitBlk = await util.getState(
 				custodianContract,
 				CUSTODIAN_STATE.PRERESET_WAITING_BLOCKS
 			);
@@ -146,7 +141,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('priceFetchCoolDown should equal specified value', async () => {
-			let pxFetchCoolDown = await getState(
+			let pxFetchCoolDown = await util.getState(
 				custodianContract,
 				CUSTODIAN_STATE.PRICE_FETCH_COOLDOWN
 			);
@@ -158,7 +153,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('navA should equal specified value', async () => {
-			let navAInWei = await getState(custodianContract, CUSTODIAN_STATE.NAVA_INWEI);
+			let navAInWei = await util.getState(custodianContract, CUSTODIAN_STATE.NAVA_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(navAInWei), 1),
 				'navAInWei specified incorrect'
@@ -166,7 +161,7 @@ contract('Custodian', accounts => {
 		});
 
 		it('navB should equal specified value', async () => {
-			let navBInWei = await await getState(custodianContract, CUSTODIAN_STATE.NAVB_INWEI);
+			let navBInWei = await await util.getState(custodianContract, CUSTODIAN_STATE.NAVB_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(navBInWei), 1),
 				'navBInWei specified incorrect'
@@ -178,7 +173,7 @@ contract('Custodian', accounts => {
 		before(initContracts);
 
 		it('userLenght should be 0', async () => {
-			let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
+			let userSize = await util.getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
 	});
@@ -198,7 +193,7 @@ contract('Custodian', accounts => {
 			});
 
 			it('should in state trading', async () => {
-				let state = await getState(custodianContract, CUSTODIAN_STATE.STATE);
+				let state = await util.getState(custodianContract, CUSTODIAN_STATE.STATE);
 				assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
 			});
 
@@ -213,7 +208,7 @@ contract('Custodian', accounts => {
 			it('alice userIdx should be updated', async () => {
 				let userIdx = await custodianContract.getExistingUser.call(alice);
 				assert.isTrue(util.isEqual(userIdx.valueOf(), 1), 'alice is not updated');
-				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
+				let userSize = await util.getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 1),
 					'user size not updated correctly'
@@ -308,7 +303,7 @@ contract('Custodian', accounts => {
 				assert.isTrue(util.isEqual(userIdxAlice.valueOf(), 1), 'alice is not updated');
 				let userIdxBob = await custodianContract.getExistingUser.call(bob);
 				assert.isTrue(util.isEqual(userIdxBob.valueOf(), 2), 'bob userIdx is not updated');
-				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
+				let userSize = await util.getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 2),
 					'user size not updated correctly'
@@ -390,7 +385,7 @@ contract('Custodian', accounts => {
 					util.isEqual(userIdxCharles.valueOf(), 3),
 					'charles userIdx is not updated'
 				);
-				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
+				let userSize = await util.getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.isTrue(
 					util.isEqual(userSize.valueOf(), 3),
 					'user size not updated correctly'
@@ -466,7 +461,7 @@ contract('Custodian', accounts => {
 				userIdxDavid = await custodianContract.getExistingUser.call(david);
 				assert.equal(userIdxDavid.valueOf(), '1', 'david is not updated');
 
-				let userSize = await getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
+				let userSize = await util.getState(custodianContract, CUSTODIAN_STATE.TOTAL_USERS);
 				assert.equal(userSize.valueOf(), '3', 'user size not updated correctly');
 			});
 		}
@@ -497,7 +492,7 @@ contract('Custodian', accounts => {
 
 		it('balance and fee should be set correct', async () => {
 			let balance = await util.getBalance(custodianContract.address);
-			let ethFee = await getState(custodianContract, CUSTODIAN_STATE.FEE_BALANCE_INWEI);
+			let ethFee = await util.getState(custodianContract, CUSTODIAN_STATE.FEE_BALANCE_INWEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(balance), initFee) &&
 					util.isEqual(util.fromWei(ethFee), initFee),
