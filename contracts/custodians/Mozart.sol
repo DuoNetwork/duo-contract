@@ -260,9 +260,7 @@ contract Mozart is Custodian {
 		lastPriceTimeInSecond = timeInSecond;
 		(navAInWei, navBInWei) = calculateNav(
 			priceInWei, 
-			timeInSecond, 
-			resetPriceInWei, 
-			resetPriceTimeInSecond
+			resetPriceInWei 
 			);
 		if (maturityInSecond > 0 && timeInSecond > maturityInSecond) {
 			state = State.Matured;
@@ -278,9 +276,7 @@ contract Mozart is Custodian {
 	
 	function calculateNav(
 		uint priceInWei, 
-		uint timeInSecond, 
-		uint rstPriceInWei, 
-		uint rstTimeInSecond
+		uint rstPriceInWei
 		) 
 		public 
 		view 
@@ -291,15 +287,17 @@ contract Mozart is Custodian {
 			.mul(alphaInBP.add(BP_DENOMINATOR))
 			.div(BP_DENOMINATOR);
 
-		if(navEth >= 2*WEI_DENOMINATOR) {
+		if(navEth >= 2 * WEI_DENOMINATOR) {
 			return (0, navParent);
 		}
 
 		if(navEth <= WEI_DENOMINATOR/2) {
 			return (navParent.mul(BP_DENOMINATOR).div(alphaInBP), 0);
 		}
-		uint navA = 2* WEI_DENOMINATOR.sub(navParent);
-		uint navB = (2* alphaInBP.add(BP_DENOMINATOR).mul(navEth).sub(2 * alphaInBP)).div(BP_DENOMINATOR);
+		uint navA = 2* WEI_DENOMINATOR.sub(navEth);
+		uint navB = (2* alphaInBP.add(BP_DENOMINATOR).mul(navEth)
+					.sub(2 * alphaInBP.mul(WEI_DENOMINATOR))
+					).div(BP_DENOMINATOR);
 		return(navA, navB);
 	
 	}
