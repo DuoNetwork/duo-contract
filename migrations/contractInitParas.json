@@ -1,60 +1,90 @@
 {
-	"Beethoven6M": {
-		"name": "B-M19",
-		"maturity": 1561723200,
-		"alphaInBP": 10000,
-		"couponRate": "0.000006",
-		"hp": "0",  
-		"hu": "2.0",
-		"hd": "0.25",
-		"comm": 100,
-		"pd": 3600,
-		"optCoolDown": 86400,
-		"pxFetchCoolDown": 3000,
-		"iteGasTh": 65000,
-		"iteGasThSC": 105000,
-		"preResetWaitBlk": 10,
-		"minimumBalance": 0.01,
-		"TokenA": {
-			"tokenName": "B-M19-I0",
-			"tokenSymbol": "B-M19-I0"
-		},
-		"TokenB": {
-			"tokenName": "B-M19-L2",
-			"tokenSymbol": "B-M19-L2"
-		}
-	},
-	"BeethovenPPT": {
-		"name": "B-PPT",
-		"maturity": 0,
-		"alphaInBP": 10000,
-		"couponRate": "0.000006",
-		"hp": "1.013",  
-		"hu": "2.0",
-		"hd": "0.25",
-		"comm": 100,
-		"pd": 3600,
-		"optCoolDown": 86400,
-		"pxFetchCoolDown": 3000,
-		"iteGasTh": 65000,
-		"iteGasThSC": 105000,
-		"preResetWaitBlk": 10,
-		"minimumBalance": 0.01,
-		"TokenA": {
-			"tokenName": "B-PPT-I0",
-			"tokenSymbol": "B-PPT-I0"
-		},
-		"TokenB": {
-			"tokenName": "B-PPT-L2",
-			"tokenSymbol": "B-PPT-L2"
-		}
-	},
 	"DUO": {
 		"initSupply": "100000000",
-		"tokenName": "Test DUO Network Token",
+		"tokenName": "Test DUO.Network Token",
 		"tokenSymbol": "DUO"
 	},
-	
+	"BTV": {
+		"6M": {
+			"name": "B-M19",
+			"maturity": 1561723200,
+			"alphaInBP": 10000,
+			"couponRate": "0.000006",
+			"hp": "0",  
+			"hu": "2.0",
+			"hd": "0.25",
+			"comm": 100,
+			"pd": 3600,
+			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
+			"optCoolDown": 86400,
+			"pxFetchCoolDown": 3000,
+			"iteGasTh": 65000,
+			"iteGasThSC": 105000,
+			"preResetWaitBlk": 10,
+			"minimumBalance": 0.01,
+			"TokenA": {
+				"tokenName": "aETH-M19",
+				"tokenSymbol": "aETH-M19"
+			},
+			"TokenB": {
+				"tokenName": "bETH-M19",
+				"tokenSymbol": "bETH-M19"
+			}
+		},
+		"PPT": {
+			"name": "B-PPT",
+			"maturity": 0,
+			"alphaInBP": 10000,
+			"couponRate": "0.000006",
+			"hp": "1.013",  
+			"hu": "2.0",
+			"hd": "0.25",
+			"comm": 100,
+			"pd": 3600,
+			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
+			"optCoolDown": 86400,
+			"pxFetchCoolDown": 3000,
+			"iteGasTh": 65000,
+			"iteGasThSC": 105000,
+			"preResetWaitBlk": 10,
+			"minimumBalance": 0.01,
+			"TokenA": {
+				"tokenName": "aETH",
+				"tokenSymbol": "aETH"
+			},
+			"TokenB": {
+				"tokenName": "bETH",
+				"tokenSymbol": "bETH"
+			}
+		}
+
+	},
+	"MOZART": {
+		"PPT": {
+			"name": "M-PPT",
+			"maturity": 0,
+			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
+			"alphaInBP": 5000,
+			"hu": "1.75",
+			"hd": "0.25",
+			"comm": 100,
+			"pd": 3600,
+			"optCoolDown": 86400,
+			"pxFetchCoolDown": 3000,
+			"iteGasTh": 65000,
+			"preResetWaitBlk": 10,
+			"minimumBalance": 0.01,
+			"TokenA": {
+				"tokenName": "sETH",
+				"tokenSymbol": "sETH"
+			},
+			"TokenB": {
+				"tokenName": "LETH",
+				"tokenSymbol": "LETH"
+			}
+		}
+	},
+
 	"RoleManager": {
 		"optCoolDown": 86400
 	},

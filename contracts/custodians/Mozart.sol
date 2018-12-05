@@ -324,11 +324,9 @@ contract Mozart is Custodian {
 				newAFromAPerA = excessAInWei.mul(alphaInBP).div(BP_DENOMINATOR + alphaInBP);
 				totalSupplyA = totalSupplyA.add(totalSupplyA.mul(newAFromAPerA).div(WEI_DENOMINATOR));
 				totalSupplyB = totalSupplyB.add(totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR));
-
 			} 
 
 			emit TotalSupply(totalSupplyA, totalSupplyB);
-
 			emit StartReset(nextResetAddrIndex, users.length);
 		} else 
 			emit StartPreReset();
