@@ -114,15 +114,15 @@ contract Mozart is DualClassCustodian {
 				newBFromBPerB = excessBInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
 				newAFromBPerB = newBFromBPerB.mul(alphaInBP).div(BP_DENOMINATOR);
 				// adjust total supply
-				totalSupplyA = totalSupplyA.add(totalSupplyB.mul(newAFromBPerB).div(WEI_DENOMINATOR));
-				totalSupplyB = totalSupplyB.add(totalSupplyB.mul(newBFromBPerB).div(WEI_DENOMINATOR));
+				totalSupplyA = totalSupplyA.mul(navAInWei).div(WEI_DENOMINATOR).add(totalSupplyB.mul(newAFromBPerB).div(WEI_DENOMINATOR));
+				totalSupplyB = totalSupplyB.mul(navAInWei).div(WEI_DENOMINATOR).add(totalSupplyB.mul(newBFromBPerB).div(WEI_DENOMINATOR));
 			} else {
 				resetState = ResetState.DownwardReset;
 				uint excessAInWei = navAInWei.sub(navBInWei);
 				newBFromAPerA = excessAInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
 				newAFromAPerA = newBFromAPerA.mul(alphaInBP).div(BP_DENOMINATOR);
-				totalSupplyA = totalSupplyA.add(totalSupplyA.mul(newAFromAPerA).div(WEI_DENOMINATOR));
-				totalSupplyB = totalSupplyB.add(totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR));
+				totalSupplyB = totalSupplyB.mul(navBInWei).div(WEI_DENOMINATOR).add(totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR));
+				totalSupplyA = totalSupplyA.mul(navBInWei).div(WEI_DENOMINATOR).add(totalSupplyA.mul(newAFromAPerA).div(WEI_DENOMINATOR));
 			} 
 
 			emit TotalSupply(totalSupplyA, totalSupplyB);

@@ -1,344 +1,1017 @@
-// const Mozart = artifacts.require('../contracts/mocks/MozartMock');
-// const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
-// const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-// const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
-// const InitParas = require('../migrations/contractInitParas.json');
-// const MozartInitPPT = InitParas['MOZART']['PPT'];
-// const RoleManagerInit = InitParas['RoleManager'];
-// const MagiInit = InitParas['Magi'];
-// const util = require('./util');
+const Mozart = artifacts.require('../contracts/mocks/MozartMock');
+const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
+const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
+const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
+const InitParas = require('../migrations/contractInitParas.json');
+const MozartInitPPT = InitParas['MOZART']['PPT'];
+const RoleManagerInit = InitParas['RoleManager'];
+const MagiInit = InitParas['Magi'];
+const util = require('./util');
+const CST = require('./constants');
 
-// const CST = {
-// 	MOZART_STATE: {
-// 		LAST_OPERATION_TIME: 0,
-// 		OPERATION_COOLDOWN: 1,
-// 		STATE: 2,
-// 		MIN_BALANCE: 3,
-// 		TOTAL_SUPPLYA: 4,
-// 		TOTAL_SUPPLYB: 5,
-// 		ETH_COLLATERAL_INWEI: 6,
-// 		NAVA_INWEI: 7,
-// 		NAVB_INWEI: 8,
-// 		LAST_PRICE_INWEI: 9,
-// 		LAST_PRICETIME_INSECOND: 10,
-// 		RESET_PRICE_INWEI: 11,
-// 		RESET_PRICETIME_INSECOND: 12,
-// 		CREATE_COMMINBP: 13,
-// 		REDEEM_COMMINBP: 14,
-// 		PERIOD: 15,
-// 		MATURITY_IN_SECOND: 16,
-// 		PRERESET_WAITING_BLOCKS: 17,
-// 		PRICE_FETCH_COOLDOWN: 18,
-// 		NEXT_RESET_ADDR_INDEX: 19,
-// 		TOTAL_USERS: 20,
-// 		FEE_BALANCE_INWEI: 21,
-// 		RESET_STATE: 22,
-// 		ALPHA_INBP: 23,
-// 		LIMIT_UPPER_INWEI: 24,
-// 		LIMIT_LOWER_INWEI: 25,
-// 		ITERATION_GAS_THRESHOLD: 26
-// 	}
-// };
+const ethInitPrice = 582;
 
-// // Event
-// const EVENT_ACCEPT_PX = 'AcceptPrice';
-// const EVENT_MATURIED = 'Matured';
-// const EVENT_START_TRADING = 'StartTrading';
-// const EVENT_CREATE = 'Create';
-// const EVENT_REDEEM = 'Redeem';
-// const EVENT_TOTAL_SUPPLY = 'TotalSupply';
-// const EVENT_START_RESET = 'StartReset';
-// const EVENT_SET_VALUE = 'SetValue';
-// const EVENT_COLLECT_FEE = 'CollectFee';
+const PERTETUAL_NAME = 'mozart perpetual';
+const TERM_NAME = 'mozart term6';
 
-// const STATE_INCEPTION = '0';
-// const STATE_TRADING = '1';
-// const STATE_PRE_RESET = '2';
-// const STATE_RESET = '3';
-// const STATE_MATURITY = '4';
+const assertState = async (contract, state) => {
+	let _state = await util.getState(contract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
+	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
+};
 
-// const STATE_UPWARD_RESET = '0';
-// const STATE_DOWNWARD_RESET = '1';
+const assertResetState = async (contract, state) => {
+	let _state = await util.getState(contract, CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_STATE);
+	assert.isTrue(util.isEqual(_state.valueOf(), state));
+};
 
-// const ethInitPrice = 582;
+contract.only('Mozart', accounts => {
+	let mozartContract;
+	let roleManagerContract;
+	let oracleContract;
+	let wethContract;
 
-// const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
-// const A_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
-// const B_ADDR = '0x424325334C3537A6248E09E1Dc392C003d8706Db';
+	const creator = accounts[0];
+	const pf1 = accounts[1];
+	const pf2 = accounts[2];
+	const pf3 = accounts[3];
+	const fc = accounts[4];
+	const alice = accounts[6];
+	const bob = accounts[7];
+	const charles = accounts[8];
 
-// const PERTETUAL_NAME = 'mozart perpetual';
-// const TERM_NAME = 'beethoven term6';
+	const initContracts = async (alphaInBP = 0, name, maturity) => {
+		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
+			from: creator
+		});
 
+		mozartContract = await Mozart.new(
+			name,
+			maturity,
+			roleManagerContract.address,
+			fc,
+			alphaInBP ? alphaInBP : MozartInitPPT.alphaInBP,
+			util.toWei(MozartInitPPT.couponRate),
+			util.toWei(MozartInitPPT.hp),
+			util.toWei(MozartInitPPT.hu),
+			util.toWei(MozartInitPPT.hd),
+			MozartInitPPT.comm,
+			MozartInitPPT.pd,
+			MozartInitPPT.optCoolDown,
+			MozartInitPPT.pxFetchCoolDown,
+			process.env.SOLIDITY_COVERAGE ? MozartInitPPT.iteGasThSC : MozartInitPPT.iteGasTh,
+			MozartInitPPT.preResetWaitBlk,
+			util.toWei(MozartInitPPT.minimumBalance),
+			{
+				from: creator
+			}
+		);
 
-// const assertState = async (contract, state) => {
-// 	let _state = await util.getState(contract, CST.MOZART_STATE.STATE);
-// 	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
-// };
+		oracleContract = await Magi.new(
+			creator,
+			pf1,
+			pf2,
+			pf3,
+			roleManagerContract.address,
+			MagiInit.pxFetchCoolDown,
+			MagiInit.optCoolDown,
+			{
+				from: creator
+			}
+		);
 
-// const assertResetState = async (mozartContract, state) => {
-// 	let _state = await util.getState(mozartContract, CST.MOZART_STATE.RESET_STATE);
-// 	assert.isTrue(util.isEqual(_state.valueOf(), state));
-// };
+		wethContract = await WETH.new();
+	};
 
-// contract.only('Mozart', accounts => {
-// 	let mozartContract;
-// 	let roleManagerContract;
-// 	let oracleContract;
-// 	let wethContract;
+	const calcNav = (price, resetPrice, alpha) => {
+		let navEth = price / resetPrice;
+		let navParent = navEth * (1 + alpha);
 
-// 	const creator = accounts[0];
-// 	const pf1 = accounts[1];
-// 	const pf2 = accounts[2];
-// 	const pf3 = accounts[3];
-// 	const fc = accounts[4];
-// 	const alice = accounts[6];
-// 	const bob = accounts[7];
-// 	const charles = accounts[8];
+		if (navEth >= 2) {
+			return [0, navParent];
+		}
 
-// 	const WEI_DENOMINATOR = 1e18;
-// 	const BP_DENOMINATOR = 10000;
+		if (navEth <= 0.5) {
+			return [navParent / alpha, 0];
+		}
+		return [2 - navEth, (2 * alpha + 1) * navEth - 2 * alpha];
+	};
 
-// 	const initContracts = async (alphaInBP = 0, name, maturity) => {
-// 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
-// 			from: creator
-// 		});
+	describe('constructor', () => {
+		function constructorTest(alphaInBP, name, maturity) {
+			before(() => initContracts(alphaInBP, name, maturity));
 
-// 		mozartContract = await Mozart.new(
-// 			name,
-// 			maturity,
-// 			roleManagerContract.address,
-// 			fc,
-// 			alphaInBP ? alphaInBP : MozartInitPPT.alphaInBP,
-// 			util.toWei(MozartInitPPT.hu),
-// 			util.toWei(MozartInitPPT.hd),
-// 			MozartInitPPT.comm,
-// 			MozartInitPPT.pd,
-// 			MozartInitPPT.optCoolDown,
-// 			MozartInitPPT.pxFetchCoolDown,
-// 			process.env.SOLIDITY_COVERAGE ? MozartInitPPT.iteGasThSC : MozartInitPPT.iteGasTh,
-// 			MozartInitPPT.preResetWaitBlk,
-// 			util.toWei(MozartInitPPT.minimumBalance),
-// 			{
-// 				from: creator
-// 			}
-// 		);
+			it('contract code should be set correctly', async () => {
+				let contractCode = await mozartContract.contractCode.call();
+				assert.equal(contractCode.valueOf(), name, 'alpha set incorrectly');
+			});
 
-// 		oracleContract = await Magi.new(
-// 			creator,
-// 			pf1,
-// 			pf2,
-// 			pf3,
-// 			roleManagerContract.address,
-// 			MagiInit.pxFetchCoolDown,
-// 			MagiInit.optCoolDown,
-// 			{
-// 				from: creator
-// 			}
-// 		);
+			it('maturity should be set correctly', async () => {
+				let contractMaturity = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.MATURITY_IN_SECOND
+				);
+				assert.isTrue(
+					util.isEqual(contractMaturity.valueOf(), maturity),
+					'alpha set incorrectly'
+				);
+			});
 
-// 		wethContract = await WETH.new();
-// 	};
+			it('alpha should be set correctly', async () => {
+				let alpha = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ALPHA_INBP
+				);
+				assert.isTrue(
+					util.isEqual(alpha.valueOf(), alphaInBP ? alphaInBP : MozartInitPPT.alphaInBP),
+					'alpha set incorrectly'
+				);
+			});
 
-// 	describe('constructor', () => {
-// 		function constructorTest(alphaInBP, name, maturity) {
-// 			before(() => initContracts(alphaInBP, name, maturity));
+			it('limitUpperInWei should be set correctly', async () => {
+				let limitUpperInWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.LIMIT_UPPER_INWEI
+				);
+				assert.isTrue(
+					util.isEqual(util.fromWei(limitUpperInWei), MozartInitPPT.hu),
+					'limitUpperInWei set incorrectly'
+				);
+			});
 
-// 			it('contract code should be set correctly', async () => {
-// 				let contractCode = await mozartContract.contractCode.call();
-// 				assert.equal(contractCode.valueOf(), name, 'alpha set incorrectly');
-// 			});
+			it('limitLowerInWei should be set correctly', async () => {
+				let limitLowerInWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.LIMIT_LOWER_INWEI
+				);
+				assert.equal(
+					util.fromWei(limitLowerInWei),
+					MozartInitPPT.hd + '',
+					'limitLowerInWei set incorrectly'
+				);
+			});
 
-// 			it('maturity should be set correctly', async () => {
-// 				let contractMaturity = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.MATURITY_IN_SECOND
-// 				);
-// 				assert.isTrue(
-// 					util.isEqual(contractMaturity.valueOf(), maturity),
-// 					'alpha set incorrectly'
-// 				);
-// 			});
+			it('iterationGasThreshold should be set correctly', async () => {
+				let iterationGasThreshold = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ITERATION_GAS_THRESHOLD
+				);
+				assert.equal(
+					iterationGasThreshold.valueOf(),
+					process.env.SOLIDITY_COVERAGE
+						? MozartInitPPT.iteGasThSC
+						: MozartInitPPT.iteGasTh,
+					'iterationGasThreshold set incorrectly'
+				);
+			});
 
-// 			it('alpha should be set correctly', async () => {
-// 				let alpha = await util.getState(mozartContract, CST.MOZART_STATE.ALPHA_INBP);
-// 				assert.isTrue(
-// 					util.isEqual(alpha.valueOf(), alphaInBP ? alphaInBP : MozartInitPPT.alphaInBP),
-// 					'alpha set incorrectly'
-// 				);
-// 			});
+			it('createCommInBP should be set correctly', async () => {
+				let createCommInBP = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.CREATE_COMMINBP
+				);
+				assert.equal(
+					createCommInBP.valueOf(),
+					MozartInitPPT.comm + '',
+					'createCommInBP set incorrectly'
+				);
+			});
 
-// 			it('limitUpperInWei should be set correctly', async () => {
-// 				let limitUpperInWei = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.LIMIT_UPPER_INWEI
-// 				);
-// 				assert.isTrue(
-// 					util.isEqual(util.fromWei(limitUpperInWei), MozartInitPPT.hu),
-// 					'limitUpperInWei set incorrectly'
-// 				);
-// 			});
+			it('redeemCommInBP should be set correctly', async () => {
+				let comm = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.REDEEM_COMMINBP
+				);
+				assert.equal(comm.valueOf(), MozartInitPPT.comm, 'redeemCommInBP set incorrectly');
+			});
 
-// 			it('limitLowerInWei should be set correctly', async () => {
-// 				let limitLowerInWei = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.LIMIT_LOWER_INWEI
-// 				);
-// 				assert.equal(
-// 					util.fromWei(limitLowerInWei),
-// 					MozartInitPPT.hd + '',
-// 					'limitLowerInWei set incorrectly'
-// 				);
-// 			});
+			it('preResetWaitingBlocks should be set correctly', async () => {
+				let preResetWaitingBlocks = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
+				);
+				assert.equal(
+					preResetWaitingBlocks.valueOf(),
+					MozartInitPPT.preResetWaitBlk + '',
+					'preResetWaitingBlocks set incorrectly'
+				);
+			});
 
-// 			it('iterationGasThreshold should be set correctly', async () => {
-// 				let iterationGasThreshold = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.ITERATION_GAS_THRESHOLD
-// 				);
-// 				assert.equal(
-// 					iterationGasThreshold.valueOf(),
-// 					process.env.SOLIDITY_COVERAGE
-// 						? MozartInitPPT.iteGasThSC
-// 						: MozartInitPPT.iteGasTh,
-// 					'iterationGasThreshold set incorrectly'
-// 				);
-// 			});
+			it('minimumBalance should be set correctly', async () => {
+				let minBalance = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.MIN_BALANCE
+				);
+				assert.equal(
+					util.fromWei(minBalance.valueOf()),
+					MozartInitPPT.minimumBalance + '',
+					'preResetWaitingBlocks set incorrectly'
+				);
+			});
+		}
 
-// 			it('createCommInBP should be set correctly', async () => {
-// 				let createCommInBP = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.CREATE_COMMINBP
-// 				);
-// 				assert.equal(
-// 					createCommInBP.valueOf(),
-// 					MozartInitPPT.comm + '',
-// 					'createCommInBP set incorrectly'
-// 				);
-// 			});
+		//case 1: Perpetual tEST
+		describe('Perpetual case 1', () => {
+			constructorTest(0, PERTETUAL_NAME, 0);
+		});
 
-// 			it('redeemCommInBP should be set correctly', async () => {
-// 				let comm = await util.getState(mozartContract, CST.MOZART_STATE.REDEEM_COMMINBP);
-// 				assert.equal(comm.valueOf(), MozartInitPPT.comm, 'redeemCommInBP set incorrectly');
-// 			});
+		//case 2: Term tEST
+		describe('Term case 2', () => {
+			constructorTest(
+				0,
+				TERM_NAME,
+				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
+			);
+		});
+	});
 
-// 			it('preResetWaitingBlocks should be set correctly', async () => {
-// 				let preResetWaitingBlocks = await util.getState(
-// 					mozartContract,
-// 					CST.MOZART_STATE.PRERESET_WAITING_BLOCKS
-// 				);
-// 				assert.equal(
-// 					preResetWaitingBlocks.valueOf(),
-// 					MozartInitPPT.preResetWaitBlk + '',
-// 					'preResetWaitingBlocks set incorrectly'
-// 				);
-// 			});
+	describe('nav calculation', () => {
+		before(async () => {
+			await initContracts(0, PERTETUAL_NAME, 0);
+			let time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+			await mozartContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
+		});
 
-// 			it('minimumBalance should be set correctly', async () => {
-// 				let minBalance = await util.getState(mozartContract, CST.MOZART_STATE.MIN_BALANCE);
-// 				assert.equal(
-// 					util.fromWei(minBalance.valueOf()),
-// 					MozartInitPPT.minimumBalance + '',
-// 					'preResetWaitingBlocks set incorrectly'
-// 				);
-// 			});
-// 		}
+		function calcNav(price, resetPrice, alpha) {
+			let navEth = price / resetPrice;
+			let navParent = navEth * (1 + alpha);
 
-// 		//case 1: Perpetual tEST
-// 		describe('Perpetual case 1', () => {
-// 			constructorTest(0, PERTETUAL_NAME, 0);
-// 		});
+			if (navEth >= 2) {
+				return [0, navParent];
+			}
 
-// 		//case 2: Term tEST
-// 		describe('Term case 2', () => {
-// 			constructorTest(
-// 				0,
-// 				TERM_NAME,
-// 				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
-// 			);
-// 		});
-// 	});
+			if (navEth <= 0.5) {
+				return [navParent / alpha, 0];
+			}
+			return [2 - navEth, (2 * alpha + 1) * navEth - 2 * alpha];
+		}
 
-// 	describe('nav calculation', () => {
-// 		before(async () => {
-// 			await initContracts(0, PERTETUAL_NAME, 0);
-// 			let time = await oracleContract.timestamp.call();
-// 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-// 			await mozartContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-// 				from: creator
-// 			});
-// 		});
+		function testNav(resetPrice, lastPrice) {
+			let resetPriceInWei = util.toWei(resetPrice);
+			let lastPriceInWei = util.toWei(lastPrice);
 
-// 		function calcNav(price, resetPrice, alpha) {
+			let [navA, navB] = calcNav(lastPrice, resetPrice, 0.5);
+			return mozartContract.calculateNav.call(lastPriceInWei, resetPriceInWei).then(res => {
+				let navAInWei = res[0].valueOf();
+				let navBInWei = res[1].valueOf();
+				assert.isTrue(
+					util.isEqual(util.fromWei(navAInWei), navA),
+					'navA not calculated correctly'
+				);
+				assert.isTrue(
+					util.isEqual(util.fromWei(navBInWei), navB),
+					'navB not calculated correctly'
+				);
+			});
+		}
 
-// 			let navEth = price/resetPrice;
-// 			let navParent = navEth * ( 1 + alpha);
+		// for non reset case
+		it('it should calculate nav correclty case 1', () => {
+			return testNav(582, 600);
+		});
 
-// 			if(navEth >= 2) {
-// 				return [0, navParent];
-// 			}
+		// //for upward reset case
+		it('it should calculate nav correclty case 2', () => {
+			return testNav(800, 1500);
+		});
 
-// 			if(navEth <= 0.5) {
-// 				return [navParent/alpha, 0];
-// 			}
-// 			return [2-navEth, (2*alpha + 1)*navEth - 2 *alpha];
-		
-// 		}
+		// //for downward reset case
+		it('it should calculate nav correclty case 3', () => {
+			return testNav(1000, 600);
+		});
 
-// 		function testNav(resetPrice, lastPrice) {
-// 			let resetPriceInWei = util.toWei(resetPrice);
-// 			let resetPriceTimeSeconds = 1522745087;
-// 			let lastPriceInWei = util.toWei(lastPrice);
-// 			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
-// 			let betaInWei = util.toWei(beta);
-// 			let [navA, navB] = calcNav(
-// 				lastPrice,
-// 				lastPriceTimeSeconds,
-// 				resetPrice,
-// 				resetPriceTimeSeconds,
-// 				beta
-// 			);
-// 			return mozartContract.calculateNav
-// 				.call(
-// 					lastPriceInWei,
-// 					lastPriceTimeSeconds,
-// 					resetPriceInWei,
-// 					resetPriceTimeSeconds,
-// 					betaInWei
-// 				)
-// 				.then(res => {
-// 					let navAInWei = res[0].valueOf();
-// 					let navBInWei = res[1].valueOf();
-// 					assert.isTrue(
-// 						util.isEqual(util.fromWei(navAInWei), navA),
-// 						'navA not calculated correctly'
-// 					);
-// 					assert.isTrue(
-// 						util.isEqual(util.fromWei(navBInWei), navB),
-// 						'navB not calculated correctly'
-// 					);
-// 				});
-// 		}
+		//for downward reset case where navB goes to 0
+		it('it should calculate nav correclty case 4', () => {
+			return testNav(1000, 200);
+		});
+	});
 
-// 		// for non reset case
-// 		it('it should calculate nav correclty case 1', () => {
-// 			return testNav(582, 600, 1.2);
-// 		});
+	describe('pre reset', () => {
+		before(async () => {
+			await initContracts(0, PERTETUAL_NAME, 0);
+			let time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
+			await mozartContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 
-// 		//for upward reset case
-// 		it('it should calculate nav correclty case 2', () => {
-// 			return testNav(800, 1500, 1);
-// 		});
+			await oracleContract.skipCooldown(1);
+			time = await oracleContract.timestamp.call();
 
-// 		//for downward reset case
-// 		it('it should calculate nav correclty case 3', () => {
-// 			return testNav(1000, 600, 1);
-// 		});
+			await mozartContract.setTimestamp(time.valueOf());
+			await oracleContract.setLastPrice(util.toWei(888), time.valueOf(), pf1);
 
-// 		//for downward reset case where navB goes to 0
-// 		it('it should calculate nav correclty case 4', () => {
-// 			return testNav(1000, 200, 1);
-// 		});
-// 	});
+			await mozartContract.fetchPrice();
+		});
 
+		// function CALCULATE_NEW_TOKEN() {
+		// 	if (navBInWei >= limitUpperInWei) {
 
-// });
+		// 		resetState = ResetState.UpwardReset;
+		// 		uint excessBInWei = navBInWei.sub(navAInWei);
+		// 		newBFromBPerB = excessBInWei.mul(CST.BP_DENOMINATOR).div(CST.BP_DENOMINATOR + alphaInBP);
+		// 		newAFromBPerB = excessBInWei.mul(alphaInBP).div(CST.BP_DENOMINATOR + alphaInBP);
+		// 		// adjust total supply
+		// 		totalSupplyA = totalSupplyA.add(totalSupplyB.mul(newAFromBPerB).div(CST.WEI_DENOMINATOR));
+		// 		totalSupplyB = totalSupplyB.add(totalSupplyB.mul(newBFromBPerB).div(CST.WEI_DENOMINATOR));
+		// 	} else {
+		// 		resetState = ResetState.DownwardReset;
+		// 		uint excessAInWei = navAInWei.sub(navBInWei);
+		// 		newBFromAPerA = excessAInWei.mul(CST.BP_DENOMINATOR).div(CST.BP_DENOMINATOR + alphaInBP);
+		// 		newAFromAPerA = excessAInWei.mul(alphaInBP).div(CST.BP_DENOMINATOR + alphaInBP);
+		// 		totalSupplyA = totalSupplyA.add(totalSupplyA.mul(newAFromAPerA).div(CST.WEI_DENOMINATOR));
+		// 		totalSupplyB = totalSupplyB.add(totalSupplyA.mul(newBFromAPerA).div(CST.WEI_DENOMINATOR));
+		// 	}
+		// }
+
+		it('should be in state preReset', async () => {
+			let state = await util.getState(mozartContract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
+			assert.equal(
+				state.valueOf(),
+				CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET,
+				'state is wrong'
+			);
+		});
+
+		it('should not allow creation', async () => {
+			try {
+				await mozartContract.create.call({
+					from: alice,
+					value: util.toWei(1)
+				});
+				assert.isTrue(false, 'still can create');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can create ');
+			}
+		});
+
+		it('should not allow redemption', async () => {
+			try {
+				await mozartContract.redeem.call(util.toWei(2800), util.toWei(2900), {
+					from: alice
+				});
+
+				assert.isTrue(false, 'still can redeem');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can redeem ');
+			}
+		});
+
+		it('should not allow any transfer of A', async () => {
+			try {
+				await mozartContract.transfer.call(
+					0,
+					CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+					bob,
+					util.toWei(1),
+					{
+						from: alice
+					}
+				);
+
+				assert.isTrue(false, 'still can transfer A token');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer A token');
+			}
+		});
+
+		it('should not allow any transfer of B', async () => {
+			try {
+				await mozartContract.transfer.call(
+					1,
+					CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+					bob,
+					util.toWei(1),
+					{
+						from: alice
+					}
+				);
+
+				assert.isTrue(false, 'still can transfer B token');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer B token');
+			}
+		});
+
+		it('should not allow admin set createCommInBP', async () => {
+			try {
+				await mozartContract.setValue.call(0, 1000, { from: creator });
+
+				assert.isTrue(false, 'still can set createCommInBP');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set createCommInBP');
+			}
+		});
+
+		it('should not allow admin set redeemCommInBP', async () => {
+			try {
+				await mozartContract.setValue.call(1, 1000, { from: creator });
+
+				assert.isTrue(false, 'still can set redeemCommInBP');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set redeemCommInBP');
+			}
+		});
+
+		it('should not allow admin set iterationGasThreshold', async () => {
+			try {
+				await mozartContract.setValue.call(2, 1000, { from: creator });
+				assert.isTrue(false, 'still can set iterationGasThreshold');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set iterationGasThreshold');
+			}
+		});
+
+		it('should not allow admin set preResetWaitingBlocks', async () => {
+			try {
+				await mozartContract.setValue.call(3, 1000, { from: creator });
+				assert.isTrue(false, 'still can set preResetWaitingBlocks');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set preResetWaitingBlocks');
+			}
+		});
+
+		it('should not allow admin set priceTolInBP', async () => {
+			try {
+				await mozartContract.setValue.call(4, 1000, { from: creator });
+
+				assert.isTrue(false, 'still can set priceTolInBP');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set priceTolInBP');
+			}
+		});
+
+		it('should only transit to reset state after a given number of blocks but not before that', async () => {
+			let preResetWaitBlk = await util.getState(
+				mozartContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
+			);
+
+			for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
+				await mozartContract.startPreReset();
+
+			await assertState(mozartContract, CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET);
+
+			let tx = await mozartContract.startPreReset();
+			assert.isTrue(
+				tx.logs.length === 2 &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
+				'wrong events emitted'
+			);
+
+			await assertState(mozartContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
+		});
+	});
+
+	describe.only('resets', () => {
+		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, alphaInBP = 0) {
+			let alpha = (alphaInBP || MozartInitPPT.alphaInBP) / CST.BP_DENOMINATOR;
+			let excessB = navB - navA;
+			let newBFromBPerB = excessB / (1 + alpha);
+			// let newAFromBPerB = (excessB * alpha) / (1 + alpha);
+			let newBFromB = prevBalanceB * newBFromBPerB;
+			let newAFromB = newBFromB * alpha;
+			let newBalanceA = prevBalanceA * navA + newAFromB;
+			let newBalanceB = prevBalanceB * navA + newBFromB;
+			return [newBalanceA, newBalanceB];
+		}
+
+		function downwardReset(prevBalanceA, prevBalanceB, navA, navB, alphaInBP = 0) {
+			let alpha = (alphaInBP || MozartInitPPT.alphaInBP) / CST.BP_DENOMINATOR;
+			let excessA = navA - navB;
+			let newBFromAPerA = excessA / (1 + alpha);
+			// let newAFromAPerA = (excessA * alpha) / (1 + alpha);
+			let newBFromA = prevBalanceB * newBFromAPerA;
+			let newAFromA = newBFromA * alpha;
+			let newBalanceA = prevBalanceA * navB + newAFromA;
+			let newBalanceB = prevBalanceB * navB + newBFromA;
+			return [newBalanceA, newBalanceB];
+		}
+		function assertABalanceForAddress(addr, expected) {
+			return mozartContract.balanceOf.call(0, addr).then(currentBalanceA => {
+				assert.isTrue(
+					util.isEqual(currentBalanceA.valueOf() / CST.WEI_DENOMINATOR, expected),
+					'BalanceA not updated correctly'
+				);
+			});
+		}
+
+		function assertBBalanceForAddress(addr, expected) {
+			return mozartContract.balanceOf
+				.call(1, addr)
+				.then(currentBalanceB =>
+					assert.isTrue(
+						util.isEqual(currentBalanceB.valueOf() / CST.WEI_DENOMINATOR, expected),
+						'BalanceB not updated correctly'
+					)
+				);
+		}
+
+		function resetTest(
+			price,
+			resetFunc,
+			resetState,
+			resetGas,
+			transferABRequired,
+			alphaInBP = 0
+		) {
+			let prevBalanceAalice, prevBalanceBalice;
+			let prevBalanceAbob, prevBalanceBbob;
+			let prevBalanceAcharles, prevBalanceBcharles;
+			let currentNavA;
+			let currentNavB;
+			let newBalanceAalice, newBalanceBalice;
+			let newBalanceAbob, newBalanceBbob;
+			let newBalanceAcharles, newBalanceBcharles;
+			let resetTime;
+			let newBetaAfterRst;
+
+			before(async () => {
+				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
+				let time = await oracleContract.timestamp.call();
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await mozartContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
+				await mozartContract.create({
+					from: alice,
+					value: util.toWei(1)
+				});
+				await mozartContract.create({
+					from: bob,
+					value: util.toWei(1.2)
+				});
+				await mozartContract.create({
+					from: charles,
+					value: util.toWei(1.5)
+				});
+
+				if (transferABRequired) {
+					let aliceA = await mozartContract.balanceOf.call(0, alice);
+
+					mozartContract.transfer(
+						0,
+						CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+						bob,
+						aliceA.valueOf(),
+						{
+							from: alice
+						}
+					);
+					await mozartContract.balanceOf.call(1, bob).then(bobB => {
+						mozartContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							bobB.valueOf(),
+							{
+								from: bob
+							}
+						);
+					});
+
+					await mozartContract.balanceOf.call(1, charles).then(charlesB => {
+						mozartContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							charlesB.valueOf(),
+							{
+								from: charles
+							}
+						);
+					});
+				}
+
+				await mozartContract.balanceOf
+					.call(0, alice)
+					.then(aliceA => (prevBalanceAalice = aliceA.valueOf() / CST.WEI_DENOMINATOR));
+				let aliceB = await mozartContract.balanceOf.call(1, alice);
+
+				prevBalanceBalice = aliceB.valueOf() / CST.WEI_DENOMINATOR;
+
+				await mozartContract.balanceOf
+					.call(0, bob)
+					.then(bobA => (prevBalanceAbob = bobA.valueOf() / CST.WEI_DENOMINATOR));
+				let bobB = await mozartContract.balanceOf.call(1, bob);
+				prevBalanceBbob = bobB.valueOf() / CST.WEI_DENOMINATOR;
+
+				await mozartContract.balanceOf
+					.call(0, charles)
+					.then(
+						charlesA => (prevBalanceAcharles = charlesA.valueOf() / CST.WEI_DENOMINATOR)
+					);
+				let charlesB = await mozartContract.balanceOf.call(1, charles);
+				prevBalanceBcharles = charlesB.valueOf() / CST.WEI_DENOMINATOR;
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(time.valueOf());
+
+				await oracleContract.setLastPrice(util.toWei(price), time.valueOf(), pf1);
+
+				await mozartContract.fetchPrice();
+
+				let navAinWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
+				currentNavA = navAinWei.valueOf() / CST.WEI_DENOMINATOR;
+				let navBinWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
+				currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
+
+				for (let i = 0; i < 10; i++) await mozartContract.startPreReset();
+			});
+
+			it('should in corect reset state', async () => {
+				assertState(mozartContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
+				assertResetState(mozartContract, resetState);
+			});
+
+			it('should have three users', async () => {
+				let userSize = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
+				);
+				assert.equal(userSize.valueOf(), 3, 'num of users incorrect');
+			});
+
+			it('should have correct setup', () => {
+				if (transferABRequired)
+					assert.isTrue(
+						prevBalanceAalice === 0 &&
+							prevBalanceBalice > 0 &&
+							prevBalanceAbob > 0 &&
+							prevBalanceBbob === 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles === 0,
+						'Wrong setup'
+					);
+				else
+					assert.isTrue(
+						prevBalanceAalice > 0 &&
+							prevBalanceBalice > 0 &&
+							prevBalanceAbob > 0 &&
+							prevBalanceBbob > 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles > 0,
+						'Wrong setup'
+					);
+			});
+
+			it('should process reset for only one user', async () => {
+				let tx = await mozartContract.startReset({ gas: resetGas });
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
+					'not only one user processed'
+				);
+
+				let nextIndex = await mozartContract.getNextResetAddrIndex.call();
+				assert.isTrue(
+					util.isEqual(nextIndex.valueOf(), '1', true),
+					'not moving to next user'
+
+				);
+				
+				let currentBalanceAalice = await mozartContract.balanceOf.call(0, alice);
+				let currentBalanceBalice = await mozartContract.balanceOf.call(1, alice);
+			
+				let [newBalanceA, newBalanceB] = resetFunc(
+					prevBalanceAalice,
+					prevBalanceBalice,
+					currentNavA,
+					currentNavB,
+					alphaInBP
+				);
+				newBalanceAalice = newBalanceA;
+				newBalanceBalice = newBalanceB;
+
+				console.log(currentNavA, currentNavB);
+
+				console.log('###################');
+				console.log(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA);
+
+				assert.isTrue(
+					util.isEqual(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA, true),
+					'BalanceA not updated correctly'
+				);
+				assert.isTrue(
+					util.isEqual(currentBalanceBalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceB, true),
+					'BalanceB not updated correctly'
+				);
+			});
+
+			it('should complete reset for second user', async () => {
+				let [newBalanceA, newBalanceB] = resetFunc(
+					prevBalanceAbob,
+					prevBalanceBbob,
+					currentNavA,
+					currentNavB,
+					alphaInBP
+				);
+				newBalanceAbob = newBalanceA;
+				newBalanceBbob = newBalanceB;
+				let tx = await mozartContract.startReset({ gas: resetGas });
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
+					'reset not completed'
+				);
+				await assertABalanceForAddress(bob, newBalanceA);
+				await assertBBalanceForAddress(bob, newBalanceB);
+			});
+
+			it('should complete reset for third user and transit to trading', async () => {
+				let [newBalanceA, newBalanceB] = resetFunc(
+					prevBalanceAcharles,
+					prevBalanceBcharles,
+					currentNavA,
+					currentNavB,
+					alphaInBP
+				);
+				newBalanceAcharles = newBalanceA;
+				newBalanceBcharles = newBalanceB;
+				let tx = await mozartContract.startReset({ gas: resetGas });
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_TRADING,
+					'reset not completed'
+				);
+				let nextIndex = await mozartContract.getNextResetAddrIndex.call();
+				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+				await assertABalanceForAddress(charles, newBalanceA);
+				await assertBBalanceForAddress(charles, newBalanceB);
+
+				let resetTimeInBN = await oracleContract.timestamp.call();
+				resetTime = resetTimeInBN.valueOf();
+			});
+
+			it('totalA should equal totalB times alpha', async () => {
+				let totalA = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYA
+				);
+				let totalB = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYB
+				);
+
+				assert.isTrue(
+					util.isEqual(
+						totalA.valueOf() / CST.WEI_DENOMINATOR,
+						newBalanceAbob + newBalanceAalice + newBalanceAcharles, 
+						true
+					),
+					'totalSupplyA is wrong'
+				);
+				
+				assert.isTrue(
+					util.isEqual(
+						totalB.valueOf() / CST.WEI_DENOMINATOR,
+						newBalanceBbob + newBalanceBalice + newBalanceBcharles, 
+						true
+					),
+					'totalSupplyB is wrong'
+				);
+
+				assert.isTrue(
+					util.isEqual(
+						newBalanceAbob + newBalanceAalice + newBalanceAcharles,
+						((newBalanceBbob + newBalanceBalice + +newBalanceBcharles) *
+							(alphaInBP || MozartInitPPT.alphaInBP)) /
+							CST.BP_DENOMINATOR
+						, true
+					),
+					'total A is not equal to total B times alpha'
+				);
+			});
+
+			it('should update nav', async () => {
+				let navA = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
+				let navB = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
+
+				assert.equal(util.fromWei(navA), '1', 'nav A not reset to 1');
+				assert.isTrue(util.fromWei(navB) === '1', 'nav B not updated correctly');
+			});
+
+			it('should update reset price', async () => {
+				let resetPriceInWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_PRICE_INWEI
+				);
+
+				assert.equal(
+					resetPriceInWei.valueOf() / CST.WEI_DENOMINATOR,
+					price,
+					'resetprice not updated'
+				);
+			});
+
+			it('should update nav correctly after price commit following a reset', async () => {
+				await oracleContract.skipCooldown(1);
+				let time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(
+					util.toWei(price*1.02 + '', 'ether'),
+					time.valueOf(),
+					pf1
+				);
+
+				await mozartContract.fetchPrice();
+
+				let navAinWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
+				currentNavA = navAinWei.valueOf() / CST.WEI_DENOMINATOR;
+
+				let navBinWei = await util.getState(
+					mozartContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
+				currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
+
+				const [newNavA, newNavB] = calcNav(price*1.02, price, alphaInBP/ CST.BP_DENOMINATOR);
+				assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
+				assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
+			});
+		}
+
+		let resetGasAmt = process.env.SOLIDITY_COVERAGE ? 160000 : 95000;
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('upward reset case 1', () => {
+			resetTest(
+				900,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				5000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('upward reset case 2', () => {
+			resetTest(
+				900,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				true,
+				5000
+			);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('upward reset case 3', () => {
+			resetTest(
+				850,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				10000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('upward reset case 4', () => {
+			resetTest(
+				850,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				true,
+				10000
+			);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('upward reset case 5', () => {
+			resetTest(
+				819,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				20000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('upward reset case 6', () => {
+			resetTest(
+				810,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				true,
+				20000
+			);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe.only('downward reset case 1', () => {
+			resetTest(
+				350,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				5000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('downward reset case 2', () => {
+			resetTest(
+				300,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				true,
+				5000
+			);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('downward reset case 3', () => {
+			resetTest(
+				430,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				10000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('downward reset case 4', () => {
+			resetTest(
+				430,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				10000
+			);
+		});
+
+		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
+		describe('downward reset case 5', () => {
+			resetTest(
+				290,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				20000
+			);
+		});
+
+		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
+		describe('downward reset case 6', () => {
+			resetTest(
+				290,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				20000
+			);
+		});
+	});
+});
