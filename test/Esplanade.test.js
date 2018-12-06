@@ -7,6 +7,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
+const CST = require('./constants');
 const users = require('./users.json');
 
 // Event
@@ -178,7 +179,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -196,7 +197,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -208,7 +209,7 @@ contract('Esplanade', accounts => {
 				});
 				assert.isTrue(false, 'can start voting in contract voting stage');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -238,7 +239,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.terminateContractVoting.call({ from: creator });
 				assert.isTrue(false, 'can terminate voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -248,7 +249,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.terminateContractVoting.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -279,7 +280,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.startModeratorVoting.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -307,7 +308,7 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.vote(true, { from: alice });
 					assert.isTrue(false, 'non cold can vote');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -319,7 +320,7 @@ contract('Esplanade', accounts => {
 				try {
 					await vote([bob, bob], [true, true]);
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -428,7 +429,7 @@ contract('Esplanade', accounts => {
 						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -439,7 +440,7 @@ contract('Esplanade', accounts => {
 						: await startModeratorVoting();
 					roleManagerContract.terminateByTimeout({ from: alice });
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -475,7 +476,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.startManager.call({ from: alice });
 				assert.isTrue(false, 'can start voting');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -483,7 +484,7 @@ contract('Esplanade', accounts => {
 			try {
 				await roleManagerContract.startManager({ from: creator });
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -507,7 +508,7 @@ contract('Esplanade', accounts => {
 				await roleManagerContract.setModerator(newModerator2);
 				await roleManagerContract.startManager({ from: newModerator2 });
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -524,7 +525,7 @@ contract('Esplanade', accounts => {
 						from: alice
 					});
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -535,7 +536,7 @@ contract('Esplanade', accounts => {
 						from: creator
 					});
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -641,7 +642,7 @@ contract('Esplanade', accounts => {
 						from: newModerator
 					});
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 		}
@@ -662,7 +663,7 @@ contract('Esplanade', accounts => {
 					from: alice
 				});
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -673,7 +674,7 @@ contract('Esplanade', accounts => {
 					from: creator
 				});
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -683,7 +684,7 @@ contract('Esplanade', accounts => {
 					from: creator
 				});
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -739,7 +740,7 @@ contract('Esplanade', accounts => {
 					from: newModerator2
 				});
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -756,7 +757,7 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.addAddress.call(alice, bob, index, { from: charles });
 					assert.isTrue(false, 'non moderator can add address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -767,7 +768,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can add same address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -776,7 +777,7 @@ contract('Esplanade', accounts => {
 					await roleManagerContract.addAddress(pf1, pf2, index, { from: moderator });
 					assert.isTrue(false, 'can add used account');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -789,7 +790,7 @@ contract('Esplanade', accounts => {
 						{ from: moderator }
 					);
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -808,7 +809,7 @@ contract('Esplanade', accounts => {
 						{ from: newModerator2 }
 					);
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -891,7 +892,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'non moderator can remove address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -904,7 +905,7 @@ contract('Esplanade', accounts => {
 				} catch (err) {
 					assert.equal(
 						err.message,
-						util.VM_INVALID_OPCODE_MSG,
+						CST.VM_INVALID_OPCODE_MSG,
 						'transaction not reverted'
 					);
 				}
@@ -917,7 +918,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'address not in pool can be removed');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -930,7 +931,7 @@ contract('Esplanade', accounts => {
 					);
 					assert.isTrue(false, 'can remove when custodian pool size is less than 1');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -949,7 +950,7 @@ contract('Esplanade', accounts => {
 					);
 					assert.isTrue(false, 'can remove when pool size is less than threshold');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1040,7 +1041,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can remove within cool down');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 		}
@@ -1067,7 +1068,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'non contract address can request address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1078,7 +1079,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'hot address can request address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1092,7 +1093,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can request address');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1103,7 +1104,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'index can be more than 1');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -1114,7 +1115,7 @@ contract('Esplanade', accounts => {
 					});
 					assert.isTrue(false, 'can add when custodian pool is empty');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 

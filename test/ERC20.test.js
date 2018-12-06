@@ -8,6 +8,7 @@ const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
+const CST = require('./constants');
 const ethInitPrice = 582;
 const BP_DENOMINATOR = 10000;
 
@@ -175,7 +176,7 @@ contract('ERC20Token', accounts => {
 				});
 				assert.isTrue(false, 'can transfer of more than balance');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -212,7 +213,7 @@ contract('ERC20Token', accounts => {
 				});
 				assert.isTrue(false, 'can transfer of more than balance');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 	}

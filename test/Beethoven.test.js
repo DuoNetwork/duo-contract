@@ -7,79 +7,19 @@ const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
-
-const CST = {
-	BTV_STATE: {
-		LAST_OPERATION_TIME: 0,
-		OPERATION_COOLDOWN: 1,
-		STATE: 2,
-		MIN_BALANCE: 3,
-		TOTAL_SUPPLYA: 4,
-		TOTAL_SUPPLYB: 5,
-		ETH_COLLATERAL_INWEI: 6,
-		NAVA_INWEI: 7,
-		NAVB_INWEI: 8,
-		LAST_PRICE_INWEI: 9,
-		LAST_PRICETIME_INSECOND: 10,
-		RESET_PRICE_INWEI: 11,
-		RESET_PRICETIME_INSECOND: 12,
-		CREATE_COMMINBP: 13,
-		REDEEM_COMMINBP: 14,
-		PERIOD: 15,
-		MATURITY_IN_SECOND: 16,
-		PRERESET_WAITING_BLOCKS: 17,
-		PRICE_FETCH_COOLDOWN: 18,
-		NEXT_RESET_ADDR_INDEX: 19,
-		TOTAL_USERS: 20,
-		FEE_BALANCE_INWEI: 21,
-		RESET_STATE: 22,
-		ALPHA_INBP: 23,
-		BETA_INWEI: 24,
-		PERIOD_COUPON_INWEI: 25,
-		LIMIT_PERIODIC_INWEI: 26,
-		LIMIT_UPPER_INWEI: 27,
-		LIMIT_LOWER_INWEI: 28,
-		ITERATION_GAS_THRESHOLD: 29
-	}
-};
-
-// Event
-const EVENT_ACCEPT_PX = 'AcceptPrice';
-const EVENT_MATURIED = 'Matured';
-const EVENT_START_TRADING = 'StartTrading';
-const EVENT_CREATE = 'Create';
-const EVENT_REDEEM = 'Redeem';
-const EVENT_TOTAL_SUPPLY = 'TotalSupply';
-const EVENT_START_RESET = 'StartReset';
-const EVENT_SET_VALUE = 'SetValue';
-const EVENT_COLLECT_FEE = 'CollectFee';
-
-const STATE_INCEPTION = '0';
-const STATE_TRADING = '1';
-const STATE_PRE_RESET = '2';
-const STATE_RESET = '3';
-const STATE_MATURITY = '4';
-
-const STATE_UPWARD_RESET = '0';
-const STATE_DOWNWARD_RESET = '1';
-const STATE_PERIODIC_RESET = '2';
+const CST = require('./constants');
 
 const ethInitPrice = 582;
-
-const DUMMY_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
-const A_ADDR = '0xdE8BDd2072D736Fc377e00b8483f5959162DE317';
-const B_ADDR = '0x424325334C3537A6248E09E1Dc392C003d8706Db';
-
 const PERTETUAL_NAME = 'beethoven perpetual';
 const TERM_NAME = 'beethoven term6';
 
 const assertState = async (beethovenContract, state) => {
-	let _state = await util.getState(beethovenContract, CST.BTV_STATE.STATE);
+	let _state = await util.getState(beethovenContract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
 	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
 };
 
 const assertResetState = async (beethovenContract, state) => {
-	let _state = await util.getState(beethovenContract, CST.BTV_STATE.RESET_STATE);
+	let _state = await util.getState(beethovenContract, CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_STATE);
 	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
@@ -156,7 +96,7 @@ contract('Beethoven', accounts => {
 			it('maturity should be set correctly', async () => {
 				let contractMaturity = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.MATURITY_IN_SECOND
+					CST.DUAL_CUSTODIAN.STATE_INDEX.MATURITY_IN_SECOND
 				);
 				assert.isTrue(
 					util.isEqual(contractMaturity.valueOf(), maturity),
@@ -165,7 +105,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('alpha should be set correctly', async () => {
-				let alpha = await util.getState(beethovenContract, CST.BTV_STATE.ALPHA_INBP);
+				let alpha = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ALPHA_INBP
+				);
 				assert.isTrue(
 					util.isEqual(alpha.valueOf(), alphaInBP ? alphaInBP : BeethovenInit.alphaInBP),
 					'alpha set incorrectly'
@@ -173,14 +116,17 @@ contract('Beethoven', accounts => {
 			});
 
 			it('period should be set correctly', async () => {
-				let pd = await util.getState(beethovenContract, CST.BTV_STATE.PERIOD);
+				let pd = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.PERIOD
+				);
 				assert.equal(pd.valueOf(), BeethovenInit.pd, 'period set incorrectly');
 			});
 
 			it('limitPeriodicInWei should be set correctly', async () => {
 				let limitPeriodicInWei = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.LIMIT_PERIODIC_INWEI
+					CST.DUAL_CUSTODIAN.STATE_INDEX.LIMIT_PERIODIC_INWEI
 				);
 				assert.equal(
 					util.fromWei(limitPeriodicInWei),
@@ -192,7 +138,7 @@ contract('Beethoven', accounts => {
 			it('limitUpperInWei should be set correctly', async () => {
 				let limitUpperInWei = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.LIMIT_UPPER_INWEI
+					CST.DUAL_CUSTODIAN.STATE_INDEX.LIMIT_UPPER_INWEI
 				);
 				assert.isTrue(
 					util.isEqual(util.fromWei(limitUpperInWei), BeethovenInit.hu),
@@ -203,7 +149,7 @@ contract('Beethoven', accounts => {
 			it('limitLowerInWei should be set correctly', async () => {
 				let limitLowerInWei = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.LIMIT_LOWER_INWEI
+					CST.DUAL_CUSTODIAN.STATE_INDEX.LIMIT_LOWER_INWEI
 				);
 				assert.equal(
 					util.fromWei(limitLowerInWei),
@@ -215,7 +161,7 @@ contract('Beethoven', accounts => {
 			it('iterationGasThreshold should be set correctly', async () => {
 				let iterationGasThreshold = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.ITERATION_GAS_THRESHOLD
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ITERATION_GAS_THRESHOLD
 				);
 				assert.equal(
 					iterationGasThreshold.valueOf(),
@@ -229,7 +175,7 @@ contract('Beethoven', accounts => {
 			it('createCommInBP should be set correctly', async () => {
 				let createCommInBP = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.CREATE_COMMINBP
+					CST.DUAL_CUSTODIAN.STATE_INDEX.CREATE_COMMINBP
 				);
 				assert.equal(
 					createCommInBP.valueOf(),
@@ -239,7 +185,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('redeemCommInBP should be set correctly', async () => {
-				let comm = await util.getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
+				let comm = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.REDEEM_COMMINBP
+				);
 				assert.equal(comm.valueOf(), BeethovenInit.comm, 'redeemCommInBP set incorrectly');
 			});
 
@@ -251,7 +200,7 @@ contract('Beethoven', accounts => {
 			it('preResetWaitingBlocks should be set correctly', async () => {
 				let preResetWaitingBlocks = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+					CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
 				);
 				assert.equal(
 					preResetWaitingBlocks.valueOf(),
@@ -261,7 +210,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('minimumBalance should be set correctly', async () => {
-				let minBalance = await util.getState(beethovenContract, CST.BTV_STATE.MIN_BALANCE);
+				let minBalance = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.MIN_BALANCE
+				);
 				assert.equal(
 					util.fromWei(minBalance.valueOf()),
 					BeethovenInit.minimumBalance + '',
@@ -290,35 +242,42 @@ contract('Beethoven', accounts => {
 		let time;
 
 		it('state should be Inception before starting', async () => {
-			let state = await util.getState(beethovenContract, CST.BTV_STATE.STATE);
-			assert.equal(state.valueOf(), STATE_INCEPTION, 'state is not inception');
+			let state = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.STATE
+			);
+			assert.equal(
+				state.valueOf(),
+				CST.DUAL_CUSTODIAN.STATE.STATE_INCEPTION,
+				'state is not inception'
+			);
 		});
 
 		it('non operator cannot start', async () => {
 			try {
 				await beethovenContract.startCustodian.call(
-					A_ADDR,
-					B_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
 					oracleContract.address,
 					{ from: alice }
 				);
 				assert.isTrue(false, 'can start');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
 		it('should not start with oracle not ready', async () => {
 			try {
 				await beethovenContract.startCustodian.call(
-					A_ADDR,
-					B_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
 					oracleContract.address,
 					{ from: creator }
 				);
 				assert.isTrue(false, 'can start with oracle not ready');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -327,16 +286,16 @@ contract('Beethoven', accounts => {
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 
 			let tx = await beethovenContract.startCustodian(
-				A_ADDR,
-				B_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
 				oracleContract.address,
 				{ from: creator }
 			);
 
 			assert.isTrue(
 				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_ACCEPT_PX &&
-					tx.logs[1].event === EVENT_START_TRADING,
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_ACCEPT_PX &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_TRADING,
 				'worng event emitted'
 			);
 
@@ -351,10 +310,13 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should update lastPrice and resetPrice', async () => {
-			let lastPrice = await util.getState(beethovenContract, CST.BTV_STATE.LAST_PRICE_INWEI);
+			let lastPrice = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.LAST_PRICE_INWEI
+			);
 			let lastPriceTime = await util.getState(
 				beethovenContract,
-				CST.BTV_STATE.LAST_PRICETIME_INSECOND
+				CST.DUAL_CUSTODIAN.STATE_INDEX.LAST_PRICETIME_INSECOND
 			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(lastPrice), ethInitPrice),
@@ -368,10 +330,13 @@ contract('Beethoven', accounts => {
 				'lastPrice time not updated correctly'
 			);
 
-			let resetPrice = await util.getState(beethovenContract, CST.BTV_STATE.RESET_PRICE_INWEI);
+			let resetPrice = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_PRICE_INWEI
+			);
 			let resetPriceTime = await util.getState(
 				beethovenContract,
-				CST.BTV_STATE.RESET_PRICETIME_INSECOND
+				CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_PRICETIME_INSECOND
 			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(resetPrice), ethInitPrice),
@@ -386,8 +351,15 @@ contract('Beethoven', accounts => {
 		});
 
 		it('state should be trading', async () => {
-			let state = await util.getState(beethovenContract, CST.BTV_STATE.STATE);
-			assert.equal(state.valueOf(), STATE_TRADING, 'state is not trading');
+			let state = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.STATE
+			);
+			assert.equal(
+				state.valueOf(),
+				CST.DUAL_CUSTODIAN.STATE.STATE_TRADING,
+				'state is not trading'
+			);
 		});
 	});
 
@@ -400,9 +372,14 @@ contract('Beethoven', accounts => {
 				time = await oracleContract.timestamp.call();
 				initTime = time;
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-					from: creator
-				});
+				await beethovenContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
 			});
 
 			it('should not fetch price 0', async () => {
@@ -414,7 +391,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'fetched price 0');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -427,7 +404,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'fetched with future time');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -442,7 +419,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'can fetch within cool down');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -453,7 +430,8 @@ contract('Beethoven', accounts => {
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				let tx = await beethovenContract.fetchPrice();
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX,
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_ACCEPT_PX,
 					'wrong event'
 				);
 				assert.isTrue(
@@ -478,10 +456,16 @@ contract('Beethoven', accounts => {
 					);
 					let tx = await beethovenContract.fetchPrice();
 
-					let navAinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
+					let navAinWei = await util.getState(
+						beethovenContract,
+						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+					);
 					let currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 
-					let navBinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
+					let navBinWei = await util.getState(
+						beethovenContract,
+						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+					);
 					let currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
 
 					let currentTime = await oracleContract.timestamp.call();
@@ -507,8 +491,8 @@ contract('Beethoven', accounts => {
 
 					assert.isTrue(
 						tx.logs.length === 2 &&
-							tx.logs[1].event === EVENT_ACCEPT_PX &&
-							tx.logs[0].event === EVENT_MATURIED,
+							tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_ACCEPT_PX &&
+							tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_MATURIED,
 						'wrong event'
 					);
 					assert.isTrue(
@@ -519,13 +503,13 @@ contract('Beethoven', accounts => {
 						'wrong event args'
 					);
 
-					await assertState(beethovenContract, STATE_MATURITY);
+					await assertState(beethovenContract, CST.DUAL_CUSTODIAN.STATE.STATE_MATURITY);
 
 					try {
 						await beethovenContract.fetchPrice();
 						assert.isTrue(false, 'fetched price 0');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 			}
@@ -560,9 +544,14 @@ contract('Beethoven', accounts => {
 				await initContracts(0, PERTETUAL_NAME, 0);
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-					from: creator
-				});
+				await beethovenContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
 				if (isWithWETH) {
 					await wethContract.deposit({
 						from: alice,
@@ -584,13 +573,13 @@ contract('Beethoven', accounts => {
 						);
 						assert.isTrue(false, 'can create with 0');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				} else {
 					try {
 						await beethovenContract.create.call({ from: alice, value: 0 });
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				}
 			});
@@ -605,7 +594,7 @@ contract('Beethoven', accounts => {
 						);
 						assert.isTrue(false, 'can create with insufficient allowance');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 
@@ -621,7 +610,7 @@ contract('Beethoven', accounts => {
 						);
 						assert.isTrue(false, 'can create more than allowance');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 
@@ -637,7 +626,7 @@ contract('Beethoven', accounts => {
 						);
 						assert.isTrue(false, 'can create with 0x0');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 			}
@@ -664,8 +653,8 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(
 					tx.logs.length === 2 &&
-						tx.logs[0].event === EVENT_CREATE &&
-						tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_CREATE &&
+						tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
 					'incorrect event emitted'
 				);
 
@@ -707,7 +696,10 @@ contract('Beethoven', accounts => {
 			});
 
 			it('feeAccumulated should be updated', async () => {
-				let ethFee = await util.getState(beethovenContract, CST.BTV_STATE.FEE_BALANCE_INWEI);
+				let ethFee = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
+				);
 				let fee = (1 * BeethovenInit.comm) / BP_DENOMINATOR;
 				assert.isTrue(
 					util.fromWei(ethFee) === fee.toString(),
@@ -753,14 +745,14 @@ contract('Beethoven', accounts => {
 					await beethovenContract.collectFee.call(util.toWei(1), { from: fc });
 					assert.isTrue(false, 'can collect fee more than allowed');
 				} catch (err) {
-					assert.equal(err.message, util.VM_INVALID_OPCODE_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_INVALID_OPCODE_MSG, 'not reverted');
 				}
 			});
 
 			it('should collect fee', async () => {
 				let feeBalanceInWei = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.FEE_BALANCE_INWEI
+					CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
 				);
 				accumulatedFeeAfterWithdrawal = Number(util.fromWei(feeBalanceInWei)) - 0.0001;
 				let success = await beethovenContract.collectFee.call(util.toWei(0.0001), {
@@ -772,7 +764,8 @@ contract('Beethoven', accounts => {
 				});
 
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_COLLECT_FEE,
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_COLLECT_FEE,
 					'worng event emitted'
 				);
 				assert.isTrue(
@@ -789,7 +782,7 @@ contract('Beethoven', accounts => {
 			it('should update fee balance correctly', async () => {
 				let feeBalanceInWei = await util.getState(
 					beethovenContract,
-					CST.BTV_STATE.FEE_BALANCE_INWEI
+					CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
 				);
 				assert.isTrue(
 					util.isEqual(util.fromWei(feeBalanceInWei), accumulatedFeeAfterWithdrawal),
@@ -822,20 +815,36 @@ contract('Beethoven', accounts => {
 			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
-			});
+			await beethovenContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 			await beethovenContract.create({ from: alice, value: util.toWei(1) });
 			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
-			let ethFee = await util.getState(beethovenContract, CST.BTV_STATE.FEE_BALANCE_INWEI);
+			let ethFee = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
+			);
 			prevFeeAccumulated = ethFee.valueOf();
 			prevCollateral =
-				(await util.getState(beethovenContract, CST.BTV_STATE.ETH_COLLATERAL_INWEI)).valueOf() /
-				WEI_DENOMINATOR;
-			totalSupplyA = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYA);
+				(await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ETH_COLLATERAL_INWEI
+				)).valueOf() / WEI_DENOMINATOR;
+			totalSupplyA = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYA
+			);
 			totalSupplyA = totalSupplyA.valueOf() / WEI_DENOMINATOR;
-			totalSupplyB = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYB);
+			totalSupplyB = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYB
+			);
 			totalSupplyB = totalSupplyB.valueOf() / WEI_DENOMINATOR;
 		});
 
@@ -846,7 +855,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'able to redeem more than balance');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'able to redeem more than allowed');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem more than allowed');
 			}
 		});
 
@@ -863,8 +872,8 @@ contract('Beethoven', accounts => {
 			});
 			assert.isTrue(
 				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_REDEEM &&
-					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_REDEEM &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
 				'incorrect event emitted'
 			);
 			totalSupplyA = totalSupplyA - deductAmtA;
@@ -880,8 +889,10 @@ contract('Beethoven', accounts => {
 			);
 
 			let ethCollateral =
-				(await util.getState(beethovenContract, CST.BTV_STATE.ETH_COLLATERAL_INWEI)).valueOf() /
-				WEI_DENOMINATOR;
+				(await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.ETH_COLLATERAL_INWEI
+				)).valueOf() / WEI_DENOMINATOR;
 			assert.isTrue(
 				util.isEqual(ethCollateral, prevCollateral - amtEth),
 				'eth collateral not set correctly'
@@ -927,14 +938,20 @@ contract('Beethoven', accounts => {
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(util.isEqual(userFlag.valueOf(), '1'), 'user not in the user list');
-			let userSize = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
+			let userSize = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
+			);
 			assert.isTrue(util.isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
 		});
 
 		it('should be in user list', async () => {
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(userFlag.valueOf() == '1', 'user not in the user list');
-			let userSize = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
+			let userSize = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
+			);
 			assert.equal(userSize.valueOf(), 1, 'user size not updated correctly');
 		});
 
@@ -949,7 +966,10 @@ contract('Beethoven', accounts => {
 			);
 			let userFlag = await beethovenContract.existingUsers.call(alice);
 			assert.isTrue(util.isEqual(userFlag.valueOf(), 0), 'user still in the userList');
-			let userSize = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
+			let userSize = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
+			);
 			assert.isTrue(util.isEqual(userSize.valueOf(), 0), 'user size not updated correctly');
 		});
 	});
@@ -965,9 +985,14 @@ contract('Beethoven', accounts => {
 			);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
-			});
+			await beethovenContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 			await beethovenContract.create({ from: alice, value: util.toWei(1) });
 			prevBalanceA = await beethovenContract.balanceOf.call(0, alice);
 			prevBalanceB = await beethovenContract.balanceOf.call(1, alice);
@@ -980,7 +1005,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'able to redeem in trading state');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'able to redeem in trading state');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem in trading state');
 			}
 		});
 
@@ -990,8 +1015,12 @@ contract('Beethoven', accounts => {
 			await beethovenContract.setTimestamp(time.valueOf());
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await beethovenContract.fetchPrice();
-			navA = util.fromWei(await util.getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI));
-			navB = util.fromWei(await util.getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI));
+			navA = util.fromWei(
+				await util.getState(beethovenContract, CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI)
+			);
+			navB = util.fromWei(
+				await util.getState(beethovenContract, CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI)
+			);
 
 			try {
 				await beethovenContract.redeemAll({
@@ -999,7 +1028,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'able to redeemAll with 0 balance');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'able to redeemAll with 0 balance');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeemAll with 0 balance');
 			}
 		});
 
@@ -1010,8 +1039,8 @@ contract('Beethoven', accounts => {
 
 			assert.isTrue(
 				tx.logs.length === 2 &&
-					tx.logs[0].event === EVENT_REDEEM &&
-					tx.logs[1].event === EVENT_TOTAL_SUPPLY,
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_REDEEM &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
 				'wrong event'
 			);
 
@@ -1042,9 +1071,14 @@ contract('Beethoven', accounts => {
 			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
-			});
+			await beethovenContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 		});
 
 		function calcNav(price, time, resetPrice, resetTime, beta) {
@@ -1120,9 +1154,14 @@ contract('Beethoven', accounts => {
 			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
-			});
+			await beethovenContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 
 			await oracleContract.skipCooldown(1);
 			time = await oracleContract.timestamp.call();
@@ -1134,8 +1173,15 @@ contract('Beethoven', accounts => {
 		});
 
 		it('should be in state preReset', async () => {
-			let state = await util.getState(beethovenContract, CST.BTV_STATE.STATE);
-			assert.equal(state.valueOf(), STATE_PRE_RESET, 'state is wrong');
+			let state = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.STATE
+			);
+			assert.equal(
+				state.valueOf(),
+				CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET,
+				'state is wrong'
+			);
 		});
 
 		it('should not allow creation', async () => {
@@ -1146,7 +1192,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'still can create');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can create ');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can create ');
 			}
 		});
 
@@ -1158,31 +1204,43 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can redeem');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can redeem ');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can redeem ');
 			}
 		});
 
 		it('should not allow any transfer of A', async () => {
 			try {
-				await beethovenContract.transfer.call(0, DUMMY_ADDR, bob, util.toWei(1), {
-					from: alice
-				});
+				await beethovenContract.transfer.call(
+					0,
+					CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+					bob,
+					util.toWei(1),
+					{
+						from: alice
+					}
+				);
 
 				assert.isTrue(false, 'still can transfer A token');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can transfer A token');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer A token');
 			}
 		});
 
 		it('should not allow any transfer of B', async () => {
 			try {
-				await beethovenContract.transfer.call(1, DUMMY_ADDR, bob, util.toWei(1), {
-					from: alice
-				});
+				await beethovenContract.transfer.call(
+					1,
+					CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+					bob,
+					util.toWei(1),
+					{
+						from: alice
+					}
+				);
 
 				assert.isTrue(false, 'still can transfer B token');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can transfer B token');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer B token');
 			}
 		});
 
@@ -1192,7 +1250,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set createCommInBP');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can set createCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set createCommInBP');
 			}
 		});
 
@@ -1202,7 +1260,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set redeemCommInBP');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still can set redeemCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set redeemCommInBP');
 			}
 		});
 
@@ -1211,7 +1269,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(2, 1000, { from: creator });
 				assert.isTrue(false, 'still can set iterationGasThreshold');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still set iterationGasThreshold');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set iterationGasThreshold');
 			}
 		});
 
@@ -1220,7 +1278,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(3, 1000, { from: creator });
 				assert.isTrue(false, 'still can set preResetWaitingBlocks');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still set preResetWaitingBlocks');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set preResetWaitingBlocks');
 			}
 		});
 
@@ -1230,30 +1288,30 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set priceTolInBP');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'still set priceTolInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set priceTolInBP');
 			}
 		});
 
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
 			let preResetWaitBlk = await util.getState(
 				beethovenContract,
-				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+				CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
 			);
 
 			for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
 				await beethovenContract.startPreReset();
 
-			await assertState(beethovenContract, STATE_PRE_RESET);
+			await assertState(beethovenContract, CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET);
 
 			let tx = await beethovenContract.startPreReset();
 			assert.isTrue(
 				tx.logs.length === 2 &&
-					tx.logs[1].event === EVENT_START_RESET &&
-					tx.logs[0].event === EVENT_TOTAL_SUPPLY,
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
 				'wrong events emitted'
 			);
 
-			await assertState(beethovenContract, STATE_RESET);
+			await assertState(beethovenContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
 		});
 	});
 
@@ -1370,9 +1428,14 @@ contract('Beethoven', accounts => {
 				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-				await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-					from: creator
-				});
+				await beethovenContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
 				await beethovenContract.create({
 					from: alice,
 					value: util.toWei(1)
@@ -1389,19 +1452,37 @@ contract('Beethoven', accounts => {
 				if (transferABRequired) {
 					let aliceA = await beethovenContract.balanceOf.call(0, alice);
 
-					beethovenContract.transfer(0, DUMMY_ADDR, bob, aliceA.valueOf(), {
-						from: alice
-					});
+					beethovenContract.transfer(
+						0,
+						CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+						bob,
+						aliceA.valueOf(),
+						{
+							from: alice
+						}
+					);
 					await beethovenContract.balanceOf.call(1, bob).then(bobB => {
-						beethovenContract.transfer(1, DUMMY_ADDR, alice, bobB.valueOf(), {
-							from: bob
-						});
+						beethovenContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							bobB.valueOf(),
+							{
+								from: bob
+							}
+						);
 					});
 
 					await beethovenContract.balanceOf.call(1, charles).then(charlesB => {
-						beethovenContract.transfer(1, DUMMY_ADDR, alice, charlesB.valueOf(), {
-							from: charles
-						});
+						beethovenContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							charlesB.valueOf(),
+							{
+								from: charles
+							}
+						);
 					});
 				}
 
@@ -1431,15 +1512,27 @@ contract('Beethoven', accounts => {
 
 				await beethovenContract.fetchPrice();
 
-				let navAinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
+				let navAinWei = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
-				let navBinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
+				let navBinWei = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
 
-				let betaInWei = await util.getState(beethovenContract, CST.BTV_STATE.BETA_INWEI);
+				let betaInWei = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.BETA_INWEI
+				);
 				prevBeta = betaInWei.valueOf() / WEI_DENOMINATOR;
 				for (let i = 0; i < 10; i++) await beethovenContract.startPreReset();
-				let betaInWeiAfter = await util.getState(beethovenContract, CST.BTV_STATE.BETA_INWEI);
+				let betaInWeiAfter = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.BETA_INWEI
+				);
 				beta = betaInWeiAfter.valueOf() / WEI_DENOMINATOR;
 			});
 
@@ -1464,12 +1557,15 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should in corect reset state', async () => {
-				assertState(beethovenContract, STATE_RESET);
+				assertState(beethovenContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
 				assertResetState(beethovenContract, resetState);
 			});
 
 			it('should have three users', async () => {
-				let userSize = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_USERS);
+				let userSize = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
+				);
 				assert.equal(userSize.valueOf(), 3, 'num of users incorrect');
 			});
 
@@ -1499,7 +1595,8 @@ contract('Beethoven', accounts => {
 			it('should process reset for only one user', async () => {
 				let tx = await beethovenContract.startReset({ gas: resetGas });
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_RESET,
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
 					'not only one user processed'
 				);
 
@@ -1541,7 +1638,8 @@ contract('Beethoven', accounts => {
 				newBalanceBbob = newBalanceB;
 				let tx = await beethovenContract.startReset({ gas: resetGas });
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_RESET,
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
 					'reset not completed'
 				);
 				await assertABalanceForAddress(bob, newBalanceA);
@@ -1561,7 +1659,8 @@ contract('Beethoven', accounts => {
 				newBalanceBcharles = newBalanceB;
 				let tx = await beethovenContract.startReset({ gas: resetGas });
 				assert.isTrue(
-					tx.logs.length === 1 && tx.logs[0].event === EVENT_START_TRADING,
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_TRADING,
 					'reset not completed'
 				);
 				let nextIndex = await beethovenContract.getNextResetAddrIndex.call();
@@ -1574,8 +1673,14 @@ contract('Beethoven', accounts => {
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
-				let totalA = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYA);
-				let totalB = await util.getState(beethovenContract, CST.BTV_STATE.TOTAL_SUPPLYB);
+				let totalA = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYA
+				);
+				let totalB = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYB
+				);
 				assert.isTrue(
 					util.isEqual(
 						totalA.valueOf() / WEI_DENOMINATOR,
@@ -1602,8 +1707,14 @@ contract('Beethoven', accounts => {
 			});
 
 			it('should update nav', async () => {
-				let navA = await util.getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
-				let navB = await util.getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
+				let navA = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
+				let navB = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
 
 				assert.equal(util.fromWei(navA), '1', 'nav A not reset to 1');
 				assert.isTrue(
@@ -1618,7 +1729,7 @@ contract('Beethoven', accounts => {
 				if (!isPeriodicReset) {
 					let resetPriceInWei = await util.getState(
 						beethovenContract,
-						CST.BTV_STATE.RESET_PRICE_INWEI
+						CST.DUAL_CUSTODIAN.STATE_INDEX.RESET_PRICE_INWEI
 					);
 
 					assert.equal(
@@ -1641,10 +1752,16 @@ contract('Beethoven', accounts => {
 
 				await beethovenContract.fetchPrice();
 
-				let navAinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVA_INWEI);
+				let navAinWei = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+				);
 				currentNavA = navAinWei.valueOf() / WEI_DENOMINATOR;
 
-				let navBinWei = await util.getState(beethovenContract, CST.BTV_STATE.NAVB_INWEI);
+				let navBinWei = await util.getState(
+					beethovenContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+				);
 				currentNavB = navBinWei.valueOf() / WEI_DENOMINATOR;
 
 				let currentTime = await oracleContract.timestamp.call();
@@ -1671,72 +1788,178 @@ contract('Beethoven', accounts => {
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 1', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, false);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				false
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 2', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, true);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				true
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 3', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, false, 20000);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				20000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 4', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, true, 20000);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				20000
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('upward reset case 5', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, false, 5000);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				5000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('upward reset case 6', () => {
-			resetTest(1200, upwardReset, STATE_UPWARD_RESET, resetGasAmt, false, true, 5000);
+			resetTest(
+				1200,
+				upwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_UPWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				5000
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 1', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, false);
+			resetTest(
+				350,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				false
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
-			resetTest(350, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, true);
+			resetTest(
+				350,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				true
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 3', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, false, 20000);
+			resetTest(
+				430,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				20000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 4', () => {
-			resetTest(430, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, true, 20000);
+			resetTest(
+				430,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				20000
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 5', () => {
-			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, false, 5000);
+			resetTest(
+				290,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				false,
+				5000
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 6', () => {
-			resetTest(290, downwardReset, STATE_DOWNWARD_RESET, resetGasAmt, false, true, 5000);
+			resetTest(
+				290,
+				downwardReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
+				resetGasAmt,
+				false,
+				true,
+				5000
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('periodic reset case 1', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, false);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				false
+			);
 		});
 
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('periodic reset case 2', () => {
-			resetTest(ethInitPrice, periodicReset, STATE_PERIODIC_RESET, resetGasAmt, true, true);
+			resetTest(
+				ethInitPrice,
+				periodicReset,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
+				resetGasAmt,
+				true,
+				true
+			);
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
@@ -1744,7 +1967,7 @@ contract('Beethoven', accounts => {
 			resetTest(
 				ethInitPrice,
 				periodicReset,
-				STATE_PERIODIC_RESET,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
 				resetGasAmt,
 				true,
 				false,
@@ -1757,7 +1980,7 @@ contract('Beethoven', accounts => {
 			resetTest(
 				ethInitPrice,
 				periodicReset,
-				STATE_PERIODIC_RESET,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
 				resetGasAmt,
 				true,
 				true,
@@ -1770,7 +1993,7 @@ contract('Beethoven', accounts => {
 			resetTest(
 				ethInitPrice,
 				periodicReset,
-				STATE_PERIODIC_RESET,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
 				resetGasAmt,
 				true,
 				false,
@@ -1783,7 +2006,7 @@ contract('Beethoven', accounts => {
 			resetTest(
 				ethInitPrice,
 				periodicReset,
-				STATE_PERIODIC_RESET,
+				CST.DUAL_CUSTODIAN.STATE.STATE_PERIODIC_RESET,
 				resetGasAmt,
 				true,
 				true,
@@ -1797,9 +2020,14 @@ contract('Beethoven', accounts => {
 			await initContracts(0, PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(A_ADDR, B_ADDR, oracleContract.address, {
-				from: creator
-			});
+			await beethovenContract.startCustodian(
+				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				oracleContract.address,
+				{
+					from: creator
+				}
+			);
 		});
 
 		beforeEach(async () => {
@@ -1809,11 +2037,15 @@ contract('Beethoven', accounts => {
 		it('admin should be able to set createCommission', async () => {
 			let success = await beethovenContract.setValue.call(0, 100, { from: creator });
 			assert.isTrue(success, 'not be able to set commissison');
-			let createCommInBP = await util.getState(beethovenContract, CST.BTV_STATE.CREATE_COMMINBP);
+			let createCommInBP = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.CREATE_COMMINBP
+			);
 			let preValue = createCommInBP.valueOf();
 			let tx = await beethovenContract.setValue(0, 50, { from: creator });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
 				'wrong event emitted'
 			);
 			assert.isTrue(
@@ -1830,7 +2062,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1839,7 +2071,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(0, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1848,11 +2080,15 @@ contract('Beethoven', accounts => {
 				from: creator
 			});
 			assert.isTrue(success, 'not be able to set redeemCommInBP');
-			let redeemCommInBP = await util.getState(beethovenContract, CST.BTV_STATE.REDEEM_COMMINBP);
+			let redeemCommInBP = await util.getState(
+				beethovenContract,
+				CST.DUAL_CUSTODIAN.STATE_INDEX.REDEEM_COMMINBP
+			);
 			let preValue = redeemCommInBP.valueOf();
 			let tx = await beethovenContract.setValue(1, 100, { from: creator });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
 				'wrong event emitted'
 			);
 			assert.isTrue(
@@ -1869,7 +2105,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1878,7 +2114,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(1, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1889,12 +2125,13 @@ contract('Beethoven', accounts => {
 			assert.isTrue(success, 'not be able to set gas threshhold');
 			let iterationGasThreshold = await util.getState(
 				beethovenContract,
-				CST.BTV_STATE.ITERATION_GAS_THRESHOLD
+				CST.DUAL_CUSTODIAN.STATE_INDEX.ITERATION_GAS_THRESHOLD
 			);
 			let preValue = iterationGasThreshold.valueOf();
 			let tx = await beethovenContract.setValue(2, 100, { from: creator });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
 				'wrong event emitted'
 			);
 			assert.isTrue(
@@ -1910,7 +2147,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(2, 100000, { from: alice });
 				assert.isTrue(false, 'non admin can change gas threshhold');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1921,12 +2158,13 @@ contract('Beethoven', accounts => {
 			assert.isTrue(success, 'not be able to set pre reset waiting block');
 			let preResetWaitingBlocks = await util.getState(
 				beethovenContract,
-				CST.BTV_STATE.PRERESET_WAITING_BLOCKS
+				CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
 			);
 			let preValue = preResetWaitingBlocks.valueOf();
 			let tx = await beethovenContract.setValue(3, 100, { from: creator });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_SET_VALUE,
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
 				'wrong event emitted'
 			);
 			assert.isTrue(
@@ -1943,7 +2181,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -1954,7 +2192,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'can set value with invalid index');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 	});

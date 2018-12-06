@@ -7,6 +7,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 const Pool = InitParas['Pool'];
 const MagiInit = InitParas['Magi'];
 const util = require('./util');
+const CST = require('./constants');
 // Event
 const EVENT_ACCEPT_PRICE = 'AcceptPrice';
 const EVENT_COMMIT_PRICE = 'CommitPrice';
@@ -130,7 +131,7 @@ contract('Magi', accounts => {
 				});
 				assert.isTrue(false, 'non pf can start');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -145,7 +146,7 @@ contract('Magi', accounts => {
 				);
 				assert.isTrue(false, 'startTime can be less than blockchain time');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
@@ -188,7 +189,7 @@ contract('Magi', accounts => {
 				});
 				assert.isTrue(false, 'not reverted');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 	});
@@ -217,7 +218,7 @@ contract('Magi', accounts => {
 				});
 				assert.isTrue(false, 'non pf address can commit price');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, '');
+				assert.equal(err.message, CST.VM_REVERT_MSG, '');
 			}
 		});
 
@@ -286,7 +287,7 @@ contract('Magi', accounts => {
 
 				assert.isTrue(false, 'the price is not rejected');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'the VM is not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'the VM is not reverted');
 			}
 		});
 
@@ -438,7 +439,7 @@ contract('Magi', accounts => {
 
 				assert.isTrue(false, 'third price is not rejected');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'third price is not rejected');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'third price is not rejected');
 			}
 		});
 
@@ -450,7 +451,7 @@ contract('Magi', accounts => {
 				});
 				assert.isTrue(false, 'third price is not rejected');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'third price is not rejected');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'third price is not rejected');
 			}
 		});
 
@@ -617,7 +618,7 @@ contract('Magi', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					util.VM_REVERT_MSG,
+					CST.VM_REVERT_MSG,
 					'can commit price within cooldown period'
 				);
 			}
@@ -710,7 +711,7 @@ contract('Magi', accounts => {
 					await oracleContract.updatePriceFeed.call(0, { from: alice });
 					assert.isTrue(false, 'hot address can update price feed');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 
@@ -769,7 +770,7 @@ contract('Magi', accounts => {
 					await oracleContract.updatePriceFeed(index, { from: bob });
 					assert.isTrue(false, 'can update price feed in cool down period');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 				}
 			});
 		}
@@ -796,7 +797,7 @@ contract('Magi', accounts => {
 					try {
 						await oracleContract.setValue(index, value, { from: creator });
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 			} else {
@@ -805,7 +806,7 @@ contract('Magi', accounts => {
 						await oracleContract.setValue(index, value, { from: alice });
 						assert.isTrue(false, 'non operater can setValue');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 
@@ -839,7 +840,7 @@ contract('Magi', accounts => {
 								await oracleContract.setValue(index, value, { from: creator });
 								assert.isTrue(false, 'wrong argument');
 							} catch (err) {
-								assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+								assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 							}
 							break;
 					}
@@ -864,7 +865,7 @@ contract('Magi', accounts => {
 						await oracleContract.setValue(index, value, { from: creator });
 						assert.isTrue(false, 'non update within cool down');
 					} catch (err) {
-						assert.equal(err.message, util.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 					}
 				});
 			}

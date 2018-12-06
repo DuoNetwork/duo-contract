@@ -83,23 +83,22 @@ contract Mozart is DualClassCustodian {
 		returns (uint, uint) 
 	{
 		uint navEth = priceInWei.mul(WEI_DENOMINATOR).div(rstPriceInWei);
+		
 		uint navParent = navEth
 			.mul(alphaInBP.add(BP_DENOMINATOR))
 			.div(BP_DENOMINATOR);
-
+		
 		if(navEth >= 2 * WEI_DENOMINATOR) {
 			return (0, navParent);
 		}
-
 		if(navEth <= WEI_DENOMINATOR/2) {
 			return (navParent.mul(BP_DENOMINATOR).div(alphaInBP), 0);
 		}
-		uint navA = 2* WEI_DENOMINATOR.sub(navEth);
-		uint navB = (2* alphaInBP.add(BP_DENOMINATOR).mul(navEth)
-					.sub(2 * alphaInBP.mul(WEI_DENOMINATOR))
+		uint navA = (2*WEI_DENOMINATOR).sub(navEth);
+		uint navB = ((2* alphaInBP).add(BP_DENOMINATOR).mul(navEth)
+					.sub((2 * alphaInBP).mul(WEI_DENOMINATOR))
 					).div(BP_DENOMINATOR);
 		return(navA, navB);
-	
 	}
 	// end of priceFetch function
 
@@ -113,7 +112,7 @@ contract Mozart is DualClassCustodian {
 				resetState = ResetState.UpwardReset;
 				uint excessBInWei = navBInWei.sub(navAInWei);
 				newBFromBPerB = excessBInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
-				newAFromBPerB = excessBInWei.mul(alphaInBP).div(BP_DENOMINATOR + alphaInBP);
+				newAFromBPerB = newBFromBPerB.mul(alphaInBP).div(BP_DENOMINATOR);
 				// adjust total supply
 				totalSupplyA = totalSupplyA.add(totalSupplyB.mul(newAFromBPerB).div(WEI_DENOMINATOR));
 				totalSupplyB = totalSupplyB.add(totalSupplyB.mul(newBFromBPerB).div(WEI_DENOMINATOR));
@@ -121,7 +120,7 @@ contract Mozart is DualClassCustodian {
 				resetState = ResetState.DownwardReset;
 				uint excessAInWei = navAInWei.sub(navBInWei);
 				newBFromAPerA = excessAInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
-				newAFromAPerA = excessAInWei.mul(alphaInBP).div(BP_DENOMINATOR + alphaInBP);
+				newAFromAPerA = newBFromAPerA.mul(alphaInBP).div(BP_DENOMINATOR);
 				totalSupplyA = totalSupplyA.add(totalSupplyA.mul(newAFromAPerA).div(WEI_DENOMINATOR));
 				totalSupplyB = totalSupplyB.add(totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR));
 			} 

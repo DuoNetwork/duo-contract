@@ -7,6 +7,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
 const PoolInit = InitParas['Pool'];
 const util = require('./util');
+const CST = require('./constants');
 // Event
 const EVENT_TRANSFER = 'Transfer';
 const EVENT_APPROVAL = 'Approval';
@@ -337,7 +338,7 @@ contract('Custodian', accounts => {
 
 					assert.isTrue(false, 'able to transfer more than balance');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -411,7 +412,7 @@ contract('Custodian', accounts => {
 					);
 					assert.isTrue(false, 'can transferFrom of more than allowance');
 				} catch (err) {
-					assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 				}
 			});
 
@@ -505,7 +506,7 @@ contract('Custodian', accounts => {
 				await custodianContract.collectFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'non fc can withdraw');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'non fc can withdraw');
 			}
 		});
 
@@ -518,7 +519,7 @@ contract('Custodian', accounts => {
 			} catch (err) {
 				assert.equal(
 					err.message,
-					util.VM_INVALID_OPCODE_MSG,
+					CST.VM_INVALID_OPCODE_MSG,
 					'can collect fee more than allowed'
 				);
 			}
@@ -561,7 +562,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateOracle.call(newOracleAddr, { from: alice });
 				assert.isTrue(false, 'non operator can update address');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -572,7 +573,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update not passed contract');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -584,7 +585,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update non passed contract');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -617,7 +618,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: alice });
 				assert.isTrue(false, 'address not in pool can update address');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
@@ -626,7 +627,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: PoolInit[1][0] });
 				assert.isTrue(false, 'hot address can update address');
 			} catch (err) {
-				assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 

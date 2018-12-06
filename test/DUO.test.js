@@ -1,6 +1,6 @@
 const DUO = artifacts.require('./DUO.sol');
 const util = require('./util');
-
+const CST = require('./constants');
 // Event
 const TRANSFER = 'Transfer';
 const APPROVAL = 'Approval';
@@ -77,7 +77,7 @@ contract('DUO', accounts => {
 			await duoContract.transferFrom(creator, bob, util.toWei(200), { from: alice });
 			assert.isTrue(false, 'can transfer of more than balance');
 		} catch (err) {
-			assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 		}
 	});
 
@@ -112,7 +112,7 @@ contract('DUO', accounts => {
 			await duoContract.transfer(bob, util.toWei(10000), { from: creator });
 			assert.isTrue(false, 'can transfer of more than balance');
 		} catch (err) {
-			assert.equal(err.message, util.VM_REVERT_MSG, 'transaction not reverted');
+			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 		}
 	});
 });
