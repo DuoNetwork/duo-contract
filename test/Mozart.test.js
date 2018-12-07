@@ -88,7 +88,7 @@ contract('Mozart', accounts => {
 			return [0, navParent];
 		}
 
-		if (navEth <= 0.5) {
+		if (navEth <= 2*alpha/(2*alpha + 1)) {
 			return [navParent / alpha, 0];
 		}
 		return [2 - navEth, (2 * alpha + 1) * navEth - 2 * alpha];
