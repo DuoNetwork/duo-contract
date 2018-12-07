@@ -373,58 +373,87 @@ contract('Mozart', accounts => {
 	});
 
 	describe('nav calculation', () => {
-		before(async () => {
-			await initContracts(0, PERTETUAL_NAME, 0);
-			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await mozartContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
-				oracleContract.address,
-				{
-					from: creator
-				}
+
+		function navTest(alphaInBP) {
+			before(async () => {
+				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
+				let time = await oracleContract.timestamp.call();
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await mozartContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
+			});
+	
+			function testNav(resetPrice, lastPrice) {
+				let resetPriceInWei = util.toWei(resetPrice);
+				let lastPriceInWei = util.toWei(lastPrice);
+	
+				let [navA, navB] = calcNav(lastPrice, resetPrice, alphaInBP/CST.BP_DENOMINATOR);
+				return mozartContract.calculateNav.call(lastPriceInWei, resetPriceInWei).then(res => {
+					let navAInWei = res[0].valueOf();
+					let navBInWei = res[1].valueOf();
+					assert.isTrue(
+						util.isEqual(util.fromWei(navAInWei), navA),
+						'navA not calculated correctly'
+					);
+					assert.isTrue(
+						util.isEqual(util.fromWei(navBInWei), navB),
+						'navB not calculated correctly'
+					);
+				});
+			}
+	
+			// for non reset case
+			it('it should calculate nav correclty case 1', () => {
+				return testNav(582, 600, alphaInBP);
+			});
+	
+			// //for upward reset case
+			it('it should calculate nav correclty case 2', () => {
+				return testNav(800, 1500, alphaInBP);
+			});
+	
+			// //for downward reset case
+			it('it should calculate nav correclty case 3', () => {
+				return testNav(1000, 600, alphaInBP);
+			});
+	
+			//for downward reset case where navB goes to 0
+			it('it should calculate nav correclty case 4', () => {
+				return testNav(1000, 200, alphaInBP);
+			});
+
+		}
+
+		// case 1 alpha= 5000
+		describe('alpha= 5000', () => {
+			navTest(
+				5000
 			);
 		});
 
-		function testNav(resetPrice, lastPrice) {
-			let resetPriceInWei = util.toWei(resetPrice);
-			let lastPriceInWei = util.toWei(lastPrice);
-
-			let [navA, navB] = calcNav(lastPrice, resetPrice, 0.5);
-			return mozartContract.calculateNav.call(lastPriceInWei, resetPriceInWei).then(res => {
-				let navAInWei = res[0].valueOf();
-				let navBInWei = res[1].valueOf();
-				assert.isTrue(
-					util.isEqual(util.fromWei(navAInWei), navA),
-					'navA not calculated correctly'
-				);
-				assert.isTrue(
-					util.isEqual(util.fromWei(navBInWei), navB),
-					'navB not calculated correctly'
-				);
-			});
-		}
-
-		// for non reset case
-		it('it should calculate nav correclty case 1', () => {
-			return testNav(582, 600);
+		// case 2 alpha= 10000
+		describe('alpha= 10000', () => {
+			navTest(
+				10000
+			);
 		});
 
-		// //for upward reset case
-		it('it should calculate nav correclty case 2', () => {
-			return testNav(800, 1500);
+
+		// case 3 alpha= 20000
+		describe('alpha= 20000', () => {
+			navTest(
+				20000
+			);
 		});
 
-		// //for downward reset case
-		it('it should calculate nav correclty case 3', () => {
-			return testNav(1000, 600);
-		});
 
-		//for downward reset case where navB goes to 0
-		it('it should calculate nav correclty case 4', () => {
-			return testNav(1000, 200);
-		});
+		
 	});
 
 	describe('pre reset', () => {

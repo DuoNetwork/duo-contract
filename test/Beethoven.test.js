@@ -402,85 +402,109 @@ contract('Beethoven', accounts => {
 	});
 
 	describe('nav calculation', () => {
-		before(async () => {
-			await initContracts(0, PERTETUAL_NAME, 0);
-			let time = await oracleContract.timestamp.call();
-			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			await beethovenContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
-				oracleContract.address,
-				{
-					from: creator
-				}
-			);
-		});
+		function navTest(alphaInBP) {
+			before(async () => {
+				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
+				let time = await oracleContract.timestamp.call();
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await beethovenContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
+			});
 
-		function calcNav(price, time, resetPrice, resetTime, beta) {
-			let numOfPeriods = Math.floor((time - resetTime) / BeethovenInit.pd);
-			let navParent =
-				(price / resetPrice / beta) * (1 + BeethovenInit.alphaInBP / BP_DENOMINATOR);
+			function calcNav(price, time, resetPrice, resetTime, beta) {
+				let numOfPeriods = Math.floor((time - resetTime) / BeethovenInit.pd);
+				let navParent =
+					(price / resetPrice / beta) * (1 + alphaInBP / BP_DENOMINATOR);
 
-			let navA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
-			let navAAdj = (navA * BeethovenInit.alphaInBP) / BP_DENOMINATOR;
-			if (navParent <= navAAdj)
-				return [(navParent * BP_DENOMINATOR) / BeethovenInit.alphaInBP, 0];
-			else return [navA, navParent - navAAdj];
-		}
+				let navA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
+				let navAAdj = (navA * alphaInBP) / BP_DENOMINATOR;
+				if (navParent <= navAAdj)
+					return [(navParent * BP_DENOMINATOR) / alphaInBP, 0];
+				else return [navA, navParent - navAAdj];
+			}
 
-		function testNav(resetPrice, lastPrice, beta) {
-			let resetPriceInWei = util.toWei(resetPrice);
-			let resetPriceTimeSeconds = 1522745087;
-			let lastPriceInWei = util.toWei(lastPrice);
-			let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
-			let betaInWei = util.toWei(beta);
-			let [navA, navB] = calcNav(
-				lastPrice,
-				lastPriceTimeSeconds,
-				resetPrice,
-				resetPriceTimeSeconds,
-				beta
-			);
-			return beethovenContract.calculateNav
-				.call(
-					lastPriceInWei,
+			function testNav(resetPrice, lastPrice, beta) {
+				let resetPriceInWei = util.toWei(resetPrice);
+				let resetPriceTimeSeconds = 1522745087;
+				let lastPriceInWei = util.toWei(lastPrice);
+				let lastPriceTimeSeconds = 1522745087 + 60 * 5 + 10;
+				let betaInWei = util.toWei(beta);
+				let [navA, navB] = calcNav(
+					lastPrice,
 					lastPriceTimeSeconds,
-					resetPriceInWei,
+					resetPrice,
 					resetPriceTimeSeconds,
-					betaInWei
-				)
-				.then(res => {
-					let navAInWei = res[0].valueOf();
-					let navBInWei = res[1].valueOf();
-					assert.isTrue(
-						util.isEqual(util.fromWei(navAInWei), navA),
-						'navA not calculated correctly'
-					);
-					assert.isTrue(
-						util.isEqual(util.fromWei(navBInWei), navB),
-						'navB not calculated correctly'
-					);
-				});
+					beta
+				);
+				return beethovenContract.calculateNav
+					.call(
+						lastPriceInWei,
+						lastPriceTimeSeconds,
+						resetPriceInWei,
+						resetPriceTimeSeconds,
+						betaInWei
+					)
+					.then(res => {
+						let navAInWei = res[0].valueOf();
+						let navBInWei = res[1].valueOf();
+						assert.isTrue(
+							util.isEqual(util.fromWei(navAInWei), navA),
+							'navA not calculated correctly'
+						);
+						assert.isTrue(
+							util.isEqual(util.fromWei(navBInWei), navB),
+							'navB not calculated correctly'
+						);
+					});
+			}
+
+			// for non reset case
+			it('it should calculate nav correclty case 1', () => {
+				return testNav(582, 600, 1.2);
+			});
+
+			//for upward reset case
+			it('it should calculate nav correclty case 2', () => {
+				return testNav(800, 1500, 1);
+			});
+
+			//for downward reset case
+			it('it should calculate nav correclty case 3', () => {
+				return testNav(1000, 600, 1);
+			});
+
+			//for downward reset case where navB goes to 0
+			it('it should calculate nav correclty case 4', () => {
+				return testNav(1000, 200, 1);
+			});
 		}
 
-		// for non reset case
-		it('it should calculate nav correclty case 1', () => {
-			return testNav(582, 600, 1.2);
+		// case 1 alpha= 5000
+		describe('alpha= 5000', () => {
+			navTest(
+				5000
+			);
 		});
 
-		//for upward reset case
-		it('it should calculate nav correclty case 2', () => {
-			return testNav(800, 1500, 1);
+		// case 2 alpha= 10000
+		describe('alpha= 10000', () => {
+			navTest(
+				10000
+			);
 		});
 
-		//for downward reset case
-		it('it should calculate nav correclty case 3', () => {
-			return testNav(1000, 600, 1);
-		});
 
-		//for downward reset case where navB goes to 0
-		it('it should calculate nav correclty case 4', () => {
-			return testNav(1000, 200, 1);
+		// case 3 alpha= 20000
+		describe('alpha= 20000', () => {
+			navTest(
+				20000
+			);
 		});
 	});
 
