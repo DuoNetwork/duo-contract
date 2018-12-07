@@ -22,13 +22,13 @@ module.exports = async (deployer, network, accounts) => {
 		pf1 = '0x0022BFd6AFaD3408A1714fa8F9371ad5Ce8A0F1a';
 		pf2 = '0x002002812b42601Ae5026344F0395E68527bb0F8';
 		pf3 = '0x00476E55e02673B0E4D2B474071014D5a366Ed4E';
-		fc = '0x0';
+		fc = '0x003519A4aB2C35c59Cb31d9194A45DD3F9Bf9e32';
 	} else if (network == 'ropsten') {
 		creator = '0x00dCB44e6EC9011fE3A52fD0160b59b48a11564E';
 		pf1 = '0x00f125c2C1b08c2516e7A7B789d617ad93Fdf4C0';
 		pf2 = '0x002cac65031CEbefE8233672C33bAE9E95c6dC1C';
 		pf3 = '0x0076c03e1028F92f8391029f15096026bd3bdFd2';
-		fc = '0x0';
+		fc = '0x003519A4aB2C35c59Cb31d9194A45DD3F9Bf9e32';
 	} else if (network == 'development' || network == 'coverage') {
 		creator = accounts[0];
 		pf1 = accounts[1];
@@ -49,8 +49,8 @@ module.exports = async (deployer, network, accounts) => {
 		);
 	} else if (process.env.CONTRACT_TYPE === 'BTV') {
 		let BTV_INIT_PARAS = InitParas.BTV.PPT;
-		if (process.env.MATURITY === '6M') {
-			BTV_INIT_PARAS = InitParas.BTV['6M'];
+		if (process.env.MATURITY === 'M19') {
+			BTV_INIT_PARAS = InitParas.BTV['M19'];
 		}
 		// 74748
 		await deployer.deploy(SafeMath, {
@@ -98,8 +98,8 @@ module.exports = async (deployer, network, accounts) => {
 	} else if(process.env.CONTRACT_TYPE === 'MZT') {
 
 		let MOZART_INIT_PARAS = InitParas.MOZART.PPT;
-		if (process.env.MATURITY === '6M') {
-			MOZART_INIT_PARAS = InitParas.MOZART['6M'];
+		if (process.env.MATURITY === 'M19') {
+			MOZART_INIT_PARAS = InitParas.MOZART['M19'];
 		}
 
 		// 74748

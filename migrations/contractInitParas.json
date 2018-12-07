@@ -5,32 +5,6 @@
 		"tokenSymbol": "DUO"
 	},
 	"BTV": {
-		"M19": {
-			"name": "BEETHOVEN-M19",
-			"maturity": 1561708800,
-			"alphaInBP": 10000,
-			"couponRate": "0.000006",
-			"hp": "0",  
-			"hu": "2.0",
-			"hd": "0.25",
-			"comm": 100,
-			"pd": 3600,
-			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
-			"optCoolDown": 86400,
-			"pxFetchCoolDown": 3000,
-			"iteGasTh": 65000,
-			"iteGasThSC": 105000,
-			"preResetWaitBlk": 10,
-			"minimumBalance": 0.01,
-			"TokenA": {
-				"tokenName": "aETH-M19",
-				"tokenSymbol": "aETH-M19"
-			},
-			"TokenB": {
-				"tokenName": "bETH-M19",
-				"tokenSymbol": "bETH-M19"
-			}
-		},
 		"PPT": {
 			"name": "BEETHOVEN-PPT",
 			"maturity": 0,
@@ -55,6 +29,32 @@
 			"TokenB": {
 				"tokenName": "bETH",
 				"tokenSymbol": "bETH"
+			}
+		},
+		"M19": {
+			"name": "BEETHOVEN-M19",
+			"maturity": 1561708800,
+			"alphaInBP": 10000,
+			"couponRate": "0.000006",
+			"hp": "0",  
+			"hu": "2.0",
+			"hd": "0.25",
+			"comm": 100,
+			"pd": 3600,
+			"esplanade": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
+			"optCoolDown": 86400,
+			"pxFetchCoolDown": 3000,
+			"iteGasTh": 65000,
+			"iteGasThSC": 105000,
+			"preResetWaitBlk": 10,
+			"minimumBalance": 0.01,
+			"TokenA": {
+				"tokenName": "aETH-M19",
+				"tokenSymbol": "aETH-M19"
+			},
+			"TokenB": {
+				"tokenName": "bETH-M19",
+				"tokenSymbol": "bETH-M19"
 			}
 		}
 

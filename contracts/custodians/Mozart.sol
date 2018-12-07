@@ -73,7 +73,7 @@ contract Mozart is DualClassCustodian {
 		uint priceInWei, 
 		uint rstPriceInWei
 		) 
-		public 
+		internal 
 		view 
 		returns (uint, uint) 
 	{

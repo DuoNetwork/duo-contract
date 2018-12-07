@@ -442,7 +442,7 @@ contract('Beethoven', accounts => {
 					resetPriceTimeSeconds,
 					beta
 				);
-				return beethovenContract.calculateNav
+				return beethovenContract.calculateNavPublic
 					.call(
 						lastPriceInWei,
 						lastPriceTimeSeconds,

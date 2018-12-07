@@ -86,7 +86,7 @@ contract Beethoven is DualClassCustodian {
 		uint rstPriceInWei, 
 		uint rstTimeInSecond,
 		uint bInWei) 
-		public 
+		internal 
 		view 
 		returns (uint, uint) 
 	{

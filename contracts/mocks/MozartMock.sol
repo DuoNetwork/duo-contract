@@ -58,4 +58,18 @@ contract MozartMock is Mozart {
 	function getNextResetAddrIndex() public view returns (uint) {
 		return nextResetAddrIndex;
 	}
+
+	function calculateNavPublic(
+		uint priceInWei, 
+		uint rstPriceInWei 
+		) 
+		public 
+		view 
+		returns (uint, uint) 
+	{
+		return calculateNav(
+			priceInWei, 
+			rstPriceInWei
+		);
+	}
 }

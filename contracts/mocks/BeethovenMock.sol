@@ -66,4 +66,24 @@ contract BeethovenMock is Beethoven {
 	function getNextResetAddrIndex() public view returns (uint) {
 		return nextResetAddrIndex;
 	}
+
+	function calculateNavPublic(
+		uint priceInWei, 
+		uint timeInSecond, 
+		uint rstPriceInWei, 
+		uint rstTimeInSecond,
+		uint bInWei
+		) 
+		public 
+		view 
+		returns (uint, uint) 
+	{
+		return calculateNav(
+			priceInWei, 
+			timeInSecond, 
+			rstPriceInWei, 
+			rstTimeInSecond,
+			bInWei
+		);
+	}
 }

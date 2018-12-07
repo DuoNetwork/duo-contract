@@ -394,7 +394,7 @@ contract('Mozart', accounts => {
 				let lastPriceInWei = util.toWei(lastPrice);
 	
 				let [navA, navB] = calcNav(lastPrice, resetPrice, alphaInBP/CST.BP_DENOMINATOR);
-				return mozartContract.calculateNav.call(lastPriceInWei, resetPriceInWei).then(res => {
+				return mozartContract.calculateNavPublic.call(lastPriceInWei, resetPriceInWei).then(res => {
 					let navAInWei = res[0].valueOf();
 					let navBInWei = res[1].valueOf();
 					assert.isTrue(
