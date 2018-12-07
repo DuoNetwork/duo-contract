@@ -222,6 +222,173 @@ contract('Mozart', accounts => {
 		});
 	});
 
+	describe('fetchPrice', () => {
+		function fetchPriceTest(alphaInBP, name, maturity) {
+			let time;
+			let initTime;
+			beforeEach(async () => {
+				await initContracts(alphaInBP, name, maturity);
+				time = await oracleContract.timestamp.call();
+				initTime = time;
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await mozartContract.startCustodian(
+					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
+					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					oracleContract.address,
+					{
+						from: creator
+					}
+				);
+			});
+
+			it('should not fetch price 0', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(0, time.valueOf(), pf1);
+				try {
+					await mozartContract.fetchPrice();
+					assert.isTrue(false, 'fetched price 0');
+				} catch (err) {
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should not fetch price with future time', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(time.valueOf() - 1);
+				await oracleContract.setLastPrice(100, time.valueOf(), pf1);
+				try {
+					await mozartContract.fetchPrice();
+					assert.isTrue(false, 'fetched with future time');
+				} catch (err) {
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should not fetch withinCoolDown', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(
+					time.valueOf() - MozartInitPPT.pxFetchCoolDown / 2
+				);
+				await oracleContract.setLastPrice(100, time.valueOf(), pf1);
+				try {
+					await mozartContract.fetchPrice();
+					assert.isTrue(false, 'can fetch within cool down');
+				} catch (err) {
+					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				}
+			});
+
+			it('should fetch price', async () => {
+				await oracleContract.skipCooldown(1);
+				time = await oracleContract.timestamp.call();
+				await mozartContract.setTimestamp(time.valueOf());
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				let tx = await mozartContract.fetchPrice();
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_ACCEPT_PX,
+					'wrong event'
+				);
+				assert.isTrue(
+					util.isEqual(
+						util.fromWei(tx.logs[0].args.priceInWei),
+						ethInitPrice.toString()
+					) && util.isEqual(tx.logs[0].args.timeInSecond.valueOf(), time.valueOf()),
+					'wrong event args'
+				);
+			});
+
+			// test for maturity
+			if (maturity > 0) {
+				it('should transit to maturity', async () => {
+					await oracleContract.skipCooldown(6 * 30 * 24 + 1);
+					time = await oracleContract.timestamp.call();
+					await mozartContract.setTimestamp(time.valueOf());
+					await oracleContract.setLastPrice(
+						util.toWei(ethInitPrice),
+						time.valueOf(),
+						pf1
+					);
+					let tx = await mozartContract.fetchPrice();
+
+					let navAinWei = await util.getState(
+						mozartContract,
+						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVA_INWEI
+					);
+					let currentNavA = navAinWei.valueOf() / CST.WEI_DENOMINATOR;
+
+					let navBinWei = await util.getState(
+						mozartContract,
+						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
+					);
+					let currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
+
+					let currentTime = await oracleContract.timestamp.call();
+					let numOfPeriods = Math.floor(
+						(Number(currentTime.valueOf()) - Number(initTime.valueOf())) /
+							Number(MozartInitPPT.pd)
+					);
+					let newNavA = 1 + numOfPeriods * Number(MozartInitPPT.couponRate);
+					assert.isTrue(
+						util.isEqual(currentNavA, newNavA, true),
+						'NavA is updated wrongly'
+					);
+
+					let newNavB;
+					let navParent = 1 + (alphaInBP || MozartInitPPT.alphaInBP) / CST.BP_DENOMINATOR;
+
+					let navAAdj =
+						(newNavA * (alphaInBP || MozartInitPPT.alphaInBP)) / CST.BP_DENOMINATOR;
+					if (navParent <= navAAdj) newNavB = 0;
+					else newNavB = navParent - navAAdj;
+
+					assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
+
+					assert.isTrue(
+						tx.logs.length === 2 &&
+							tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_ACCEPT_PX &&
+							tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_MATURIED,
+						'wrong event'
+					);
+					assert.isTrue(
+						util.isEqual(
+							util.fromWei(tx.logs[1].args.priceInWei),
+							ethInitPrice.toString()
+						) && util.isEqual(tx.logs[1].args.timeInSecond.valueOf(), time.valueOf()),
+						'wrong event args'
+					);
+
+					await assertState(mozartContract, CST.DUAL_CUSTODIAN.STATE.STATE_MATURITY);
+
+					try {
+						await mozartContract.fetchPrice();
+						assert.isTrue(false, 'fetched price 0');
+					} catch (err) {
+						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+					}
+				});
+			}
+		}
+
+		//case 1: Perpetual tEST
+		describe('Perpetual case 1', () => {
+			fetchPriceTest(0, PERTETUAL_NAME, 0);
+		});
+
+		//case 2: Term tEST
+		describe('Term case 2', () => {
+			fetchPriceTest(
+				0,
+				TERM_NAME,
+				Math.floor(new Date().valueOf() / 1000) + 6 * 30 * 24 * 60 * 60
+			);
+		});
+	});
+
 	describe('nav calculation', () => {
 		before(async () => {
 			await initContracts(0, PERTETUAL_NAME, 0);
