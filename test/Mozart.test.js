@@ -387,20 +387,6 @@ contract('Mozart', accounts => {
 			);
 		});
 
-		function calcNav(price, resetPrice, alpha) {
-			let navEth = price / resetPrice;
-			let navParent = navEth * (1 + alpha);
-
-			if (navEth >= 2) {
-				return [0, navParent];
-			}
-
-			if (navEth <= 0.5) {
-				return [navParent / alpha, 0];
-			}
-			return [2 - navEth, (2 * alpha + 1) * navEth - 2 * alpha];
-		}
-
 		function testNav(resetPrice, lastPrice) {
 			let resetPriceInWei = util.toWei(resetPrice);
 			let lastPriceInWei = util.toWei(lastPrice);
@@ -463,26 +449,6 @@ contract('Mozart', accounts => {
 
 			await mozartContract.fetchPrice();
 		});
-
-		// function CALCULATE_NEW_TOKEN() {
-		// 	if (navBInWei >= limitUpperInWei) {
-
-		// 		resetState = ResetState.UpwardReset;
-		// 		uint excessBInWei = navBInWei.sub(navAInWei);
-		// 		newBFromBPerB = excessBInWei.mul(CST.BP_DENOMINATOR).div(CST.BP_DENOMINATOR + alphaInBP);
-		// 		newAFromBPerB = excessBInWei.mul(alphaInBP).div(CST.BP_DENOMINATOR + alphaInBP);
-		// 		// adjust total supply
-		// 		totalSupplyA = totalSupplyA.add(totalSupplyB.mul(newAFromBPerB).div(CST.WEI_DENOMINATOR));
-		// 		totalSupplyB = totalSupplyB.add(totalSupplyB.mul(newBFromBPerB).div(CST.WEI_DENOMINATOR));
-		// 	} else {
-		// 		resetState = ResetState.DownwardReset;
-		// 		uint excessAInWei = navAInWei.sub(navBInWei);
-		// 		newBFromAPerA = excessAInWei.mul(CST.BP_DENOMINATOR).div(CST.BP_DENOMINATOR + alphaInBP);
-		// 		newAFromAPerA = excessAInWei.mul(alphaInBP).div(CST.BP_DENOMINATOR + alphaInBP);
-		// 		totalSupplyA = totalSupplyA.add(totalSupplyA.mul(newAFromAPerA).div(CST.WEI_DENOMINATOR));
-		// 		totalSupplyB = totalSupplyB.add(totalSupplyA.mul(newBFromAPerA).div(CST.WEI_DENOMINATOR));
-		// 	}
-		// }
 
 		it('should be in state preReset', async () => {
 			let state = await util.getState(mozartContract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
