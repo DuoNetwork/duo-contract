@@ -1,7 +1,7 @@
 const Mozart = artifacts.require('../contracts/mocks/MozartMock');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
+// const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const MozartInitPPT = InitParas['MOZART']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
@@ -24,11 +24,10 @@ const assertResetState = async (contract, state) => {
 	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
-contract.only('Mozart', accounts => {
+contract('Mozart', accounts => {
 	let mozartContract;
 	let roleManagerContract;
 	let oracleContract;
-	let wethContract;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -79,7 +78,6 @@ contract.only('Mozart', accounts => {
 			}
 		);
 
-		wethContract = await WETH.new();
 	};
 
 	const calcNav = (price, resetPrice, alpha) => {
@@ -476,7 +474,7 @@ contract.only('Mozart', accounts => {
 		});
 	});
 
-	describe.only('resets', () => {
+	describe('resets', () => {
 		function upwardReset(prevBalanceA, prevBalanceB, navA, navB, alphaInBP = 0) {
 			let alpha = (alphaInBP || MozartInitPPT.alphaInBP) / CST.BP_DENOMINATOR;
 			let excessB = navB - navA;
@@ -494,7 +492,7 @@ contract.only('Mozart', accounts => {
 			let excessA = navA - navB;
 			let newBFromAPerA = excessA / (1 + alpha);
 			// let newAFromAPerA = (excessA * alpha) / (1 + alpha);
-			let newBFromA = prevBalanceB * newBFromAPerA;
+			let newBFromA = prevBalanceA * newBFromAPerA;
 			let newAFromA = newBFromA * alpha;
 			let newBalanceA = prevBalanceA * navB + newAFromA;
 			let newBalanceB = prevBalanceB * navB + newBFromA;
@@ -536,8 +534,6 @@ contract.only('Mozart', accounts => {
 			let newBalanceAalice, newBalanceBalice;
 			let newBalanceAbob, newBalanceBbob;
 			let newBalanceAcharles, newBalanceBcharles;
-			let resetTime;
-			let newBetaAfterRst;
 
 			before(async () => {
 				await initContracts(alphaInBP, PERTETUAL_NAME, 0);
@@ -707,11 +703,6 @@ contract.only('Mozart', accounts => {
 				newBalanceAalice = newBalanceA;
 				newBalanceBalice = newBalanceB;
 
-				console.log(currentNavA, currentNavB);
-
-				console.log('###################');
-				console.log(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA);
-
 				assert.isTrue(
 					util.isEqual(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA, true),
 					'BalanceA not updated correctly'
@@ -762,9 +753,6 @@ contract.only('Mozart', accounts => {
 				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
 				await assertABalanceForAddress(charles, newBalanceA);
 				await assertBBalanceForAddress(charles, newBalanceB);
-
-				let resetTimeInBN = await oracleContract.timestamp.call();
-				resetTime = resetTimeInBN.valueOf();
 			});
 
 			it('totalA should equal totalB times alpha', async () => {
@@ -939,7 +927,7 @@ contract.only('Mozart', accounts => {
 		});
 
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
-		describe.only('downward reset case 1', () => {
+		describe('downward reset case 1', () => {
 			resetTest(
 				350,
 				downwardReset,
@@ -953,7 +941,7 @@ contract.only('Mozart', accounts => {
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 2', () => {
 			resetTest(
-				300,
+				350,
 				downwardReset,
 				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
 				resetGasAmt,
@@ -965,11 +953,10 @@ contract.only('Mozart', accounts => {
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 3', () => {
 			resetTest(
-				430,
+				435,
 				downwardReset,
 				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
 				resetGasAmt,
-				false,
 				false,
 				10000
 			);
@@ -978,11 +965,10 @@ contract.only('Mozart', accounts => {
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 4', () => {
 			resetTest(
-				430,
+				435,
 				downwardReset,
 				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
 				resetGasAmt,
-				false,
 				true,
 				10000
 			);
@@ -991,11 +977,10 @@ contract.only('Mozart', accounts => {
 		//case 1: aliceA > 0, aliceB > 0; bobA > 0, bobB > 0
 		describe('downward reset case 5', () => {
 			resetTest(
-				290,
+				490,
 				downwardReset,
 				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
 				resetGasAmt,
-				false,
 				false,
 				20000
 			);
@@ -1004,11 +989,10 @@ contract.only('Mozart', accounts => {
 		//case 2: aliceA = 0, aliceB > 0; bobA > 0, bobB = 0
 		describe('downward reset case 6', () => {
 			resetTest(
-				290,
+				490,
 				downwardReset,
 				CST.DUAL_CUSTODIAN.STATE.STATE_DOWNWARD_RESET,
 				resetGasAmt,
-				false,
 				true,
 				20000
 			);
