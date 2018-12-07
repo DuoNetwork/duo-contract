@@ -318,7 +318,7 @@ contract DualClassCustodian is Custodian {
 			nextResetAddrIndex,
 			totalUsers(),
 			feeBalanceInWei(),
-			// beethoven
+			// dual class custodian
 			uint(resetState),
 			alphaInBP,
 			betaInWei,

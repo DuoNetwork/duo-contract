@@ -95,7 +95,7 @@ module.exports = async (deployer, network, accounts) => {
 			Beethoven.address,
 			{ from: creator }
 		);
-	} else if(process.env.CONTRACT_TYPE === 'MOZART') {
+	} else if(process.env.CONTRACT_TYPE === 'MZT') {
 
 		let MOZART_INIT_PARAS = InitParas.MOZART.PPT;
 		if (process.env.MATURITY === '6M') {
@@ -146,7 +146,7 @@ module.exports = async (deployer, network, accounts) => {
 
 	}
 	
-	else if (process.env.CONTRACT_TYPE === 'ESPN') {
+	else if (process.env.CONTRACT_TYPE === 'ESP') {
 		// 4700965
 		await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 			from: creator

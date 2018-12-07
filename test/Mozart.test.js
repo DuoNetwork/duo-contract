@@ -1,7 +1,6 @@
 const Mozart = artifacts.require('../contracts/mocks/MozartMock');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-// const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const MozartInitPPT = InitParas['MOZART']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
@@ -16,7 +15,7 @@ const TERM_NAME = 'mozart term6';
 
 const assertState = async (contract, state) => {
 	let _state = await util.getState(contract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
-	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
+	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
 const assertResetState = async (contract, state) => {
@@ -49,8 +48,6 @@ contract('Mozart', accounts => {
 			roleManagerContract.address,
 			fc,
 			alphaInBP ? alphaInBP : MozartInitPPT.alphaInBP,
-			util.toWei(MozartInitPPT.couponRate),
-			util.toWei(MozartInitPPT.hp),
 			util.toWei(MozartInitPPT.hu),
 			util.toWei(MozartInitPPT.hd),
 			MozartInitPPT.comm,
@@ -77,7 +74,6 @@ contract('Mozart', accounts => {
 				from: creator
 			}
 		);
-
 	};
 
 	const calcNav = (price, resetPrice, alpha) => {
@@ -88,7 +84,7 @@ contract('Mozart', accounts => {
 			return [0, navParent];
 		}
 
-		if (navEth <= 2*alpha/(2*alpha + 1)) {
+		if (navEth <= (2 * alpha) / (2 * alpha + 1)) {
 			return [navParent / alpha, 0];
 		}
 		return [2 - navEth, (2 * alpha + 1) * navEth - 2 * alpha];
@@ -307,7 +303,7 @@ contract('Mozart', accounts => {
 					time = await oracleContract.timestamp.call();
 					await mozartContract.setTimestamp(time.valueOf());
 					await oracleContract.setLastPrice(
-						util.toWei(ethInitPrice*1.2),
+						util.toWei(ethInitPrice * 1.2),
 						time.valueOf(),
 						pf1
 					);
@@ -324,13 +320,14 @@ contract('Mozart', accounts => {
 						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
 					);
 					let currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
-					
-					const [newNavA, newNavB] = calcNav(ethInitPrice*1.2, ethInitPrice, MozartInitPPT.alphaInBP/CST.BP_DENOMINATOR);
 
-					assert.isTrue(
-						util.isEqual(currentNavA, newNavA),
-						'NavA is updated wrongly'
+					const [newNavA, newNavB] = calcNav(
+						ethInitPrice * 1.2,
+						ethInitPrice,
+						MozartInitPPT.alphaInBP / CST.BP_DENOMINATOR
 					);
+
+					assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
 
 					assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
 
@@ -343,7 +340,7 @@ contract('Mozart', accounts => {
 					assert.isTrue(
 						util.isEqual(
 							util.fromWei(tx.logs[1].args.priceInWei),
-							(ethInitPrice*1.2).toString()
+							(ethInitPrice * 1.2).toString()
 						) && util.isEqual(tx.logs[1].args.timeInSecond.valueOf(), time.valueOf()),
 						'wrong event args'
 					);
@@ -837,15 +834,11 @@ contract('Mozart', accounts => {
 				);
 
 				let nextIndex = await mozartContract.getNextResetAddrIndex.call();
-				assert.isTrue(
-					util.isEqual(nextIndex.valueOf(), '1', true),
-					'not moving to next user'
+				assert.isTrue(util.isEqual(nextIndex.valueOf(), '1'), 'not moving to next user');
 
-				);
-				
 				let currentBalanceAalice = await mozartContract.balanceOf.call(0, alice);
 				let currentBalanceBalice = await mozartContract.balanceOf.call(1, alice);
-			
+
 				let [newBalanceA, newBalanceB] = resetFunc(
 					prevBalanceAalice,
 					prevBalanceBalice,
@@ -857,11 +850,11 @@ contract('Mozart', accounts => {
 				newBalanceBalice = newBalanceB;
 
 				assert.isTrue(
-					util.isEqual(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA, true),
+					util.isEqual(currentBalanceAalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceA),
 					'BalanceA not updated correctly'
 				);
 				assert.isTrue(
-					util.isEqual(currentBalanceBalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceB, true),
+					util.isEqual(currentBalanceBalice.valueOf() / CST.WEI_DENOMINATOR, newBalanceB),
 					'BalanceB not updated correctly'
 				);
 			});
@@ -921,17 +914,15 @@ contract('Mozart', accounts => {
 				assert.isTrue(
 					util.isEqual(
 						totalA.valueOf() / CST.WEI_DENOMINATOR,
-						newBalanceAbob + newBalanceAalice + newBalanceAcharles, 
-						true
+						newBalanceAbob + newBalanceAalice + newBalanceAcharles
 					),
 					'totalSupplyA is wrong'
 				);
-				
+
 				assert.isTrue(
 					util.isEqual(
 						totalB.valueOf() / CST.WEI_DENOMINATOR,
-						newBalanceBbob + newBalanceBalice + newBalanceBcharles, 
-						true
+						newBalanceBbob + newBalanceBalice + newBalanceBcharles
 					),
 					'totalSupplyB is wrong'
 				);
@@ -942,7 +933,6 @@ contract('Mozart', accounts => {
 						((newBalanceBbob + newBalanceBalice + +newBalanceBcharles) *
 							(alphaInBP || MozartInitPPT.alphaInBP)) /
 							CST.BP_DENOMINATOR
-						, true
 					),
 					'total A is not equal to total B times alpha'
 				);
@@ -980,7 +970,7 @@ contract('Mozart', accounts => {
 				let time = await oracleContract.timestamp.call();
 				await mozartContract.setTimestamp(time.valueOf());
 				await oracleContract.setLastPrice(
-					util.toWei(price*1.02 + '', 'ether'),
+					util.toWei(price * 1.02 + '', 'ether'),
 					time.valueOf(),
 					pf1
 				);
@@ -999,7 +989,11 @@ contract('Mozart', accounts => {
 				);
 				currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
 
-				const [newNavA, newNavB] = calcNav(price*1.02, price, alphaInBP/ CST.BP_DENOMINATOR);
+				const [newNavA, newNavB] = calcNav(
+					price * 1.02,
+					price,
+					alphaInBP / CST.BP_DENOMINATOR
+				);
 				assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
 				assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
 			});

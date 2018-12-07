@@ -1,7 +1,4 @@
 pragma solidity ^0.5.1;
-import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
-import { IWETH } from "../interfaces/IWETH.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 import { DualClassCustodian } from "./DualClassCustodian.sol";
 
 /// @title Beethoven - dual class token contract

@@ -1,7 +1,4 @@
 pragma solidity ^0.5.1;
-import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
-import { IWETH } from "../interfaces/IWETH.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 import { DualClassCustodian } from "./DualClassCustodian.sol";
 
 /// @title Mozart - short & long token contract
@@ -16,8 +13,6 @@ contract Mozart is DualClassCustodian {
 		address roleManagerAddr,
 		address payable fc,
 		uint alpha,
-		uint r,
-		uint hp,
 		uint hu,
 		uint hd,
 		uint comm,
@@ -35,8 +30,8 @@ contract Mozart is DualClassCustodian {
 			roleManagerAddr,
 			fc,
 			alpha,
-			r,
-			hp,
+			0,
+			0,
 			hu,
 			hd,
 			comm,
@@ -82,23 +77,37 @@ contract Mozart is DualClassCustodian {
 		view 
 		returns (uint, uint) 
 	{
-		uint navEth = priceInWei.mul(WEI_DENOMINATOR).div(rstPriceInWei);
+		uint navEthInWei = priceInWei.mul(WEI_DENOMINATOR).div(rstPriceInWei);
 		
-		uint navParent = navEth
-			.mul(alphaInBP.add(BP_DENOMINATOR))
+		uint navParentInWei = navEthInWei
+			.mul(alphaInBP
+				.add(BP_DENOMINATOR))
 			.div(BP_DENOMINATOR);
 		
-		if(navEth >= 2 * WEI_DENOMINATOR) {
-			return (0, navParent);
+		if(navEthInWei >= WEI_DENOMINATOR.mul(2)) {
+			return (0, navParentInWei);
 		}
-		if(navEth <= WEI_DENOMINATOR/2) {
-			return (navParent.mul(BP_DENOMINATOR).div(alphaInBP), 0);
+
+		if(navEthInWei <= WEI_DENOMINATOR
+			.mul(2)
+			.mul(alphaInBP)
+			.div(alphaInBP
+				.mul(2)
+				.add(BP_DENOMINATOR)
+			)
+		) {
+			return (navParentInWei.mul(BP_DENOMINATOR).div(alphaInBP), 0);
 		}
-		uint navA = (2*WEI_DENOMINATOR).sub(navEth);
-		uint navB = ((2* alphaInBP).add(BP_DENOMINATOR).mul(navEth)
-					.sub((2 * alphaInBP).mul(WEI_DENOMINATOR))
-					).div(BP_DENOMINATOR);
-		return(navA, navB);
+		uint navA = WEI_DENOMINATOR.mul(2).sub(navEthInWei);
+		uint navB = navEthInWei
+			.mul(alphaInBP
+				.mul(2)
+				.add(BP_DENOMINATOR))
+			.sub(WEI_DENOMINATOR
+				.mul(alphaInBP)
+				.mul(2))
+			.div(BP_DENOMINATOR);
+		return (navA, navB);
 	}
 	// end of priceFetch function
 
@@ -106,20 +115,22 @@ contract Mozart is DualClassCustodian {
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
 			state = State.Reset;
-	
 			if (navBInWei >= limitUpperInWei) {
-				
 				resetState = ResetState.UpwardReset;
+				newAFromAPerA = 0;
+				newBFromAPerA = 0;
 				uint excessBInWei = navBInWei.sub(navAInWei);
-				newBFromBPerB = excessBInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
+				newBFromBPerB = excessBInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR.add(alphaInBP));
 				newAFromBPerB = newBFromBPerB.mul(alphaInBP).div(BP_DENOMINATOR);
 				// adjust total supply
 				totalSupplyA = totalSupplyA.mul(navAInWei).div(WEI_DENOMINATOR).add(totalSupplyB.mul(newAFromBPerB).div(WEI_DENOMINATOR));
 				totalSupplyB = totalSupplyB.mul(navAInWei).div(WEI_DENOMINATOR).add(totalSupplyB.mul(newBFromBPerB).div(WEI_DENOMINATOR));
 			} else {
 				resetState = ResetState.DownwardReset;
+				newAFromBPerB = 0;
+				newBFromBPerB = 0;
 				uint excessAInWei = navAInWei.sub(navBInWei);
-				newBFromAPerA = excessAInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR + alphaInBP);
+				newBFromAPerA = excessAInWei.mul(BP_DENOMINATOR).div(BP_DENOMINATOR.add(alphaInBP));
 				newAFromAPerA = newBFromAPerA.mul(alphaInBP).div(BP_DENOMINATOR);
 				totalSupplyB = totalSupplyB.mul(navBInWei).div(WEI_DENOMINATOR).add(totalSupplyA.mul(newBFromAPerA).div(WEI_DENOMINATOR));
 				totalSupplyA = totalSupplyA.mul(navBInWei).div(WEI_DENOMINATOR).add(totalSupplyA.mul(newAFromAPerA).div(WEI_DENOMINATOR));
@@ -153,8 +164,7 @@ contract Mozart is DualClassCustodian {
 				newAFromA = newBFromA.mul(alphaInBP).div(BP_DENOMINATOR);
 				newBalanceA = currentBalanceA.mul(navBInWei).div(WEI_DENOMINATOR).add(newAFromA);
 				newBalanceB = currentBalanceB.mul(navBInWei).div(WEI_DENOMINATOR).add(newBFromA);
-			}
-			else {
+			} else {
 				newBFromB = currentBalanceB.mul(newBFromBPerB).div(WEI_DENOMINATOR);
 				newAFromB = newBFromB.mul(alphaInBP).div(BP_DENOMINATOR);
 				newBalanceA = currentBalanceA.mul(navAInWei).div(WEI_DENOMINATOR).add(newAFromB);
