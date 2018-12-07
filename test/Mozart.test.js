@@ -225,11 +225,9 @@ contract('Mozart', accounts => {
 	describe('fetchPrice', () => {
 		function fetchPriceTest(alphaInBP, name, maturity) {
 			let time;
-			let initTime;
 			beforeEach(async () => {
 				await initContracts(alphaInBP, name, maturity);
 				time = await oracleContract.timestamp.call();
-				initTime = time;
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await mozartContract.startCustodian(
 					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
@@ -309,7 +307,7 @@ contract('Mozart', accounts => {
 					time = await oracleContract.timestamp.call();
 					await mozartContract.setTimestamp(time.valueOf());
 					await oracleContract.setLastPrice(
-						util.toWei(ethInitPrice),
+						util.toWei(ethInitPrice*1.2),
 						time.valueOf(),
 						pf1
 					);
@@ -326,25 +324,13 @@ contract('Mozart', accounts => {
 						CST.DUAL_CUSTODIAN.STATE_INDEX.NAVB_INWEI
 					);
 					let currentNavB = navBinWei.valueOf() / CST.WEI_DENOMINATOR;
+					
+					const [newNavA, newNavB] = calcNav(ethInitPrice*1.2, ethInitPrice, MozartInitPPT.alphaInBP/CST.BP_DENOMINATOR);
 
-					let currentTime = await oracleContract.timestamp.call();
-					let numOfPeriods = Math.floor(
-						(Number(currentTime.valueOf()) - Number(initTime.valueOf())) /
-							Number(MozartInitPPT.pd)
-					);
-					let newNavA = 1 + numOfPeriods * Number(MozartInitPPT.couponRate);
 					assert.isTrue(
-						util.isEqual(currentNavA, newNavA, true),
+						util.isEqual(currentNavA, newNavA),
 						'NavA is updated wrongly'
 					);
-
-					let newNavB;
-					let navParent = 1 + (alphaInBP || MozartInitPPT.alphaInBP) / CST.BP_DENOMINATOR;
-
-					let navAAdj =
-						(newNavA * (alphaInBP || MozartInitPPT.alphaInBP)) / CST.BP_DENOMINATOR;
-					if (navParent <= navAAdj) newNavB = 0;
-					else newNavB = navParent - navAAdj;
 
 					assert.isTrue(util.isEqual(currentNavB, newNavB), 'NavB is updated wrongly');
 
@@ -357,7 +343,7 @@ contract('Mozart', accounts => {
 					assert.isTrue(
 						util.isEqual(
 							util.fromWei(tx.logs[1].args.priceInWei),
-							ethInitPrice.toString()
+							(ethInitPrice*1.2).toString()
 						) && util.isEqual(tx.logs[1].args.timeInSecond.valueOf(), time.valueOf()),
 						'wrong event args'
 					);
