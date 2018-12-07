@@ -850,9 +850,7 @@ contract('DualClassCustodian', accounts => {
 			let time = await oracleContract.timestamp.call();
 			await dualClassCustodianContract.setTimestamp(time.valueOf());
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-			console.log('setLastPrice');
 			await dualClassCustodianContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf());
-			console.log('setNav');
 			navA = 1.2;
 			navB = 0.8;
 			await dualClassCustodianContract.setNav(
@@ -861,7 +859,6 @@ contract('DualClassCustodian', accounts => {
 				util.toWei(ethInitPrice),
 				time.valueOf()
 			);
-			console.log(navA, navB);
 
 			try {
 				await dualClassCustodianContract.redeemAll({
@@ -891,7 +888,7 @@ contract('DualClassCustodian', accounts => {
 			let redeemedAmt = ethAmt * (1 - dualClassCustodianInit.comm / 10000);
 			let fee = (ethAmt * dualClassCustodianInit.comm) / 10000;
 			assert.isTrue(
-				util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), redeemedAmt, true) &&
+				util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), redeemedAmt) &&
 					util.isEqual(tx.logs[0].args.sender.valueOf(), alice) &&
 					util.isEqual(tx.logs[0].args.tokenAInWei.valueOf(), prevBalanceA.valueOf()) &&
 					util.isEqual(tx.logs[0].args.tokenBInWei.valueOf(), prevBalanceB.valueOf()) &&

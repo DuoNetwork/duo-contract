@@ -14,7 +14,7 @@ const TERM_NAME = 'beethoven term6';
 
 const assertState = async (beethovenContract, state) => {
 	let _state = await util.getState(beethovenContract, CST.DUAL_CUSTODIAN.STATE_INDEX.STATE);
-	assert.isTrue(util.isEqual(_state.valueOf(), state, true));
+	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
 const assertResetState = async (beethovenContract, state) => {
@@ -346,7 +346,7 @@ contract('Beethoven', accounts => {
 					);
 					let newNavA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
 					assert.isTrue(
-						util.isEqual(currentNavA, newNavA, true),
+						util.isEqual(currentNavA, newNavA),
 						'NavA is updated wrongly'
 					);
 
