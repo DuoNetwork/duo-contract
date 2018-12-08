@@ -1,7 +1,7 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
-const MOZART = artifacts.require('./Mozart.sol');
+const Mozart = artifacts.require('./Mozart.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
 const DUO = artifacts.require('./DUO.sol');
@@ -106,9 +106,9 @@ module.exports = async (deployer, network, accounts) => {
 		await deployer.deploy(SafeMath, {
 			from: creator
 		});
-		await deployer.link(SafeMath, MOZART);
+		await deployer.link(SafeMath, Mozart);
 		await deployer.deploy(
-			MOZART,
+			Mozart,
 			MOZART_INIT_PARAS.name,
 			MOZART_INIT_PARAS.maturity,
 			MOZART_INIT_PARAS.esplanade,
@@ -130,7 +130,7 @@ module.exports = async (deployer, network, accounts) => {
 			TokenA,
 			MOZART_INIT_PARAS.TokenA.tokenName,
 			MOZART_INIT_PARAS.TokenA.tokenSymbol,
-			Beethoven.address,
+			Mozart.address,
 			{
 				from: creator
 			}
@@ -140,7 +140,7 @@ module.exports = async (deployer, network, accounts) => {
 			TokenB,
 			MOZART_INIT_PARAS.TokenB.tokenName,
 			MOZART_INIT_PARAS.TokenB.tokenSymbol,
-			Beethoven.address,
+			Mozart.address,
 			{ from: creator }
 		);
 
