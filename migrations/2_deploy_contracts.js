@@ -5,8 +5,7 @@ const Mozart = artifacts.require('./Mozart.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
 const DUO = artifacts.require('./DUO.sol');
-const TokenA = artifacts.require('./TokenA.sol');
-const TokenB = artifacts.require('./TokenB.sol');
+const CustodianToken = artifacts.require('./CustodianToken.sol');
 const InitParas = require('./contractInitParas.json');
 const DuoInit = InitParas['DUO'];
 const MagiInit = InitParas['Magi'];
@@ -77,20 +76,22 @@ module.exports = async (deployer, network, accounts) => {
 		);
 		// // 1094050
 		await deployer.deploy(
-			TokenA,
+			CustodianToken,
 			BTV_INIT_PARAS.TokenA.tokenName,
 			BTV_INIT_PARAS.TokenA.tokenSymbol,
 			Beethoven.address,
+			0,
 			{
 				from: creator
 			}
 		);
 		// 1094370
 		await deployer.deploy(
-			TokenB,
+			CustodianToken,
 			BTV_INIT_PARAS.TokenB.tokenName,
 			BTV_INIT_PARAS.TokenB.tokenSymbol,
 			Beethoven.address,
+			1,
 			{ from: creator }
 		);
 	} else if (process.env.CONTRACT_TYPE === 'MZT') {
@@ -122,20 +123,22 @@ module.exports = async (deployer, network, accounts) => {
 		);
 		// // 1094050
 		await deployer.deploy(
-			TokenA,
+			CustodianToken,
 			MOZART_INIT_PARAS.TokenA.tokenName,
 			MOZART_INIT_PARAS.TokenA.tokenSymbol,
 			Mozart.address,
+			0,
 			{
 				from: creator
 			}
 		);
 		// 1094370
 		await deployer.deploy(
-			TokenB,
+			CustodianToken,
 			MOZART_INIT_PARAS.TokenB.tokenName,
 			MOZART_INIT_PARAS.TokenB.tokenSymbol,
 			Mozart.address,
+			1,
 			{ from: creator }
 		);
 	} else if (process.env.CONTRACT_TYPE === 'ESP') {
