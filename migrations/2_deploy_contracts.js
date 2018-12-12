@@ -10,6 +10,7 @@ const InitParas = require('./contractInitParas.json');
 const DuoInit = InitParas['DUO'];
 const MagiInit = InitParas['Magi'];
 const RoleManagerInit = InitParas['RoleManager'];
+const deployInfoSaver = require('./deployInfoSaver');
 
 module.exports = async (deployer, network, accounts) => {
 	let creator;
@@ -46,6 +47,7 @@ module.exports = async (deployer, network, accounts) => {
 				from: creator
 			}
 		);
+		await deployInfoSaver.saveGeneralContractInfo('DUO', DUO.address, DuoInit);
 	} else if (process.env.CONTRACT_TYPE === 'BTV') {
 		let BTV_INIT_PARAS = InitParas.BTV.PPT;
 		if (process.env.TENOR) BTV_INIT_PARAS = InitParas.BTV[process.env.TENOR];
@@ -85,6 +87,7 @@ module.exports = async (deployer, network, accounts) => {
 				from: creator
 			}
 		);
+		BTV_INIT_PARAS.TokenA.address;
 		// 1094370
 		await deployer.deploy(
 			CustodianToken,
@@ -93,6 +96,14 @@ module.exports = async (deployer, network, accounts) => {
 			Beethoven.address,
 			1,
 			{ from: creator }
+		);
+		BTV_INIT_PARAS.TokenB.address;
+
+		await deployInfoSaver.saveDualCustodianInfo(
+			'BTV',
+			process.env.TENOR,
+			Mozart.address,
+			BTV_INIT_PARAS
 		);
 	} else if (process.env.CONTRACT_TYPE === 'MZT') {
 		let MOZART_INIT_PARAS = InitParas.MOZART.PPT;
@@ -132,6 +143,7 @@ module.exports = async (deployer, network, accounts) => {
 				from: creator
 			}
 		);
+		MOZART_INIT_PARAS.TokenA.address = CustodianToken.address;
 		// 1094370
 		await deployer.deploy(
 			CustodianToken,
@@ -141,11 +153,20 @@ module.exports = async (deployer, network, accounts) => {
 			1,
 			{ from: creator }
 		);
+		MOZART_INIT_PARAS.TokenB.address = CustodianToken.address;
+
+		await deployInfoSaver.saveDualCustodianInfo(
+			'MZT',
+			process.env.TENOR,
+			Mozart.address,
+			MOZART_INIT_PARAS
+		);
 	} else if (process.env.CONTRACT_TYPE === 'ESP') {
 		// 4700965
 		await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 			from: creator
 		});
+		await deployInfoSaver.saveGeneralContractInfo('ESP', Esplanade.address, RoleManagerInit);
 	} else if (process.env.CONTRACT_TYPE === 'MAGI') {
 		await deployer.deploy(
 			Magi,
@@ -160,6 +181,8 @@ module.exports = async (deployer, network, accounts) => {
 				from: creator
 			}
 		);
+		MagiInit.esplanadeAddr = Esplanade.address;
+		await deployInfoSaver.saveGeneralContractInfo('MAGI', Magi.address, MagiInit);
 	} else {
 		console.log('contract type does not exist');
 	}

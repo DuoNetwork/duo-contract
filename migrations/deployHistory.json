@@ -1,0 +1,11 @@
+{
+	"DUO": {
+		"address": "0x29c718217cbdBaa1131B961d57749E3F6de5236d",
+		"paras": {
+			"initSupply": "100000000",
+			"tokenName": "Test DUO.Network Token",
+			"tokenSymbol": "DUO"
+		},
+		"deployedAt": "2018-12-12 08:02:55"
+	}
+}
