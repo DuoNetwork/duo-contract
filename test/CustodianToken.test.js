@@ -16,7 +16,7 @@ const BP_DENOMINATOR = 10000;
 const TRANSFER = 'Transfer';
 const APPROVAL = 'Approval';
 
-contract.only('CustodianToken', accounts => {
+contract('CustodianToken', accounts => {
 	function TOKEN_TEST(tokenName) {
 		let tokenAContract, tokenBContract;
 		let beethovenContract;
@@ -214,6 +214,17 @@ contract.only('CustodianToken', accounts => {
 					from: creator
 				});
 				assert.isTrue(false, 'can transfer of more than balance');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('non custodian cannot call emitTransfer', async () => {
+			try {
+				await tokenContract.emitTransfer(creator, bob, util.toWei(50), {
+					from: alice
+				});
+				assert.isTrue(false, 'non custodian can call emitTransfer');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
