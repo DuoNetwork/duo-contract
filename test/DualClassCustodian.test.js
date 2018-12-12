@@ -3,6 +3,7 @@ const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
+const CustodianToken = artifacts.require('../contracts/tokens/CustodianToken.sol');
 const dualClassCustodianInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
@@ -18,6 +19,8 @@ contract('DualClassCustodian', accounts => {
 	let roleManagerContract;
 	let oracleContract;
 	let wethContract;
+	let custodianTokenContractA;
+	let custodianTokenContractB;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -52,6 +55,25 @@ contract('DualClassCustodian', accounts => {
 				: dualClassCustodianInit.iteGasTh,
 			dualClassCustodianInit.preResetWaitBlk,
 			util.toWei(dualClassCustodianInit.minimumBalance),
+			{
+				from: creator
+			}
+		);
+
+		custodianTokenContractA = await CustodianToken.new(
+			dualClassCustodianInit.TokenA.tokenName,
+			dualClassCustodianInit.TokenA.tokenSymbol,
+			dualClassCustodianContract.address,
+			0,
+			{
+				from: creator
+			}
+		);
+		custodianTokenContractB = await CustodianToken.new(
+			dualClassCustodianInit.TokenB.tokenName,
+			dualClassCustodianInit.TokenB.tokenSymbol,
+			dualClassCustodianContract.address,
+			1,
 			{
 				from: creator
 			}
@@ -369,8 +391,8 @@ contract('DualClassCustodian', accounts => {
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await dualClassCustodianContract.startCustodian(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{
 						from: creator
@@ -486,7 +508,6 @@ contract('DualClassCustodian', accounts => {
 						value: util.toWei(amtEth)
 					});
 				}
-
 				assert.isTrue(
 					tx.logs.length === 2 &&
 						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_CREATE &&
@@ -652,8 +673,8 @@ contract('DualClassCustodian', accounts => {
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await dualClassCustodianContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
 				oracleContract.address,
 				{
 					from: creator
@@ -822,8 +843,8 @@ contract('DualClassCustodian', accounts => {
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 			await dualClassCustodianContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
 				oracleContract.address,
 				{
 					from: creator

@@ -1,8 +1,7 @@
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Beethoven = artifacts.require('../contracts/mocks/BeethovenMock');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const CustodianToken = artifacts.require('../contracts/tokens/CustodianToken.sol');
-// const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
+const CustodianToken = artifacts.require('../contracts/tokens/CustodianTokenMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
@@ -36,7 +35,6 @@ contract('CustodianToken', accounts => {
 		let tokenContract;
 
 		before(async () => {
-
 			roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 				from: creator
 			});
@@ -228,6 +226,25 @@ contract('CustodianToken', accounts => {
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
+		});
+
+		it('custodian can mintTransfer', async () => {
+			await tokenContract.setCustodianAddress(alice);
+			let tx = await tokenContract.emitTransfer(creator, bob, util.toWei(50), {
+				from: alice
+			});
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === 'Transfer',
+
+				'non custodian can call emitTransfer'
+			);
+			assert.isTrue(
+				tx.logs[0].args.from === creator &&
+					tx.logs[0].args.to === bob &&
+					util.fromWei(tx.logs[0].args.tokens.valueOf()) === '50',
+
+				'non custodian can call emitTransfer'
+			);
 		});
 	}
 
