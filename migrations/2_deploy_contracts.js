@@ -48,7 +48,7 @@ module.exports = async (deployer, network, accounts) => {
 		);
 	} else if (process.env.CONTRACT_TYPE === 'BTV') {
 		let BTV_INIT_PARAS = InitParas.BTV.PPT;
-		if (process.env.MATURITY) BTV_INIT_PARAS = InitParas.BTV[process.env.MATURITY];
+		if (process.env.TENOR) BTV_INIT_PARAS = InitParas.BTV[process.env.TENOR];
 		// 74748
 		await deployer.deploy(SafeMath, {
 			from: creator
@@ -96,7 +96,7 @@ module.exports = async (deployer, network, accounts) => {
 		);
 	} else if (process.env.CONTRACT_TYPE === 'MZT') {
 		let MOZART_INIT_PARAS = InitParas.MOZART.PPT;
-		if (process.env.MATURITY) MOZART_INIT_PARAS = InitParas.MOZART[process.env.MATURITY];
+		if (process.env.TENOR) MOZART_INIT_PARAS = InitParas.MOZART[process.env.TENOR];
 
 		// 74748
 		await deployer.deploy(SafeMath, {

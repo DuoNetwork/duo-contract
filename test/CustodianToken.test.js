@@ -228,7 +228,7 @@ contract('CustodianToken', accounts => {
 			}
 		});
 
-		it('custodian can mintTransfer', async () => {
+		it('custodian can emitTransfer', async () => {
 			await tokenContract.setCustodianAddress(alice);
 			let tx = await tokenContract.emitTransfer(creator, bob, util.toWei(50), {
 				from: alice

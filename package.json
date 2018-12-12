@@ -11,8 +11,8 @@
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8550 -a 20",
     "startCoverage": "testrpc-sc --defaultBalanceEther 1000 --gasLimit 0xfffffffffff --port 8555 -a 20",
     "copyAbi": "copyfiles -f .\\build\\contracts\\Custodian.json .\\build\\contracts\\DUO.json .\\build\\contracts\\TokenA.json .\\build\\contracts\\TokenB.json ..\\duo-admin\\src\\static\\",
-    "deploy": "cross-env CONTRACT_TYPE=BTV MATURITY=0 truffle.cmd migrate --reset --compile-all",
-    "deployKovan": "cross-env CONTRACT_TYPE=MZT MATURITY=M19 truffle.cmd migrate --reset --compile-all --network kovan",
+    "deploy": "cross-env CONTRACT_TYPE=BTV TENOR=0 truffle.cmd migrate --reset --compile-all",
+    "deployKovan": "cross-env CONTRACT_TYPE=MZT TENOR=M19 truffle.cmd migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle.cmd migrate --reset --compile-all --network ropsten",
     "deployLive": "npm run clean && truffle.cmd migrate --reset --compile-all --network live"
   },
