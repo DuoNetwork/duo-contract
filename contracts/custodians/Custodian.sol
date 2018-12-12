@@ -1,5 +1,6 @@
 pragma solidity ^0.5.1;
 import { SafeMath } from "../common/SafeMath.sol";
+import { ICustodianToken } from "../interfaces/ICustodianToken.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Managed } from "../common/Managed.sol";
 
@@ -25,6 +26,8 @@ contract Custodian is Managed {
      * Storage
      */
 	IOracle oracle;
+	ICustodianToken aToken;
+	ICustodianToken bToken;
 	string public contractCode;
 	address payable feeCollector;
 	address oracleAddress;

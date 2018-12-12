@@ -1,5 +1,6 @@
 pragma solidity ^0.5.1;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
+import { ICustodianToken } from "../interfaces/ICustodianToken.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { Custodian } from "./Custodian.sol";
@@ -104,7 +105,9 @@ contract DualClassCustodian is Custodian {
 		returns (bool success) 
 	{	
 		aTokenAddress = aAddr;
+		aToken = ICustodianToken(aTokenAddress);
 		bTokenAddress = bAddr;
+		bToken = ICustodianToken(bTokenAddress);
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
@@ -183,7 +186,9 @@ contract DualClassCustodian is Custodian {
 			tokenValueB, 
 			feeInWei
 			);
-		emit TotalSupply(totalSupplyA, totalSupplyB);	
+		emit TotalSupply(totalSupplyA, totalSupplyB);
+		aToken.emitTransfer(address(0), sender, tokenValueA);
+		bToken.emitTransfer(address(0), sender, tokenValueB);
 		return true;
 
 	}
@@ -247,6 +252,8 @@ contract DualClassCustodian is Custodian {
 			feeInWei
 		);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
+		aToken.emitTransfer(sender, address(0), deductAmtInWeiA);
+		bToken.emitTransfer(sender, address(0), deductAmtInWeiB);
 		return true;
 	}
 

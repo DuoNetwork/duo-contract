@@ -1,8 +1,8 @@
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Beethoven = artifacts.require('../contracts/mocks/BeethovenMock');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const TokenA = artifacts.require('../contracts/tokens/TokenA.sol');
-const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
+const CustodianToken = artifacts.require('../contracts/tokens/CustodianToken.sol');
+// const TokenB = artifacts.require('../contracts/tokens/TokenB.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
@@ -16,7 +16,7 @@ const BP_DENOMINATOR = 10000;
 const TRANSFER = 'Transfer';
 const APPROVAL = 'Approval';
 
-contract('ERC20Token', accounts => {
+contract.only('CustodianToken', accounts => {
 	function TOKEN_TEST(tokenName) {
 		let tokenAContract, tokenBContract;
 		let beethovenContract;
@@ -62,18 +62,20 @@ contract('ERC20Token', accounts => {
 				}
 			);
 
-			tokenAContract = await TokenA.new(
+			tokenAContract = await CustodianToken.new(
 				BeethovenInit.TokenA.tokenName,
 				BeethovenInit.TokenA.tokenSymbol,
 				beethovenContract.address,
+				0,
 				{
 					from: creator
 				}
 			);
-			tokenBContract = await TokenB.new(
+			tokenBContract = await CustodianToken.new(
 				BeethovenInit.TokenB.tokenName,
 				BeethovenInit.TokenB.tokenSymbol,
 				beethovenContract.address,
+				1,
 				{
 					from: creator
 				}
