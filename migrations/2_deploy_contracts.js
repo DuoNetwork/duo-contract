@@ -49,9 +49,7 @@ module.exports = async (deployer, network, accounts) => {
 		);
 	} else if (process.env.CONTRACT_TYPE === 'BTV') {
 		let BTV_INIT_PARAS = InitParas.BTV.PPT;
-		if (process.env.MATURITY === 'M19') {
-			BTV_INIT_PARAS = InitParas.BTV['M19'];
-		}
+		if (process.env.MATURITY) BTV_INIT_PARAS = InitParas.BTV[process.env.MATURITY];
 		// 74748
 		await deployer.deploy(SafeMath, {
 			from: creator
@@ -95,12 +93,9 @@ module.exports = async (deployer, network, accounts) => {
 			Beethoven.address,
 			{ from: creator }
 		);
-	} else if(process.env.CONTRACT_TYPE === 'MZT') {
-
+	} else if (process.env.CONTRACT_TYPE === 'MZT') {
 		let MOZART_INIT_PARAS = InitParas.MOZART.PPT;
-		if (process.env.MATURITY === 'M19') {
-			MOZART_INIT_PARAS = InitParas.MOZART['M19'];
-		}
+		if (process.env.MATURITY) MOZART_INIT_PARAS = InitParas.MOZART[process.env.MATURITY];
 
 		// 74748
 		await deployer.deploy(SafeMath, {
@@ -143,10 +138,7 @@ module.exports = async (deployer, network, accounts) => {
 			Mozart.address,
 			{ from: creator }
 		);
-
-	}
-	
-	else if (process.env.CONTRACT_TYPE === 'ESP') {
+	} else if (process.env.CONTRACT_TYPE === 'ESP') {
 		// 4700965
 		await deployer.deploy(Esplanade, RoleManagerInit.optCoolDown, {
 			from: creator
@@ -168,7 +160,4 @@ module.exports = async (deployer, network, accounts) => {
 	} else {
 		console.log('contract type does not exist');
 	}
-
 };
-
-
