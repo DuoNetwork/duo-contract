@@ -1,11 +1,1 @@
-{
-	"DUO": {
-		"address": "0x29c718217cbdBaa1131B961d57749E3F6de5236d",
-		"paras": {
-			"initSupply": "100000000",
-			"tokenName": "Test DUO.Network Token",
-			"tokenSymbol": "DUO"
-		},
-		"deployedAt": "2018-12-12 08:02:55"
-	}
-}
+{"DUO":{"address":"0x29c718217cbdBaa1131B961d57749E3F6de5236d","paras":{"initSupply":"100000000","tokenName":"Test DUO.Network Token","tokenSymbol":"DUO"},"deployedAt":"2018-12-12 08:02:55"},"BTV":{"":{"address":"0xEd33eAF08192D205501CD992C8D1d6257516f47F","paras":{"name":"BEETHOVEN-PPT","maturity":0,"alphaInBP":10000,"couponRate":"0.000006","hp":"1.013","hu":"2.0","hd":"0.25","comm":100,"pd":3600,"esplanade":"0xD728681490d63582047A6Cd2fC80B1343C6AbA20","optCoolDown":86400,"pxFetchCoolDown":3000,"iteGasTh":65000,"iteGasThSC":105000,"preResetWaitBlk":10,"minimumBalance":0.01,"TokenA":{"tokenName":"aETH","tokenSymbol":"aETH"},"TokenB":{"tokenName":"bETH","tokenSymbol":"bETH"}},"deployedAt":"2019-01-23 03:45:94"}}}

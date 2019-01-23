@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.0;
 
 import { Magi } from "../oracles/Magi.sol";
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";

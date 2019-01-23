@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.0;
 import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
 import { ICustodianToken } from "../interfaces/ICustodianToken.sol";
 import { IWETH } from "../interfaces/IWETH.sol";

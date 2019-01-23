@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.0;
 
 interface ICustodianToken {
 	function emitTransfer(address from, address to, uint value) external returns (bool success);

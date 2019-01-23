@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.0;
 import { SafeMath } from "../common/SafeMath.sol";
 import { ICustodianToken } from "../interfaces/ICustodianToken.sol";
 import { IOracle } from "../interfaces/IOracle.sol";

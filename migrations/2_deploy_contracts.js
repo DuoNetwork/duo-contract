@@ -102,7 +102,7 @@ module.exports = async (deployer, network, accounts) => {
 		await deployInfoSaver.saveDualCustodianInfo(
 			'BTV',
 			process.env.TENOR,
-			Mozart.address,
+			Beethoven.address,
 			BTV_INIT_PARAS
 		);
 	} else if (process.env.CONTRACT_TYPE === 'MZT') {

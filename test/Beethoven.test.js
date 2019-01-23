@@ -2,6 +2,7 @@ const Beethoven = artifacts.require('../contracts/mocks/BeethovenMock');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
+const CustodianToken = artifacts.require('../contracts/tokens/CustodianToken.sol');
 const BeethovenInit = InitParas['BTV']['PPT'];
 const RoleManagerInit = InitParas['RoleManager'];
 const MagiInit = InitParas['Magi'];
@@ -26,6 +27,8 @@ contract('Beethoven', accounts => {
 	let beethovenContract;
 	let roleManagerContract;
 	let oracleContract;
+	let custodianTokenContractA;
+	let custodianTokenContractB;
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -66,6 +69,25 @@ contract('Beethoven', accounts => {
 			}
 		);
 
+		custodianTokenContractA = await CustodianToken.new(
+			BeethovenInit.TokenA.tokenName,
+			BeethovenInit.TokenA.tokenSymbol,
+			beethovenContract.address,
+			0,
+			{
+				from: creator
+			}
+		);
+		custodianTokenContractB = await CustodianToken.new(
+			BeethovenInit.TokenB.tokenName,
+			BeethovenInit.TokenB.tokenSymbol,
+			beethovenContract.address,
+			1,
+			{
+				from: creator
+			}
+		);
+
 		oracleContract = await Magi.new(
 			creator,
 			pf1,
@@ -78,7 +100,6 @@ contract('Beethoven', accounts => {
 				from: creator
 			}
 		);
-
 	};
 
 	describe('constructor', () => {
@@ -244,8 +265,8 @@ contract('Beethoven', accounts => {
 				initTime = time;
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{
 						from: creator
@@ -345,10 +366,7 @@ contract('Beethoven', accounts => {
 							Number(BeethovenInit.pd)
 					);
 					let newNavA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
-					assert.isTrue(
-						util.isEqual(currentNavA, newNavA),
-						'NavA is updated wrongly'
-					);
+					assert.isTrue(util.isEqual(currentNavA, newNavA), 'NavA is updated wrongly');
 
 					let newNavB;
 					let navParent = 1 + (alphaInBP || BeethovenInit.alphaInBP) / BP_DENOMINATOR;
@@ -408,8 +426,8 @@ contract('Beethoven', accounts => {
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{
 						from: creator
@@ -419,13 +437,11 @@ contract('Beethoven', accounts => {
 
 			function calcNav(price, time, resetPrice, resetTime, beta) {
 				let numOfPeriods = Math.floor((time - resetTime) / BeethovenInit.pd);
-				let navParent =
-					(price / resetPrice / beta) * (1 + alphaInBP / BP_DENOMINATOR);
+				let navParent = (price / resetPrice / beta) * (1 + alphaInBP / BP_DENOMINATOR);
 
 				let navA = 1 + numOfPeriods * Number(BeethovenInit.couponRate);
 				let navAAdj = (navA * alphaInBP) / BP_DENOMINATOR;
-				if (navParent <= navAAdj)
-					return [(navParent * BP_DENOMINATOR) / alphaInBP, 0];
+				if (navParent <= navAAdj) return [(navParent * BP_DENOMINATOR) / alphaInBP, 0];
 				else return [navA, navParent - navAAdj];
 			}
 
@@ -487,24 +503,17 @@ contract('Beethoven', accounts => {
 
 		// case 1 alpha= 5000
 		describe('alpha= 5000', () => {
-			navTest(
-				5000
-			);
+			navTest(5000);
 		});
 
 		// case 2 alpha= 10000
 		describe('alpha= 10000', () => {
-			navTest(
-				10000
-			);
+			navTest(10000);
 		});
-
 
 		// case 3 alpha= 20000
 		describe('alpha= 20000', () => {
-			navTest(
-				20000
-			);
+			navTest(20000);
 		});
 	});
 
@@ -514,8 +523,8 @@ contract('Beethoven', accounts => {
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await beethovenContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
 				oracleContract.address,
 				{
 					from: creator
@@ -788,8 +797,8 @@ contract('Beethoven', accounts => {
 				let time = await oracleContract.timestamp.call();
 				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 				await beethovenContract.startCustodian(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{
 						from: creator

@@ -269,8 +269,8 @@ contract('DualClassCustodian', accounts => {
 		it('non operator cannot start', async () => {
 			try {
 				await dualClassCustodianContract.startCustodian.call(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{ from: alice }
 				);
@@ -283,8 +283,8 @@ contract('DualClassCustodian', accounts => {
 		it('should not start with oracle not ready', async () => {
 			try {
 				await dualClassCustodianContract.startCustodian.call(
-					CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-					CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
 					oracleContract.address,
 					{ from: creator }
 				);
@@ -299,8 +299,8 @@ contract('DualClassCustodian', accounts => {
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
 
 			let tx = await dualClassCustodianContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
 				oracleContract.address,
 				{ from: creator }
 			);
@@ -931,8 +931,8 @@ contract('DualClassCustodian', accounts => {
 			let time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
 			await dualClassCustodianContract.startCustodian(
-				CST.DUAL_CUSTODIAN.ADDRESS.A_ADDR,
-				CST.DUAL_CUSTODIAN.ADDRESS.B_ADDR,
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
 				oracleContract.address,
 				{
 					from: creator

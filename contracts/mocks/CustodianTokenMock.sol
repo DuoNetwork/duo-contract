@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.0;
 import { CustodianToken } from "../tokens/CustodianToken.sol";
 import { ICustodian } from "../interfaces/ICustodian.sol";
 
