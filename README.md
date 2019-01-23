@@ -1,3 +1,4 @@
+[![CircleCI](https://circleci.com/gh/FinBook/duo-contract.svg?style=svg&circle-token=6d0357847fa6cc8078323d1282dcb365e0ad09e8)](https://circleci.com/gh/FinBook/duo-contract)
 # Introduction
 
 ## DUO Network Token Contract
