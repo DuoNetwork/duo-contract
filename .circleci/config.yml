@@ -1,0 +1,46 @@
+version: 2
+jobs:
+    build-duo-contract:
+        working_directory: /home/circleci/duo-contract
+        docker:
+            - image: circleci/node:8.11.1
+        steps:
+            - add_ssh_keys:
+                  fingerprints:
+                      - '3d:80:45:8e:e6:d2:fd:fd:9b:94:73:80:b3:6c:3e:c2'
+            - run:
+                  name: Fix host authenticity for 192.30.253.113
+                  command: |
+                      ssh-keyscan 192.30.253.113 >> ~/.ssh/known_hosts
+            - run: git clone git@192.30.253.113:FinBook/duo-contract.git /home/circleci/duo-contract
+            - run: cd /home/circleci/duo-contract
+            - restore_cache:
+                  key: dependency-cache-{{ .Environment.CIRCLE_SHA1 }}
+            - run:
+                  name: Install npm wee
+                  command: npm install
+            - run:
+                  name: test
+                  command: npm start
+                  background: true
+            - run:
+                  name: test
+                  command: npm test
+            - save_cache:
+                  key: dependency-cache-{{ .Environment.CIRCLE_SHA1 }}
+                  paths:
+                      - /home/circleci/duo-contract
+workflows:
+    version: 2
+    build_test_deploy:
+        jobs:
+            - build-duo-contract
+    schedule_deploy:
+        triggers:
+            - schedule:
+                  cron: '0 4 * * *'
+                  filters:
+                      branches:
+                          only: CI
+        jobs:
+            - build-duo-contract
