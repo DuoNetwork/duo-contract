@@ -83,9 +83,9 @@ contract Vivaldi is Managed {
      */
 	event StartGame(uint indexed gameStartPriceInWei, uint indexed gameStartTime);
 	event AcceptPrice(uint indexed priceInWei, uint indexed timeInSecond);
-	event Create(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
+	event Create(address indexed sender, uint collateralTokenAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
 	event TotalSupply(uint totalSupplyAInWei, uint totalSupplyBInWei);
-	event Redeem(address indexed sender, uint ethAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
+	event Redeem(address indexed sender, uint collateralTokenAmtInWei, uint tokenAInWei, uint tokenBInWei, uint feeInWei);
 	event StartSettling(uint nextIndex, uint total);
 	// token events
 	event Transfer(address indexed from, address indexed to, uint value, uint index);
@@ -94,7 +94,7 @@ contract Vivaldi is Managed {
 	event CollectFee(address addr, uint feeInWei, uint feeBalanceInWei);
 	event UpdateOracle(address newOracleAddress);
 	event UpdateFeeCollector(address updater, address newFeeCollector);
-	
+
 	/*
      *  Constructor
      */
@@ -272,34 +272,34 @@ contract Vivaldi is Managed {
 	}
 
 	/// @dev 
-	///	@param ethAmtInWei 
+	///	@param collateralTokenAmtInWei 
 	///	@param commInBP 
 	function deductFee(
-		uint ethAmtInWei, 
+		uint collateralTokenAmtInWei, 
 		uint commInBP
 	) 
 		internal pure
 		returns (
-			uint ethAmtAfterFeeInWei, 
+			uint collateralTokenAmtAfterFeeInWei, 
 			uint feeInWei) 
 	{
-		require(ethAmtInWei > 0);
-		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
-		ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
+		require(collateralTokenAmtInWei > 0);
+		feeInWei = collateralTokenAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
+		collateralTokenAmtAfterFeeInWei = collateralTokenAmtInWei.sub(feeInWei);
 	}
 
 	/// @dev 
 	///	@param sender 
-	///	@param ethAmtInWei 
-	function createInternal(address sender, uint ethAmtInWei) 
+	///	@param collateralTokenAmtInWei 
+	function createInternal(address sender, uint collateralTokenAmtInWei) 
 		internal 
 		returns(bool)
 	{
-		require(ethAmtInWei > 0);
+		require(collateralTokenAmtInWei > 0);
 		uint feeInWei;
-		(ethAmtInWei, feeInWei) = deductFee(ethAmtInWei, creationFeeInBP);
-		tokenCollateralInWei = tokenCollateralInWei.add(ethAmtInWei);
-		uint bTokenValue = ethAmtInWei;
+		(collateralTokenAmtInWei, feeInWei) = deductFee(collateralTokenAmtInWei, creationFeeInBP);
+		tokenCollateralInWei = tokenCollateralInWei.add(collateralTokenAmtInWei);
+		uint bTokenValue = collateralTokenAmtInWei;
 		uint aTokenValue = bTokenValue;
 		balanceOf[0][sender] = balanceOf[0][sender].add(aTokenValue);
 		balanceOf[1][sender] = balanceOf[1][sender].add(bTokenValue);
@@ -309,7 +309,7 @@ contract Vivaldi is Managed {
 
 		emit Create(
 			sender, 
-			ethAmtInWei, 
+			collateralTokenAmtInWei, 
 			aTokenValue, 
 			bTokenValue, 
 			feeInWei
@@ -322,27 +322,27 @@ contract Vivaldi is Managed {
 
 	/// @dev 
 	///	@param sender 
-	///	@param ethAmtInWei 
+	///	@param collateralTokenAmtInWei 
 	function redeemInternal(address sender, uint deductAmtInWeiB) 
 		internal 
 		returns(bool)
 	{
 		require(deductAmtInWeiB > 0);
 		tokenCollateralInWei = tokenCollateralInWei.sub(deductAmtInWeiB);
-		uint ethAmtInWei;
+		uint collateralTokenAmtInWei;
 		uint feeInWei;
-		(ethAmtInWei,  feeInWei) = deductFee(deductAmtInWeiB, redemptionFeeInBP);
+		(collateralTokenAmtInWei,  feeInWei) = deductFee(deductAmtInWeiB, redemptionFeeInBP);
 		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiB);
 		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
 
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
 		totalSupplyA = totalSupplyA.sub(deductAmtInWeiB);
 		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		collateralToken.transferFrom(address(this), msg.sender,  ethAmtInWei);
+		collateralToken.transferFrom(address(this), msg.sender,  collateralTokenAmtInWei);
 
 		emit Redeem(
 			sender, 
-			ethAmtInWei, 
+			collateralTokenAmtInWei, 
 			deductAmtInWeiB, 
 			deductAmtInWeiB, 
 			feeInWei
