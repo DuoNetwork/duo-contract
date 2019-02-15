@@ -1,30 +1,15 @@
 pragma solidity ^0.5.0;
-import { ICustodianToken } from "../interfaces/ICustodianToken.sol";
-import { IWETH } from "../interfaces/IWETH.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
-import { SafeMath } from "../common/SafeMath.sol";
-import { IMultiSigManager } from "../interfaces/IMultiSigManager.sol";
-import { Erc20Custodian } from "./Erc20Custodian.sol";
+import { OptionCustodian } from "./OptionCustodian.sol";
 
-/// @title Vivaldi  - binary option token contract
+/// @title Vivaldi  - binary option custodian contract
 /// @author duo.network
-contract Vivaldi is Erc20Custodian {
+contract Vivaldi is OptionCustodian {
 	/*
      * Storage
      */
-	struct Strike {
-		uint strikeInWei;
-		bool isPositive;
-		bool isRelative;
-		bool isInclusive;
-	}
-
-	Strike strike; 
-	uint clearCommInBP;
-	uint iterationGasThreshold;
 
 	uint roundStrikeInWei;
-	bool isKnockedIn;
+	bool isKnockedIn = false;
 
 	/*
      *  Constructor
@@ -44,133 +29,22 @@ contract Vivaldi is Erc20Custodian {
 		uint preResetWaitBlk,
 		uint minimumBalance,
 		uint iteGasTh
-	) public Erc20Custodian(
+	) public OptionCustodian(
 		code,
 		collateralTokenAddr,
 		maturity,
 		roleManagerAddr,
 		fc,
 		createFee,
+		redeemFee,
+		clearFee,
 		pd,
 		optCoolDown,
 		pxFetchCoolDown,
 		preResetWaitBlk,
-		minimumBalance
+		minimumBalance,
+		iteGasTh
 	)  {
-		redeemCommInBP = redeemFee;
-		clearCommInBP = clearFee;
-		iterationGasThreshold = iteGasTh;
-	}
-
-
-	/*
-     *  Public Function
-     */
-	/// @dev start option contract
-	///	@param aAddr token a address
-	///	@param bAddr token b address
-	///	@param oracleAddr oracle contract address
-	function startCustodian(
-		address aAddr,
-		address bAddr,
-		address oracleAddr,
-		uint strikeInWei,
-		bool strikeIsPositive,
-		bool strikeIsRelative,
-		bool strikeIsInclusive
-		) 
-		public 
-		inState(State.Inception) 
-		only(operator)
-		returns (bool success) 
-	{
-		aTokenAddress = aAddr;
-		aToken = ICustodianToken(aTokenAddress);
-		bTokenAddress = bAddr;
-		bToken = ICustodianToken(bTokenAddress);
-		oracleAddress = oracleAddr;
-		oracle = IOracle(oracleAddress);
-		strike = Strike(strikeInWei, strikeIsPositive, strikeIsRelative, strikeIsInclusive);
-		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(priceInWei > 0 && timeInSecond > 0);
-		resetPriceTimeInSecond = timeInSecond;
-		resetPriceInWei = priceInWei;
-		roleManager = IMultiSigManager(roleManagerAddress);
-		state = State.Trading;
-		isKnockedIn = false;
-		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
-		emit StartTrading(navAInWei, navBInWei);
-		return true;
-	}
-
-	/// @dev create
-	///	@param amount amount of collateral token to create
-	function create(uint amount)
-		public 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
-		require(amount > 0);
-		address sender = msg.sender;
-		collateralToken.transferFrom(sender, address(this), amount);
-		uint collateralTokenBalance = collateralToken.balanceOf(address(this));
-		require(collateralTokenBalance >= amount);
-		uint feeInWei;
-		(amount, feeInWei) = deductFee(amount, createCommInBP);
-		tokenCollateralInWei = tokenCollateralInWei.add(amount);
-		balanceOf[0][sender] = balanceOf[0][sender].add(amount);
-		balanceOf[1][sender] = balanceOf[1][sender].add(amount);
-		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
-		totalSupplyA = totalSupplyA.add(amount);
-		totalSupplyB = totalSupplyB.add(amount);
-
-		emit Create(
-			sender, 
-			amount, 
-			amount, 
-			amount, 
-			feeInWei
-			);
-		emit TotalSupply(totalSupplyA, totalSupplyB);
-		aToken.emitTransfer(address(0), sender, amount);
-		bToken.emitTransfer(address(0), sender, amount);
-		return true;
-	}
-
-	/// @dev redeem
-	///	@param amtInWeiA token A amt
-	///	@param amtInWeiB token B amt
-	function redeem(uint amtInWeiA, uint amtInWeiB) 
-		public 
-		inState(State.Trading) 
-		returns (bool success) 
-	{
-		uint deductAmtInWei = amtInWeiA < amtInWeiB ? amtInWeiA : amtInWeiB;
-		address sender = msg.sender;
-		require(balanceOf[0][sender] >= deductAmtInWei && balanceOf[1][sender] >= deductAmtInWei);
-		tokenCollateralInWei = tokenCollateralInWei.sub(deductAmtInWei);
-		uint collateralTokenAmtInWei;
-		uint feeInWei;
-		(collateralTokenAmtInWei,  feeInWei) = deductFee(deductAmtInWei, redeemCommInBP);
-		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWei);
-		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWei);
-
-		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
-		totalSupplyA = totalSupplyA.sub(deductAmtInWei);
-		totalSupplyB = totalSupplyB.sub(deductAmtInWei);
-		collateralToken.transfer(sender,  collateralTokenAmtInWei);
-
-		emit Redeem(
-			sender, 
-			collateralTokenAmtInWei, 
-			deductAmtInWei, 
-			deductAmtInWei, 
-			feeInWei
-		);
-		emit TotalSupply(totalSupplyA, totalSupplyB);
-		aToken.emitTransfer(sender, address(0), deductAmtInWei);
-		bToken.emitTransfer(sender, address(0), deductAmtInWei);
-		return true;
 	}
 
 	// @dev start round
@@ -288,19 +162,4 @@ contract Vivaldi is Erc20Custodian {
 			return false;
 		}
 	}
-
-	function deductFee(
-		uint collateralAmtInWei, 
-		uint commInBP
-	) 
-		internal pure
-		returns (
-			uint collateralAmtAfterFeeInWei, 
-			uint feeInWei) 
-	{
-		require(collateralAmtInWei > 0);
-		feeInWei = collateralAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
-		collateralAmtAfterFeeInWei = collateralAmtInWei.sub(feeInWei);
-	}
-
 }
