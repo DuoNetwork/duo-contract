@@ -163,7 +163,7 @@ contract Vivaldi is OptionCustodian {
 		}
 	}
 
-	function getStates() public view returns (uint[25] memory) {
+	function getStates() public returns (uint[23] memory) {
 		return [
 			lastOperationTime,
 			operationCoolDown,
@@ -171,9 +171,7 @@ contract Vivaldi is OptionCustodian {
 			minBalance,
 			totalSupplyA,
 			totalSupplyB,
-			ethCollateralInWei,
-			navAInWei,
-			navBInWei,
+			tokenCollateralInWei,
 			lastPriceInWei,
 			lastPriceTimeInSecond,
 			resetPriceInWei,
@@ -187,7 +185,7 @@ contract Vivaldi is OptionCustodian {
 			priceFetchCoolDown,
 			nextResetAddrIndex,
 			totalUsers(),
-			feeBalanceInWei(),
+			tokenFeeBalanceInWei(),
 			iterationGasThreshold,
 			roundStrikeInWei
 		];
