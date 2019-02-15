@@ -208,7 +208,7 @@ contract Vivaldi is Erc20Custodian {
 	function forceEndRound(uint priceInWei, uint timeInSecond) 
 		public 
 		inState(State.Trading) 
-		only(operator) returns (bool) 
+		returns (bool) 
 	{
 		uint currentTime = getNowTimestamp();
 		uint requiredTime = resetPriceTimeInSecond.add(period);
