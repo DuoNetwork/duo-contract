@@ -123,6 +123,14 @@
 		"pxFetchCoolDown": 3000,
 		"preResetWaitBlk": 10
 	},
+	"Erc20Custodian": {
+		"comm": 100,
+		"pd": 86400,
+		"optCoolDown": 86400,
+		"pxFetchCoolDown": 43200,
+		"preResetWaitBlk": 10,
+		"minimumBalance": 0.01
+	},
 	"Managed": {
 		"optCoolDown": 3600
 	},
