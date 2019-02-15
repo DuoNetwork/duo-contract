@@ -175,10 +175,13 @@ contract Vivaldi is Erc20Custodian {
 
 	// @dev start round
 	function startRound() public inState(State.Trading) returns (bool) {
+		// can only start once before the round is ended
+		require(lastPriceTimeInSecond < resetPriceTimeInSecond);
 		uint currentTime = getNowTimestamp();
-		require(currentTime > resetPriceTimeInSecond.add(priceFetchCoolDown));
+		uint minAllowedTime = resetPriceTimeInSecond.add(priceFetchCoolDown);
+		require(currentTime > minAllowedTime);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(timeInSecond > resetPriceTimeInSecond && timeInSecond <= currentTime && priceInWei > 0);
+		require(timeInSecond > minAllowedTime && timeInSecond <= currentTime && priceInWei > 0);
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;
 		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
@@ -195,23 +198,42 @@ contract Vivaldi is Erc20Custodian {
 	/// @dev end round
 	function endRound() public inState(State.Trading) returns (bool) {
 		uint currentTime = getNowTimestamp();
-		require(currentTime >= resetPriceTimeInSecond.add(period));
+		uint requiredTime = resetPriceTimeInSecond.add(period);
+		require(currentTime >= requiredTime);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(timeInSecond > resetPriceTimeInSecond && timeInSecond <= currentTime && priceInWei > 0);
+		require(timeInSecond == requiredTime && timeInSecond <= currentTime && priceInWei > 0);		
+		return endRoundInternal(priceInWei, timeInSecond);
+	}
+
+	function forceEndRound(uint priceInWei, uint timeInSecond) 
+		public 
+		inState(State.Trading) 
+		only(operator) returns (bool) 
+	{
+		uint currentTime = getNowTimestamp();
+		uint requiredTime = resetPriceTimeInSecond.add(period);
+		require(currentTime > requiredTime && timeInSecond == requiredTime && priceInWei > 0);
+		updateOperator();
+		return endRoundInternal(priceInWei, timeInSecond);
+	}
+
+	function endRoundInternal(uint priceInWei, uint timeInSecond) internal returns (bool) {
+		// can only end once before the next round is started
+		require(lastPriceTimeInSecond > resetPriceTimeInSecond);
 		state = State.PreReset;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
 		
 		if (strike.isPositive) {
-			if (resetPriceInWei > roundStrikeInWei 
-			|| resetPriceInWei == roundStrikeInWei 
+			if (priceInWei > roundStrikeInWei 
+			|| priceInWei == roundStrikeInWei 
 			&& strike.isInclusive)
 				isKnockedIn = true;
 			else
 				isKnockedIn = false;
 		} else {
-			if (resetPriceInWei < roundStrikeInWei 
-			|| resetPriceInWei == roundStrikeInWei 
+			if (priceInWei < roundStrikeInWei 
+			|| priceInWei == roundStrikeInWei 
 			&& strike.isInclusive)
 				isKnockedIn = true;
 			else
@@ -226,7 +248,6 @@ contract Vivaldi is Erc20Custodian {
 	// start of reset function
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			
 			emit TotalSupply(totalSupplyA, totalSupplyB);
 			emit StartReset(nextResetAddrIndex, users.length);
 		} else 

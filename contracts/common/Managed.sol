@@ -51,7 +51,7 @@ contract Managed {
 		address updater = msg.sender;	
 		operator = roleManager.provideAddress(updater, 0);
 		emit UpdateOperator(updater, operator);	
-		return true;	
+		return true;
 	}
 
 	function getNowTimestamp() internal view returns (uint) {
