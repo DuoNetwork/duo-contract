@@ -12,29 +12,26 @@ contract Vivaldi is Erc20Custodian {
 	/*
      * Storage
      */
-	uint dailyTargetDiffInBP = 500;
-	bool dailyTargetDirection = true; 
-	uint roundPeriod;
-	uint roundPeriodTolInSecond;
+	struct Strike {
+		uint strikeInWei;
+		bool isPositive;
+		bool isRelative;
+		bool isInclusive;
+	}
+
+	Strike strike; 
 	uint clearCommInBP;
 	uint iterationGasThreshold;
 
-	enum Result {
-		None,
-		In,
-		Out
-	}
-
-	Result result;
+	uint roundStrikeInWei;
+	bool isKnockedIn;
 
 	/*
      *  Constructor
      */
 	constructor(
-		uint roundPd,
-		uint roundPeriodTol,
-		uint iteGasTh,
 		string memory code,
+		address collateralTokenAddr,
 		uint maturity,
 		address roleManagerAddr,
 		address payable fc,
@@ -46,10 +43,10 @@ contract Vivaldi is Erc20Custodian {
 		uint pxFetchCoolDown,
 		uint preResetWaitBlk,
 		uint minimumBalance,
-		address collateralTokenAddr
-
+		uint iteGasTh
 	) public Erc20Custodian(
 		code,
+		collateralTokenAddr,
 		maturity,
 		roleManagerAddr,
 		fc,
@@ -58,18 +55,11 @@ contract Vivaldi is Erc20Custodian {
 		optCoolDown,
 		pxFetchCoolDown,
 		preResetWaitBlk,
-		minimumBalance,
-		collateralTokenAddr
-		
+		minimumBalance
 	)  {
-		roundPeriod = roundPd;
-		createCommInBP = createFee;
 		redeemCommInBP = redeemFee;
 		clearCommInBP = clearFee;
-		minBalance = minimumBalance;
-		roundPeriodTolInSecond = roundPeriodTol;
 		iterationGasThreshold = iteGasTh;
-		state = State.Inception;
 	}
 
 
@@ -80,14 +70,14 @@ contract Vivaldi is Erc20Custodian {
 	///	@param aAddr token a address
 	///	@param bAddr token b address
 	///	@param oracleAddr oracle contract address
-	///	@param dailyDiff daily target price relative diff
-	///	@param direction daily target price direction
 	function startCustodian(
 		address aAddr,
 		address bAddr,
 		address oracleAddr,
-		uint dailyDiff,
-		bool direction
+		uint strikeInWei,
+		bool strikeIsPositive,
+		bool strikeIsRelative,
+		bool strikeIsInclusive
 		) 
 		public 
 		inState(State.Inception) 
@@ -100,15 +90,14 @@ contract Vivaldi is Erc20Custodian {
 		bToken = ICustodianToken(bTokenAddress);
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
+		strike = Strike(strikeInWei, strikeIsPositive, strikeIsRelative, strikeIsInclusive);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
 		require(priceInWei > 0 && timeInSecond > 0);
 		resetPriceTimeInSecond = timeInSecond;
-		resetPriceInWei = getNewTargetPrice(priceInWei);
+		resetPriceInWei = priceInWei;
 		roleManager = IMultiSigManager(roleManagerAddress);
 		state = State.Trading;
-		result = Result.None;
-		dailyTargetDiffInBP = dailyDiff;
-		dailyTargetDirection = direction;
+		isKnockedIn = false;
 		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
 		emit StartTrading(navAInWei, navBInWei);
 		return true;
@@ -122,31 +111,29 @@ contract Vivaldi is Erc20Custodian {
 		returns (bool success) 
 	{
 		require(amount > 0);
-		collateralToken.transferFrom(msg.sender, address(this), amount);
+		address sender = msg.sender;
+		collateralToken.transferFrom(sender, address(this), amount);
 		uint collateralTokenBalance = collateralToken.balanceOf(address(this));
 		require(collateralTokenBalance >= amount);
 		uint feeInWei;
-		address sender = msg.sender;
 		(amount, feeInWei) = deductFee(amount, createCommInBP);
 		tokenCollateralInWei = tokenCollateralInWei.add(amount);
-		uint bTokenValue = amount;
-		uint aTokenValue = bTokenValue;
-		balanceOf[0][sender] = balanceOf[0][sender].add(aTokenValue);
-		balanceOf[1][sender] = balanceOf[1][sender].add(bTokenValue);
+		balanceOf[0][sender] = balanceOf[0][sender].add(amount);
+		balanceOf[1][sender] = balanceOf[1][sender].add(amount);
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
-		totalSupplyA = totalSupplyA.add(aTokenValue);
-		totalSupplyB = totalSupplyB.add(bTokenValue);
+		totalSupplyA = totalSupplyA.add(amount);
+		totalSupplyB = totalSupplyB.add(amount);
 
 		emit Create(
 			sender, 
 			amount, 
-			aTokenValue, 
-			bTokenValue, 
+			amount, 
+			amount, 
 			feeInWei
 			);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
-		aToken.emitTransfer(address(0), sender, aTokenValue);
-		bToken.emitTransfer(address(0), sender, bTokenValue);
+		aToken.emitTransfer(address(0), sender, amount);
+		bToken.emitTransfer(address(0), sender, amount);
 		return true;
 	}
 
@@ -158,48 +145,78 @@ contract Vivaldi is Erc20Custodian {
 		inState(State.Trading) 
 		returns (bool success) 
 	{
-		uint deductAmtInWeiB = amtInWeiA < amtInWeiB ? amtInWeiA : amtInWeiB;
+		uint deductAmtInWei = amtInWeiA < amtInWeiB ? amtInWeiA : amtInWeiB;
 		address sender = msg.sender;
-		require(balanceOf[0][sender] >= deductAmtInWeiB && balanceOf[1][sender] >= deductAmtInWeiB);
-		tokenCollateralInWei = tokenCollateralInWei.sub(deductAmtInWeiB);
+		require(balanceOf[0][sender] >= deductAmtInWei && balanceOf[1][sender] >= deductAmtInWei);
+		tokenCollateralInWei = tokenCollateralInWei.sub(deductAmtInWei);
 		uint collateralTokenAmtInWei;
 		uint feeInWei;
-		(collateralTokenAmtInWei,  feeInWei) = deductFee(deductAmtInWeiB, redeemCommInBP);
-		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWeiB);
-		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWeiB);
+		(collateralTokenAmtInWei,  feeInWei) = deductFee(deductAmtInWei, redeemCommInBP);
+		balanceOf[0][sender] = balanceOf[0][sender].sub(deductAmtInWei);
+		balanceOf[1][sender] = balanceOf[1][sender].sub(deductAmtInWei);
 
 		checkUser(sender, balanceOf[0][sender], balanceOf[1][sender]);
-		totalSupplyA = totalSupplyA.sub(deductAmtInWeiB);
-		totalSupplyB = totalSupplyB.sub(deductAmtInWeiB);
-		collateralToken.transferFrom(address(this), msg.sender,  collateralTokenAmtInWei);
+		totalSupplyA = totalSupplyA.sub(deductAmtInWei);
+		totalSupplyB = totalSupplyB.sub(deductAmtInWei);
+		collateralToken.transfer(sender,  collateralTokenAmtInWei);
 
 		emit Redeem(
 			sender, 
 			collateralTokenAmtInWei, 
-			deductAmtInWeiB, 
-			deductAmtInWeiB, 
+			deductAmtInWei, 
+			deductAmtInWei, 
 			feeInWei
 		);
 		emit TotalSupply(totalSupplyA, totalSupplyB);
-		aToken.emitTransfer(sender, address(0), deductAmtInWeiB);
-		bToken.emitTransfer(sender, address(0), deductAmtInWeiB);
+		aToken.emitTransfer(sender, address(0), deductAmtInWei);
+		bToken.emitTransfer(sender, address(0), deductAmtInWei);
 		return true;
 	}
 
-	/// @dev close game round
-	function closeRound() public inState(State.Trading) returns (bool) {
+	// @dev start round
+	function startRound() public inState(State.Trading) returns (bool) {
 		uint currentTime = getNowTimestamp();
-		require(currentTime >= resetPriceTimeInSecond.add(roundPeriod));
+		require(currentTime > resetPriceTimeInSecond.add(priceFetchCoolDown));
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(
-			timeInSecond > resetPriceTimeInSecond.add(roundPeriod).sub(roundPeriodTolInSecond) && 
-			timeInSecond < resetPriceTimeInSecond.add(roundPeriod).add(roundPeriodTolInSecond) &&
-			timeInSecond <= currentTime && 
-			priceInWei > 0
-		);
-		state = State.PreReset;
+		require(timeInSecond > resetPriceTimeInSecond && timeInSecond <= currentTime && priceInWei > 0);
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;
+		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		if (strike.isRelative) {
+			if (strike.isPositive)
+				roundStrikeInWei = priceInWei.mul(WEI_DENOMINATOR.add(strike.strikeInWei)).div(WEI_DENOMINATOR);
+			else
+				roundStrikeInWei = priceInWei.mul(WEI_DENOMINATOR.sub(strike.strikeInWei)).div(WEI_DENOMINATOR);
+		} else
+			roundStrikeInWei = strike.strikeInWei;
+		return true;
+	}
+
+	/// @dev end round
+	function endRound() public inState(State.Trading) returns (bool) {
+		uint currentTime = getNowTimestamp();
+		require(currentTime >= resetPriceTimeInSecond.add(period));
+		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
+		require(timeInSecond > resetPriceTimeInSecond && timeInSecond <= currentTime && priceInWei > 0);
+		state = State.PreReset;
+		resetPriceInWei = priceInWei;
+		resetPriceTimeInSecond = timeInSecond;
+		
+		if (strike.isPositive) {
+			if (resetPriceInWei > roundStrikeInWei 
+			|| resetPriceInWei == roundStrikeInWei 
+			&& strike.isInclusive)
+				isKnockedIn = true;
+			else
+				isKnockedIn = false;
+		} else {
+			if (resetPriceInWei < roundStrikeInWei 
+			|| resetPriceInWei == roundStrikeInWei 
+			&& strike.isInclusive)
+				isKnockedIn = true;
+			else
+				isKnockedIn = false;
+		}
 		
 		emit StartPreReset();
 		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
@@ -209,13 +226,7 @@ contract Vivaldi is Erc20Custodian {
 	// start of reset function
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
-			if (lastPriceInWei > resetPriceInWei) {
-				result = Result.In;
-			} else {
-				result = Result.Out;
-			}
-			resetPriceTimeInSecond = resetPriceTimeInSecond.add(roundPeriod);
-			resetPriceInWei = getNewTargetPrice(lastPriceInWei);
+			
 			emit TotalSupply(totalSupplyA, totalSupplyB);
 			emit StartReset(nextResetAddrIndex, users.length);
 		} else 
@@ -231,20 +242,23 @@ contract Vivaldi is Erc20Custodian {
 			currentAddress = users[localResetAddrIndex];
 			uint collateralTokenAmtInWei;
 			uint feeInWei;
-			if (result == Result.In) {
-				(collateralTokenAmtInWei,  feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
+			if (isKnockedIn) {
+				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
 			} else {
-				(collateralTokenAmtInWei,  feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
+				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
 			} 
-			collateralToken.transferFrom(address(this), currentAddress, collateralTokenAmtInWei);
-			tokenCollateralInWei = tokenCollateralInWei.sub(collateralTokenAmtInWei);
+			balanceOf[0][currentAddress] = 0;
+			balanceOf[1][currentAddress] = 0;
+			delete existingUsers[currentAddress];
+			collateralToken.transfer(currentAddress, collateralTokenAmtInWei);
 			localResetAddrIndex++;
 		}
 
 		if (localResetAddrIndex >= users.length) {
+			tokenCollateralInWei = 0;
 			nextResetAddrIndex = 0;
 			state = State.Trading;
-			result = Result.None;
+			delete users;
 			emit StartTrading(navAInWei, navBInWei);
 			return true;
 		} else {
@@ -254,29 +268,18 @@ contract Vivaldi is Erc20Custodian {
 		}
 	}
 
-	/*
-     *  Internal Function
-     */
-	/// @dev get target price
-	///	@param priceInWei collateral price
-	function getNewTargetPrice(uint priceInWei) internal view returns(uint newTargetPriceInWei) {
-		uint offSetAmtInWei = priceInWei.mul(dailyTargetDiffInBP).div(BP_DENOMINATOR);
-		require(priceInWei >offSetAmtInWei);
-		return dailyTargetDirection ? priceInWei.add(offSetAmtInWei) : priceInWei.sub(offSetAmtInWei);
-	}
-
 	function deductFee(
-		uint ethAmtInWei, 
+		uint collateralAmtInWei, 
 		uint commInBP
 	) 
 		internal pure
 		returns (
-			uint ethAmtAfterFeeInWei, 
+			uint collateralAmtAfterFeeInWei, 
 			uint feeInWei) 
 	{
-		require(ethAmtInWei > 0);
-		feeInWei = ethAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
-		ethAmtAfterFeeInWei = ethAmtInWei.sub(feeInWei);
+		require(collateralAmtInWei > 0);
+		feeInWei = collateralAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
+		collateralAmtAfterFeeInWei = collateralAmtInWei.sub(feeInWei);
 	}
 
 }

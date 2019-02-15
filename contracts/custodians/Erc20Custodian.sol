@@ -16,6 +16,7 @@ contract Erc20Custodian is Custodian {
      */
 	constructor(
 		string memory code,
+		address collateralTokenAddr,
 		uint maturity,
 		address roleManagerAddr,
 		address payable fc,
@@ -24,8 +25,7 @@ contract Erc20Custodian is Custodian {
 		uint optCoolDown,
 		uint pxFetchCoolDown,
 		uint preResetWaitBlk,
-		uint minimumBalance,
-		address collateralTokenAddr
+		uint minimumBalance
 		) 
 		public 
 		Custodian ( 
