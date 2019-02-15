@@ -17,9 +17,14 @@ contract OptionCustodian is Erc20Custodian {
 		bool isInclusive;
 	}
 
-	Strike strike; 
+	Strike public strike; 
 	uint clearCommInBP;
 	uint iterationGasThreshold;
+
+		/*
+     * Events
+     */
+	event SetValue(uint index, uint oldValue, uint newValue);
 
 	/*
      *  Constructor
@@ -179,6 +184,35 @@ contract OptionCustodian is Erc20Custodian {
 		require(collateralAmtInWei > 0);
 		feeInWei = collateralAmtInWei.mul(commInBP).div(BP_DENOMINATOR);
 		collateralAmtAfterFeeInWei = collateralAmtInWei.sub(feeInWei);
+	}
+
+	// start of operator functions
+	function setValue(uint idx, uint newValue) public only(operator) inState(State.Trading) inUpdateWindow() returns (bool success) {
+		uint oldValue;
+		if (idx == 0) {
+			require(newValue <= BP_DENOMINATOR);
+			oldValue = createCommInBP;
+			createCommInBP = newValue;
+		} else if (idx == 1) {
+			require(newValue <= BP_DENOMINATOR);
+			oldValue = redeemCommInBP;
+			redeemCommInBP = newValue;
+		} else if (idx == 2) {
+			require(newValue <= BP_DENOMINATOR);
+			oldValue = clearCommInBP;
+			clearCommInBP = newValue;
+		} else if (idx == 3) {
+			oldValue = iterationGasThreshold;
+			iterationGasThreshold = newValue;
+		} else if (idx == 4) {
+			oldValue = preResetWaitingBlocks;
+			preResetWaitingBlocks = newValue;
+		} else {
+			revert();
+		}
+
+		emit SetValue(idx, oldValue, newValue);
+		return true;
 	}
 
 }

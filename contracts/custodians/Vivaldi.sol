@@ -9,7 +9,7 @@ contract Vivaldi is OptionCustodian {
      */
 
 	uint roundStrikeInWei;
-	bool isKnockedIn = false;
+	bool public isKnockedIn = false;
 
 	/*
      *  Constructor
@@ -162,4 +162,46 @@ contract Vivaldi is OptionCustodian {
 			return false;
 		}
 	}
+
+	function getStates() public view returns (uint[25] memory) {
+		return [
+			lastOperationTime,
+			operationCoolDown,
+			uint(state),
+			minBalance,
+			totalSupplyA,
+			totalSupplyB,
+			ethCollateralInWei,
+			navAInWei,
+			navBInWei,
+			lastPriceInWei,
+			lastPriceTimeInSecond,
+			resetPriceInWei,
+			resetPriceTimeInSecond,
+			createCommInBP,
+			redeemCommInBP,
+			clearCommInBP,
+			period,
+			maturityInSecond,
+			preResetWaitingBlocks,
+			priceFetchCoolDown,
+			nextResetAddrIndex,
+			totalUsers(),
+			feeBalanceInWei(),
+			iterationGasThreshold,
+			roundStrikeInWei
+		];
+	}
+
+	function getAddresses() public view returns (address[7] memory) {
+		return [
+			roleManagerAddress,
+			operator,
+			feeCollector,
+			oracleAddress,
+			aTokenAddress,
+			bTokenAddress,
+			collateralTokenAddress
+		];
+	} 
 }

@@ -7,7 +7,7 @@ import { IERC20 } from "../interfaces/IERC20.sol";
 contract Erc20Custodian is Custodian {
 
 	IERC20 collateralToken;
-	address public collateralTokenAddress;
+	address collateralTokenAddress;
 
 	uint tokenCollateralInWei;
 
