@@ -10,6 +10,7 @@ const MagiInit = InitParas['Magi'];
 const util = require('./util');
 const CST = require('./constants');
 
+
 const ethInitPrice = 582;
 const PERTETUAL_NAME = 'DualClassCustodian perpetual';
 const TERM_NAME = 'DualClassCustodian term6';
