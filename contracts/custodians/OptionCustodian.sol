@@ -14,7 +14,6 @@ contract OptionCustodian is Erc20Custodian {
 		uint strikeInWei;
 		bool isCall;
 		bool isRelative;
-		bool isInclusive;
 	}
 
 	Strike public strike; 
@@ -76,8 +75,7 @@ contract OptionCustodian is Erc20Custodian {
 		address oracleAddr,
 		uint strikeInWei,
 		bool strikeIsCall,
-		bool strikeIsRelative,
-		bool strikeIsInclusive
+		bool strikeIsRelative
 		) 
 		public 
 		inState(State.Inception) 
@@ -90,7 +88,7 @@ contract OptionCustodian is Erc20Custodian {
 		bToken = ICustodianToken(bTokenAddress);
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
-		strike = Strike(strikeInWei, strikeIsCall, strikeIsRelative, strikeIsInclusive);
+		strike = Strike(strikeInWei, strikeIsCall, strikeIsRelative);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
 		require(priceInWei > 0 && timeInSecond > 0);
 		resetPriceTimeInSecond = timeInSecond;
