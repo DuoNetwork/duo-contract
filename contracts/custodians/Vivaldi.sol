@@ -59,12 +59,9 @@ contract Vivaldi is OptionCustodian {
 		lastPriceInWei = priceInWei;
 		lastPriceTimeInSecond = timeInSecond;
 		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
-		if (strike.isRelative) {
-			if (strike.isPositive)
-				roundStrikeInWei = priceInWei.mul(WEI_DENOMINATOR.add(strike.strikeInWei)).div(WEI_DENOMINATOR);
-			else
-				roundStrikeInWei = priceInWei.mul(WEI_DENOMINATOR.sub(strike.strikeInWei)).div(WEI_DENOMINATOR);
-		} else
+		if (strike.isRelative) 
+			roundStrikeInWei = priceInWei.mul(strike.strikeInWei).div(WEI_DENOMINATOR);
+		else
 			roundStrikeInWei = strike.strikeInWei;
 		return true;
 	}
