@@ -63,7 +63,7 @@ contract OptionCustodianMock is OptionCustodian {
 		return timestamp;
 	}
 
-	function getStates() public view returns (uint[19] memory) {
+	function getStates() public returns (uint[20] memory) {
 		return [
 			lastOperationTime,
 			operationCoolDown,
@@ -82,6 +82,7 @@ contract OptionCustodianMock is OptionCustodian {
 			priceFetchCoolDown,
 			nextResetAddrIndex,
 			totalUsers(),
+			tokenFeeBalanceInWei(),
 			clearCommInBP,
 			iterationGasThreshold
 		];

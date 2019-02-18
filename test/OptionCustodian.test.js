@@ -127,7 +127,7 @@ contract('OptionCustodian', accounts => {
 				const states = await optionCustodianContract.getStates.call();
 				let iterationGasThreshold = states[CUSTODIAN_STATE.ITERATION_GAS_THRESHOLD];
 				assert.equal(
-					iterationGasThreshold.valueOf(),
+					Number(iterationGasThreshold.valueOf()),
 					PptParas.iteGasTh,
 					'iterationGasThreshold set incorrectly'
 				);
@@ -139,7 +139,7 @@ contract('OptionCustodian', accounts => {
 					CUSTODIAN_STATE.REDEEM_COMMINBP
 				);
 				assert.equal(
-					comm.valueOf(),
+					Number(comm.valueOf()),
 					OptionCustodianInit.redeemComm,
 					'redeemCommInBP set incorrectly'
 				);
@@ -151,7 +151,7 @@ contract('OptionCustodian', accounts => {
 					CUSTODIAN_STATE.CLEAR_COMMINBP
 				);
 				assert.equal(
-					createCommInBP.valueOf(),
+					Number(createCommInBP.valueOf()),
 					OptionCustodianInit.clearComm + '',
 					'createCommInBP set incorrectly'
 				);
