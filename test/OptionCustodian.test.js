@@ -1,9 +1,8 @@
 const OptionCustodian = artifacts.require('../contracts/mocks/OptionCustodianMock.sol');
 const CustodianToken = artifacts.require('../contracts/tokens/CustodianToken.sol');
-// const CollateralToken = artifacts.require('./DUO.sol');
+const CollateralToken = artifacts.require('./DUO.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
 const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
-const WETH = artifacts.require('../contracts/mocks/WETHMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const RoleManagerInit = InitParas['RoleManager'];
 const Erc20CustodianInit = InitParas['Erc20Custodian'];
@@ -17,7 +16,7 @@ const ethInitPrice = 100;
 const PERTETUAL_NAME = 'OptionCustodian perpetual';
 const TERM_NAME = 'OptionCustodian term6';
 
-// const TOTAL_SUPPLY = 1000000000;
+const TOTAL_SUPPLY = 1000000000;
 const CUSTODIAN_STATE = {
 	LAST_OPERATION_TIME: 0,
 	OPERATION_COOLDOWN: 1,
@@ -55,11 +54,16 @@ contract('OptionCustodian', accounts => {
 	const pf3 = accounts[3];
 	const fc = accounts[4];
 	const alice = accounts[6];
-	// const bob = accounts[7];
-	// const charles = accounts[8];
 
 	const initContracts = async (contractCode, maturity) => {
-		collateralTokenContract =  await WETH.new();
+		collateralTokenContract = await CollateralToken.new(
+			util.toWei(TOTAL_SUPPLY),
+			'COLLATERAL',
+			'COLLATERAL',
+			{
+				from: creator
+			}
+		);
 
 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 			from: creator
@@ -116,7 +120,6 @@ contract('OptionCustodian', accounts => {
 				from: creator
 			}
 		);
-
 	};
 
 	describe('constructor', () => {
@@ -319,13 +322,12 @@ contract('OptionCustodian', accounts => {
 	});
 
 	describe('creation', () => {
-		const strike = 500;
+		const strike = 1.05;
 		const strikeIsCall = true;
 		const strikeIsRelative = true;
 
 		let amtEth = 1;
-		// let accumulatedFeeAfterWithdrawal;
-		// let totalSupplyA, totalSupplyB;
+		let totalSupplyA, totalSupplyB;
 		before(async () => {
 			await initContracts(PERTETUAL_NAME, 0);
 			let time = await oracleContract.timestamp.call();
@@ -341,37 +343,31 @@ contract('OptionCustodian', accounts => {
 					from: creator
 				}
 			);
-		
-			await collateralTokenContract.deposit({
-				from: alice,
-				value: util.toWei(amtEth * 3)
+
+			await collateralTokenContract.transfer(alice, util.toWei(amtEth * 3), {
+				from: creator
 			});
-			
 		});
 
 		it('cannot create with 0', async () => {
-			
-			await collateralTokenContract.approve(optionCustodianContract.address, util.toWei(amtEth), {
-				from: alice
-			});
+			await collateralTokenContract.approve(
+				optionCustodianContract.address,
+				util.toWei(amtEth),
+				{
+					from: alice
+				}
+			);
 			try {
-				await optionCustodianContract.create.call(
-					util.toWei(0),
-					{ from: alice }
-				);
+				await optionCustodianContract.create.call(util.toWei(0), { from: alice });
 				assert.isTrue(false, 'can create with 0');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
-			
 		});
 
 		it('cannot create with insufficient allowance', async () => {
 			try {
-				await optionCustodianContract.create.call(
-					util.toWei(amtEth * 2),
-					{ from: alice }
-				);
+				await optionCustodianContract.create.call(util.toWei(amtEth * 2), { from: alice });
 				assert.isTrue(false, 'can create with insufficient allowance');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
@@ -387,525 +383,475 @@ contract('OptionCustodian', accounts => {
 				}
 			);
 			try {
-				await optionCustodianContract.create.call(
-					util.toWei(amtEth * 4),
-					{ from: alice }
-				);
+				await optionCustodianContract.create.call(util.toWei(amtEth * 4), { from: alice });
 				assert.isTrue(false, 'can create more than allowance');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
 			}
 		});
 
-		// it('should create', async () => {
-		// 	let tx;
-		// 	let preBalance = await util.getBalance(dualClassCustodianContract.address);
-		// 	if (isWithWETH) {
-		// 		await wethContract.approve(dualClassCustodianContract.address, util.toWei(amtEth), {
-		// 			from: alice
-		// 		});
-		// 		tx = await dualClassCustodianContract.createWithWETH(
-		// 			util.toWei(amtEth),
+		it('should create', async () => {
+			let tx;
+			let preBalance = await collateralTokenContract.balanceOf.call(
+				optionCustodianContract.address
+			);
 
-		// 			wethContract.address,
-		// 			{ from: alice }
-		// 		);
-		// 	} else {
-		// 		tx = await dualClassCustodianContract.create({
-		// 			from: alice,
-		// 			value: util.toWei(amtEth)
-		// 		});
-		// 	}
-		// 	assert.isTrue(
-		// 		tx.logs.length === 2 &&
-		// 			tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_CREATE &&
-		// 			tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
-		// 		'incorrect event emitted'
-		// 	);
+			await collateralTokenContract.approve(
+				optionCustodianContract.address,
+				util.toWei(amtEth),
+				{
+					from: alice
+				}
+			);
+			tx = await optionCustodianContract.create(util.toWei(amtEth), { from: alice });
 
-		// 	assert.isTrue(
-		// 		tx.logs[0].args.sender === alice &&
-		// 			util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), tokenValueA + '') &&
-		// 			util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), tokenValueB + '') &&
-		// 			util.isEqual(
-		// 				util.fromWei(tx.logs[0].args.ethAmtInWei),
-		// 				amtEth * (1 - dualClassCustodianInit.comm / CST.BP_DENOMINATOR) + ''
-		// 			) &&
-		// 			util.isEqual(
-		// 				util.fromWei(tx.logs[0].args.feeInWei),
-		// 				(amtEth * dualClassCustodianInit.comm) / CST.BP_DENOMINATOR + ''
-		// 			),
-		// 		'incorrect event arguments emitted'
-		// 	);
+			assert.isTrue(
+				tx.logs.length === 2 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_CREATE &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
+				'incorrect event emitted'
+			);
 
-		// 	let afterBalance = await util.getBalance(dualClassCustodianContract.address);
+			const feeAmt = (amtEth * Erc20CustodianInit.comm) / CST.BP_DENOMINATOR;
+			const ethAmt = amtEth - feeAmt;
 
-		// 	assert.isTrue(
-		// 		util.fromWei(afterBalance + '') - util.fromWei(preBalance + '') === amtEth,
-		// 		'contract balance updated incorrectly'
-		// 	);
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), ethAmt + '') &&
+					util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), ethAmt + '') &&
+					util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), ethAmt + '') &&
+					util.isEqual(util.fromWei(tx.logs[0].args.feeInWei), feeAmt + ''),
+				'incorrect event arguments emitted'
+			);
 
-		// 	totalSupplyA = tokenValueA;
-		// 	totalSupplyB = tokenValueB;
-		// 	assert.isTrue(
-		// 		util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA + '') &&
-		// 			util.isEqual(
-		// 				util.fromWei(tx.logs[1].args.totalSupplyBInWei),
-		// 				totalSupplyB + ''
-		// 			),
-		// 		'totalSupply not updated connectly'
-		// 	);
-		// });
+			let afterBalance = await collateralTokenContract.balanceOf.call(
+				optionCustodianContract.address
+			);
 
-		// it('feeAccumulated should be updated', async () => {
-		// 	let ethFee = await util.getState(
-		// 		dualClassCustodianContract,
-		// 		CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
-		// 	);
-		// 	let fee = (1 * dualClassCustodianInit.comm) / CST.BP_DENOMINATOR;
-		// 	assert.isTrue(
-		// 		util.fromWei(ethFee) === fee.toString(),
-		// 		'feeAccumulated not updated correctly'
-		// 	);
-		// });
+			assert.isTrue(
+				util.fromWei(afterBalance + '') - util.fromWei(preBalance + '') === amtEth,
+				'contract balance updated incorrectly'
+			);
 
-		// it('should update user list if required', async () => {
-		// 	let userFlag = await dualClassCustodianContract.existingUsers.call(alice);
-		// 	assert.isTrue(util.isEqual(userFlag.valueOf(), 1), 'new user is not updated');
-		// });
-
-		// it('should update balance of A correctly', async () => {
-		// 	let balanceA = await dualClassCustodianContract.balanceOf.call(0, alice);
-		// 	assert.isTrue(
-		// 		util.isEqual(util.fromWei(balanceA), tokenValueA.toString()),
-		// 		'balance A not updated correctly'
-		// 	);
-		// });
-
-		// it('should update balance of B correctly', async () => {
-		// 	let balanceB = await dualClassCustodianContract.balanceOf.call(1, alice);
-		// 	assert.isTrue(
-		// 		util.isEqual(util.fromWei(balanceB), tokenValueB.toString()),
-		// 		'balance B not updated correctly'
-		// 	);
-		// });
-
-		// it('should not be added into userList with small creation amt', async () => {
-		// 	await dualClassCustodianContract.create({
-		// 		from: charles,
-		// 		value: util.toWei(0.00003)
-		// 	});
-		// 	let userFlag = await dualClassCustodianContract.existingUsers.call(charles);
-		// 	assert.isTrue(
-		// 		util.isEqual(userFlag.valueOf(), '0'),
-		// 		'new user is included in userList'
-		// 	);
-		// });
-
-		// it('should only collect fee less than allowed', async () => {
-		// 	try {
-		// 		await dualClassCustodianContract.collectFee.call(util.toWei(1), { from: fc });
-		// 		assert.isTrue(false, 'can collect fee more than allowed');
-		// 	} catch (err) {
-		// 		assert.equal(err.message, CST.VM_INVALID_OPCODE_MSG, 'not reverted');
-		// 	}
-		// });
-
-		// it('should collect fee', async () => {
-		// 	let feeBalanceInWei = await util.getState(
-		// 		dualClassCustodianContract,
-		// 		CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
-		// 	);
-		// 	accumulatedFeeAfterWithdrawal = Number(util.fromWei(feeBalanceInWei)) - 0.0001;
-		// 	let success = await dualClassCustodianContract.collectFee.call(util.toWei(0.0001), {
-		// 		from: fc
-		// 	});
-		// 	assert.isTrue(success);
-		// 	let tx = await dualClassCustodianContract.collectFee(util.toWei(0.0001), {
-		// 		from: fc
-		// 	});
-
-		// 	assert.isTrue(
-		// 		tx.logs.length === 1 &&
-		// 			tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_COLLECT_FEE,
-		// 		'worng event emitted'
-		// 	);
-		// 	assert.isTrue(
-		// 		tx.logs[0].args.addr.valueOf() === fc &&
-		// 			util.isEqual(util.fromWei(tx.logs[0].args.feeInWei), 0.0001) &&
-		// 			util.isEqual(
-		// 				util.fromWei(tx.logs[0].args.feeBalanceInWei),
-		// 				accumulatedFeeAfterWithdrawal
-		// 			),
-		// 		'worng fee parameter'
-		// 	);
-		// });
-
-		// it('should update fee balance correctly', async () => {
-		// 	let feeBalanceInWei = await util.getState(
-		// 		dualClassCustodianContract,
-		// 		CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
-		// 	);
-		// 	assert.isTrue(
-		// 		util.isEqual(util.fromWei(feeBalanceInWei), accumulatedFeeAfterWithdrawal),
-		// 		'fee not updated correctly'
-		// 	);
-		// });
+			totalSupplyA = ethAmt;
+			totalSupplyB = ethAmt;
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA + '') &&
+					util.isEqual(
+						util.fromWei(tx.logs[1].args.totalSupplyBInWei),
+						totalSupplyB + ''
+					),
+				'totalSupply not updated connectly'
+			);
+		});
 	});
 
-	// describe('redemption', () => {
-	// 	let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevCollateral;
-	// 	let amtA = 28;
-	// 	let amtB = 29;
-	// 	let adjAmtA = (amtA * CST.BP_DENOMINATOR) / dualClassCustodianInit.alphaInBP;
-	// 	let deductAmtB = Math.min(adjAmtA, amtB);
-	// 	let deductAmtA = (deductAmtB * dualClassCustodianInit.alphaInBP) / CST.BP_DENOMINATOR;
-	// 	let amtEth = (deductAmtA + deductAmtB) / ethInitPrice;
-	// 	let fee = (amtEth * dualClassCustodianInit.comm) / CST.BP_DENOMINATOR;
-	// 	let totalSupplyA, totalSupplyB;
+	describe('redemption', () => {
+		const strike = 1.05;
+		const strikeIsCall = true;
+		const strikeIsRelative = true;
 
-	// 	before(async () => {
-	// 		await initContracts(0, PERTETUAL_NAME, 0);
-	// 		let time = await oracleContract.timestamp.call();
-	// 		await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
-	// 		await dualClassCustodianContract.startCustodian(
-	// 			custodianTokenContractA.address,
-	// 			custodianTokenContractB.address,
-	// 			oracleContract.address,
-	// 			{
-	// 				from: creator
-	// 			}
-	// 		);
-	// 		await dualClassCustodianContract.create({ from: alice, value: util.toWei(1) });
-	// 		prevBalanceA = await dualClassCustodianContract.balanceOf.call(0, alice);
-	// 		prevBalanceB = await dualClassCustodianContract.balanceOf.call(1, alice);
-	// 		let ethFee = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.FEE_BALANCE_INWEI
-	// 		);
-	// 		prevFeeAccumulated = ethFee.valueOf();
-	// 		prevCollateral =
-	// 			(await util.getState(
-	// 				dualClassCustodianContract,
-	// 				CST.DUAL_CUSTODIAN.STATE_INDEX.ETH_COLLATERAL_INWEI
-	// 			)).valueOf() / CST.WEI_DENOMINATOR;
-	// 		totalSupplyA = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYA
-	// 		);
-	// 		totalSupplyA = totalSupplyA.valueOf() / CST.WEI_DENOMINATOR;
-	// 		totalSupplyB = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_SUPPLYB
-	// 		);
-	// 		totalSupplyB = totalSupplyB.valueOf() / CST.WEI_DENOMINATOR;
-	// 	});
+		let prevBalanceA, prevBalanceB, prevFeeAccumulated, prevCollateral;
+		let deductAmt;
+		let amtA = 0.5;
+		let amtB = 0.6;
+		let feeAmt;
+		let totalSupplyA, totalSupplyB;
 
-	// 	it('should only redeem token value less than balance', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.redeem(util.toWei(2800), util.toWei(2900), {
-	// 				from: alice
-	// 			});
-	// 			assert.isTrue(false, 'able to redeem more than balance');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem more than allowed');
-	// 		}
-	// 	});
+		before(async () => {
+			await initContracts(PERTETUAL_NAME, 0);
+			let time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+			await optionCustodianContract.startCustodian(
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
+				oracleContract.address,
+				util.toWei(strike),
+				strikeIsCall,
+				strikeIsRelative,
+				{
+					from: creator
+				}
+			);
 
-	// 	it('should redeem token A and B fee paying with eth', async () => {
-	// 		let success = await dualClassCustodianContract.redeem.call(
-	// 			util.toWei(amtA),
-	// 			util.toWei(amtB),
+			await collateralTokenContract.transfer(alice, util.toWei(3), {
+				from: creator
+			});
 
-	// 			{ from: alice }
-	// 		);
-	// 		assert.isTrue(success, 'not able to redeem');
-	// 		let tx = await dualClassCustodianContract.redeem(util.toWei(amtA), util.toWei(amtB), {
-	// 			from: alice
-	// 		});
-	// 		assert.isTrue(
-	// 			tx.logs.length === 2 &&
-	// 				tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_REDEEM &&
-	// 				tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
-	// 			'incorrect event emitted'
-	// 		);
-	// 		totalSupplyA = totalSupplyA - deductAmtA;
-	// 		totalSupplyB = totalSupplyB - deductAmtB;
+			await collateralTokenContract.approve(optionCustodianContract.address, util.toWei(3), {
+				from: alice
+			});
+			await optionCustodianContract.create(util.toWei(1), { from: alice });
+			prevBalanceA = await optionCustodianContract.balanceOf.call(0, alice);
+			prevBalanceB = await optionCustodianContract.balanceOf.call(1, alice);
+			let collateralTokenFee = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.TOKEN_FEE_BALANCE_INWEI
+			);
+			prevFeeAccumulated = collateralTokenFee.valueOf() / CST.WEI_DENOMINATOR;
 
-	// 		assert.isTrue(
-	// 			tx.logs[0].args.sender === alice &&
-	// 				util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), deductAmtA) &&
-	// 				util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), deductAmtB) &&
-	// 				util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), amtEth - fee) &&
-	// 				util.isEqual(util.fromWei(tx.logs[0].args.feeInWei), fee),
-	// 			'incorrect event arguments emitted'
-	// 		);
+			prevCollateral =
+				(await collateralTokenContract.balanceOf.call(
+					optionCustodianContract.address
+				)).valueOf() / CST.WEI_DENOMINATOR;
 
-	// 		let ethCollateral =
-	// 			(await util.getState(
-	// 				dualClassCustodianContract,
-	// 				CST.DUAL_CUSTODIAN.STATE_INDEX.ETH_COLLATERAL_INWEI
-	// 			)).valueOf() / CST.WEI_DENOMINATOR;
-	// 		assert.isTrue(
-	// 			util.isEqual(ethCollateral, prevCollateral - amtEth),
-	// 			'eth collateral not set correctly'
-	// 		);
-	// 		prevCollateral = ethCollateral;
+			totalSupplyA = await optionCustodianContract.totalSupplyA.call();
+			totalSupplyA = totalSupplyA.valueOf() / CST.WEI_DENOMINATOR;
+			totalSupplyB = await optionCustodianContract.totalSupplyB.call();
+			totalSupplyB = totalSupplyB.valueOf() / CST.WEI_DENOMINATOR;
+		});
 
-	// 		assert.isTrue(
-	// 			util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA) &&
-	// 				util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyBInWei), totalSupplyB)
-	// 		);
-	// 	});
+		it('should only redeem token value less than balance', async () => {
+			try {
+				await optionCustodianContract.redeem(util.toWei(2), util.toWei(2), {
+					from: alice
+				});
+				assert.isTrue(false, 'able to redeem more than balance');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem more than allowed');
+			}
+		});
 
-	// 	it('fee balance should be updated', async () => {
-	// 		let feeAccumulated = await dualClassCustodianContract.feeBalanceInWei.call();
-	// 		assert.isTrue(
-	// 			util.isEqual(util.fromWei(feeAccumulated.valueOf() - prevFeeAccumulated + ''), fee),
-	// 			'fee balance not updated correctly'
-	// 		);
-	// 	});
+		it('should redeem token A and B', async () => {
+			let success = await optionCustodianContract.redeem.call(
+				util.toWei(amtA),
+				util.toWei(amtB),
+				{ from: alice }
+			);
+			assert.isTrue(success, 'not able to redeem');
+			let tx = await optionCustodianContract.redeem(util.toWei(amtA), util.toWei(amtB), {
+				from: alice
+			});
+			assert.isTrue(
+				tx.logs.length === 2 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_REDEEM &&
+					tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
+				'incorrect event emitted'
+			);
 
-	// 	it('should update balance of A correctly', async () => {
-	// 		let currentBalanceA = await dualClassCustodianContract.balanceOf.call(0, alice);
-	// 		assert.isTrue(
-	// 			util.isEqual(
-	// 				currentBalanceA.valueOf() / CST.WEI_DENOMINATOR + deductAmtA,
-	// 				prevBalanceA.valueOf() / CST.WEI_DENOMINATOR
-	// 			),
-	// 			'balance A not updated correctly after redemption'
-	// 		);
-	// 	});
+			deductAmt = amtA > amtB ? amtB : amtA;
 
-	// 	it('should update balance of B correctly', async () => {
-	// 		let currentBalanceB = await dualClassCustodianContract.balanceOf.call(1, alice);
-	// 		assert.isTrue(
-	// 			util.isEqual(
-	// 				currentBalanceB.valueOf() / CST.WEI_DENOMINATOR + deductAmtB,
-	// 				prevBalanceB.valueOf() / CST.WEI_DENOMINATOR
-	// 			),
-	// 			'balance B not updated correctly after redemption'
-	// 		);
-	// 	});
+			feeAmt = (deductAmt * OptionCustodianInit.redeemComm) / CST.BP_DENOMINATOR;
+			const tokenCollateralAmt = deductAmt - feeAmt;
 
-	// 	it('should be in user list', async () => {
-	// 		let userFlag = await dualClassCustodianContract.existingUsers.call(alice);
-	// 		assert.isTrue(util.isEqual(userFlag.valueOf(), '1'), 'user not in the user list');
-	// 		let userSize = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
-	// 		);
-	// 		assert.isTrue(util.isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
-	// 	});
+			totalSupplyA = totalSupplyA - deductAmt;
+			totalSupplyB = totalSupplyB - deductAmt;
 
-	// 	it('should be in user list', async () => {
-	// 		let userFlag = await dualClassCustodianContract.existingUsers.call(alice);
-	// 		assert.isTrue(userFlag.valueOf() == '1', 'user not in the user list');
-	// 		let userSize = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
-	// 		);
-	// 		assert.equal(userSize.valueOf(), 1, 'user size not updated correctly');
-	// 	});
+			assert.isTrue(
+				tx.logs[0].args.sender === alice &&
+					util.isEqual(util.fromWei(tx.logs[0].args.tokenAInWei), deductAmt) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.tokenBInWei), deductAmt) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.ethAmtInWei), tokenCollateralAmt) &&
+					util.isEqual(util.fromWei(tx.logs[0].args.feeInWei), feeAmt),
+				'incorrect event arguments emitted'
+			);
 
-	// 	it('should be removed from user list if all tokens are redeemed', async () => {
-	// 		let currentBalanceA = await dualClassCustodianContract.balanceOf.call(0, alice);
-	// 		let currentBalanceB = await dualClassCustodianContract.balanceOf.call(1, alice);
-	// 		await dualClassCustodianContract.redeem(
-	// 			currentBalanceA.valueOf(),
-	// 			currentBalanceB.valueOf(),
+			let tokenCollateral =
+				(await collateralTokenContract.balanceOf.call(
+					optionCustodianContract.address
+				)).valueOf() / CST.WEI_DENOMINATOR;
+			assert.isTrue(
+				util.isEqual(tokenCollateral, prevCollateral - tokenCollateralAmt),
+				'token collateral not set correctly'
+			);
+			prevCollateral = tokenCollateral;
 
-	// 			{ from: alice }
-	// 		);
-	// 		let userFlag = await dualClassCustodianContract.existingUsers.call(alice);
-	// 		assert.isTrue(util.isEqual(userFlag.valueOf(), 0), 'user still in the userList');
-	// 		let userSize = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.TOTAL_USERS
-	// 		);
-	// 		assert.isTrue(util.isEqual(userSize.valueOf(), 0), 'user size not updated correctly');
-	// 	});
-	// });
+			assert.isTrue(
+				util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyAInWei), totalSupplyA) &&
+					util.isEqual(util.fromWei(tx.logs[1].args.totalSupplyBInWei), totalSupplyB)
+			);
+		});
 
-	// describe('setValue', () => {
-	// 	before(async () => {
-	// 		await initContracts(0, PERTETUAL_NAME, 0);
-	// 		let time = await oracleContract.timestamp.call();
-	// 		await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
-	// 		await dualClassCustodianContract.startCustodian(
-	// 			custodianTokenContractA.address,
-	// 			custodianTokenContractB.address,
-	// 			oracleContract.address,
-	// 			{
-	// 				from: creator
-	// 			}
-	// 		);
-	// 	});
+		it('fee balance should be updated', async () => {
+			let feeAccumulated = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.TOKEN_FEE_BALANCE_INWEI
+			);
+			assert.isTrue(
+				util.isEqual(util.fromWei(feeAccumulated.valueOf()) - prevFeeAccumulated , feeAmt),
+				'fee balance not updated correctly'
+			);
+		});
 
-	// 	beforeEach(async () => {
-	// 		await dualClassCustodianContract.skipCooldown(25);
-	// 	});
+		it('should update balance of A correctly', async () => {
+			let currentBalanceA = await optionCustodianContract.balanceOf.call(0, alice);
+			assert.isTrue(
+				util.isEqual(
+					currentBalanceA.valueOf() / CST.WEI_DENOMINATOR + deductAmt,
+					prevBalanceA.valueOf() / CST.WEI_DENOMINATOR
+				),
+				'balance A not updated correctly after redemption'
+			);
+		});
 
-	// 	it('admin should be able to set createCommission', async () => {
-	// 		let success = await dualClassCustodianContract.setValue.call(0, 100, { from: creator });
-	// 		assert.isTrue(success, 'not be able to set commissison');
-	// 		let createCommInBP = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.CREATE_COMMINBP
-	// 		);
-	// 		let preValue = createCommInBP.valueOf();
-	// 		let tx = await dualClassCustodianContract.setValue(0, 50, { from: creator });
-	// 		assert.isTrue(
-	// 			tx.logs.length === 1 &&
-	// 				tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
-	// 			'wrong event emitted'
-	// 		);
-	// 		assert.isTrue(
-	// 			Number(tx.logs[0].args.index.valueOf()) === 0 &&
-	// 				Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
-	// 				Number(tx.logs[0].args.newValue.valueOf()) === 50,
-	// 			'wrong argument emitted'
-	// 		);
-	// 	});
+		it('should update balance of B correctly', async () => {
+			let currentBalanceB = await optionCustodianContract.balanceOf.call(1, alice);
+			assert.isTrue(
+				util.isEqual(
+					currentBalanceB.valueOf() / CST.WEI_DENOMINATOR + deductAmt,
+					prevBalanceB.valueOf() / CST.WEI_DENOMINATOR
+				),
+				'balance B not updated correctly after redemption'
+			);
+		});
 
-	// 	it('should not be able to set commission higher than 10000', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(0, 10001, { from: creator });
+		it('should be in user list', async () => {
+			let userFlag = await optionCustodianContract.existingUsers.call(alice);
+			assert.isTrue(util.isEqual(userFlag.valueOf(), '1'), 'user not in the user list');
+			let userSize = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.TOTAL_USERS
+			);
+			assert.isTrue(util.isEqual(userSize.valueOf(), 1), 'user size not updated correctly');
+		});
 
-	// 			assert.isTrue(false, 'admin can set comission higher than 10000');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+		it('should be removed from user list if all tokens are redeemed', async () => {
+			let currentBalanceA = await optionCustodianContract.balanceOf.call(0, alice);
+			let currentBalanceB = await optionCustodianContract.balanceOf.call(1, alice);
+			await optionCustodianContract.redeem(
+				currentBalanceA.valueOf(),
+				currentBalanceB.valueOf(),
 
-	// 	it('non admin should not be able to set comm', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(0, 100, { from: alice });
-	// 			assert.isTrue(false, 'non admin can change comm');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+				{ from: alice }
+			);
+			let userFlag = await optionCustodianContract.existingUsers.call(alice);
+			assert.isTrue(util.isEqual(userFlag.valueOf(), 0), 'user still in the userList');
+			let userSize = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.TOTAL_USERS
+			);
+			assert.isTrue(util.isEqual(userSize.valueOf(), 0), 'user size not updated correctly');
+		});
+	});
 
-	// 	it('admin should be able to set redeemCommInBP', async () => {
-	// 		let success = await dualClassCustodianContract.setValue.call(1, 100, {
-	// 			from: creator
-	// 		});
-	// 		assert.isTrue(success, 'not be able to set redeemCommInBP');
-	// 		let redeemCommInBP = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.REDEEM_COMMINBP
-	// 		);
-	// 		let preValue = redeemCommInBP.valueOf();
-	// 		let tx = await dualClassCustodianContract.setValue(1, 100, { from: creator });
-	// 		assert.isTrue(
-	// 			tx.logs.length === 1 &&
-	// 				tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
-	// 			'wrong event emitted'
-	// 		);
-	// 		assert.isTrue(
-	// 			Number(tx.logs[0].args.index.valueOf()) === 1 &&
-	// 				Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
-	// 				Number(tx.logs[0].args.newValue.valueOf()) === 100,
-	// 			'wrong argument emitted'
-	// 		);
-	// 	});
+	describe('setValue', () => {
+		const strike = 1.05;
+		const strikeIsCall = true;
+		const strikeIsRelative = true;
+		before(async () => {
+			await initContracts(PERTETUAL_NAME, 0);
+			let time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(400), time.valueOf(), pf1);
+			await optionCustodianContract.startCustodian(
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
+				oracleContract.address,
+				util.toWei(strike),
+				strikeIsCall,
+				strikeIsRelative,
+				{
+					from: creator
+				}
+			);
+		});
 
-	// 	it('should not be able to set commission higher than 10000', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(1, 10001, { from: creator });
+		beforeEach(async () => {
+			await optionCustodianContract.skipCooldown(25);
+		});
 
-	// 			assert.isTrue(false, 'admin can set comission higher than 10000');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+		it('admin should be able to set createCommission', async () => {
+			let success = await optionCustodianContract.setValue.call(0, 100, { from: creator });
+			assert.isTrue(success, 'not be able to set commissison');
+			let createCommInBP = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.CREATE_COMMINBP
+			);
+			let preValue = createCommInBP.valueOf();
+			let tx = await optionCustodianContract.setValue(0, 50, { from: creator });
+			assert.isTrue(
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				Number(tx.logs[0].args.index.valueOf()) === 0 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 50,
+				'wrong argument emitted'
+			);
+		});
 
-	// 	it('non admin should not be able to set comm', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(1, 100, { from: alice });
-	// 			assert.isTrue(false, 'non admin can change comm');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+		it('should not be able to set commission higher than 10000', async () => {
+			try {
+				await optionCustodianContract.setValue.call(0, 10001, { from: creator });
 
-	// 	it('admin should be able to set iteration gas threshold', async () => {
-	// 		let success = await dualClassCustodianContract.setValue.call(2, 100000, {
-	// 			from: creator
-	// 		});
-	// 		assert.isTrue(success, 'not be able to set gas threshhold');
-	// 		let iterationGasThreshold = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.ITERATION_GAS_THRESHOLD
-	// 		);
-	// 		let preValue = iterationGasThreshold.valueOf();
-	// 		let tx = await dualClassCustodianContract.setValue(2, 100, { from: creator });
-	// 		assert.isTrue(
-	// 			tx.logs.length === 1 &&
-	// 				tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
-	// 			'wrong event emitted'
-	// 		);
-	// 		assert.isTrue(
-	// 			Number(tx.logs[0].args.index.valueOf()) === 2 &&
-	// 				Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
-	// 				Number(tx.logs[0].args.newValue.valueOf()) === 100,
-	// 			'wrong argument emitted'
-	// 		);
-	// 	});
+				assert.isTrue(false, 'admin can set comission higher than 10000');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
 
-	// 	it('non admin should not be able to set gas threshhold', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(2, 100000, { from: alice });
-	// 			assert.isTrue(false, 'non admin can change gas threshhold');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+		it('non admin should not be able to set comm', async () => {
+			try {
+				await optionCustodianContract.setValue.call(0, 100, { from: alice });
+				assert.isTrue(false, 'non admin can change comm');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
 
-	// 	it('admin should be able to set pre reset waiting blocks', async () => {
-	// 		let success = await dualClassCustodianContract.setValue.call(3, 100, {
-	// 			from: creator
-	// 		});
-	// 		assert.isTrue(success, 'not be able to set pre reset waiting block');
-	// 		let preResetWaitingBlocks = await util.getState(
-	// 			dualClassCustodianContract,
-	// 			CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
-	// 		);
-	// 		let preValue = preResetWaitingBlocks.valueOf();
-	// 		let tx = await dualClassCustodianContract.setValue(3, 100, { from: creator });
-	// 		assert.isTrue(
-	// 			tx.logs.length === 1 &&
-	// 				tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
-	// 			'wrong event emitted'
-	// 		);
-	// 		assert.isTrue(
-	// 			Number(tx.logs[0].args.index.valueOf()) === 3 &&
-	// 				Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
-	// 				Number(tx.logs[0].args.newValue.valueOf()) === 100,
-	// 			'wrong argument emitted'
-	// 		);
-	// 	});
+		it('admin should be able to set redeemCommInBP', async () => {
+			let success = await optionCustodianContract.setValue.call(1, 100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set redeemCommInBP');
+			let redeemCommInBP = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.REDEEM_COMMINBP
+			);
+			let preValue = redeemCommInBP.valueOf();
+			let tx = await optionCustodianContract.setValue(1, 100, { from: creator });
+			assert.isTrue(
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				Number(tx.logs[0].args.index.valueOf()) === 1 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
+				'wrong argument emitted'
+			);
+		});
 
-	// 	it('non admin should not be able to set pre reset waiting blocks', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(3, 100, { from: alice });
+		it('should not be able to set commission higher than 10000', async () => {
+			try {
+				await optionCustodianContract.setValue.call(1, 10001, { from: creator });
 
-	// 			assert.isTrue(false, 'non admin can change pre reset waiting block');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
+				assert.isTrue(false, 'admin can set comission higher than 10000');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
 
-	// 	it('admin should not be able to set with idx 4 and bigger index', async () => {
-	// 		try {
-	// 			await dualClassCustodianContract.setValue.call(4, 100, {
-	// 				from: creator
-	// 			});
-	// 			assert.isTrue(false, 'can set value with invalid index');
-	// 		} catch (err) {
-	// 			assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
-	// 		}
-	// 	});
-	// });
+		it('non admin should not be able to set comm', async () => {
+			try {
+				await optionCustodianContract.setValue.call(1, 100, { from: alice });
+				assert.isTrue(false, 'non admin can change comm');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('admin should be able to set clearCommInBP', async () => {
+			let success = await optionCustodianContract.setValue.call(2, 100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set clearCommInBP');
+			let clearCommInBP = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.CLEAR_COMMINBP
+			);
+			let preValue = clearCommInBP.valueOf();
+			let tx = await optionCustodianContract.setValue(2, 100, { from: creator });
+			assert.isTrue(
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				Number(tx.logs[0].args.index.valueOf()) === 2 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
+				'wrong argument emitted'
+			);
+		});
+
+		it('should not be able to set clear commission higher than 10000', async () => {
+			try {
+				await optionCustodianContract.setValue.call(2, 10001, { from: creator });
+
+				assert.isTrue(false, 'admin can set comission higher than 10000');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('non admin should not be able to set clear comm', async () => {
+			try {
+				await optionCustodianContract.setValue.call(2, 100, { from: alice });
+				assert.isTrue(false, 'non admin can change comm');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('admin should be able to set iteration gas threshold', async () => {
+			let success = await optionCustodianContract.setValue.call(3, 100000, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set gas threshhold');
+			let iterationGasThreshold = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.ITERATION_GAS_THRESHOLD
+			);
+			let preValue = iterationGasThreshold.valueOf();
+			let tx = await optionCustodianContract.setValue(3, 100, { from: creator });
+			assert.isTrue(
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				Number(tx.logs[0].args.index.valueOf()) === 3 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
+				'wrong argument emitted'
+			);
+		});
+
+		it('non admin should not be able to set gas threshhold', async () => {
+			try {
+				await optionCustodianContract.setValue.call(3, 100000, { from: alice });
+				assert.isTrue(false, 'non admin can change gas threshhold');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('admin should be able to set pre reset waiting blocks', async () => {
+			let success = await optionCustodianContract.setValue.call(4, 100, {
+				from: creator
+			});
+			assert.isTrue(success, 'not be able to set pre reset waiting block');
+			let preResetWaitingBlocks = await util.getState(
+				optionCustodianContract,
+				CUSTODIAN_STATE.PRERESET_WAITING_BLOCKS
+			);
+			let preValue = preResetWaitingBlocks.valueOf();
+			let tx = await optionCustodianContract.setValue(4, 100, { from: creator });
+			assert.isTrue(
+				tx.logs.length === 1 &&
+					tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_SET_VALUE,
+				'wrong event emitted'
+			);
+			assert.isTrue(
+				Number(tx.logs[0].args.index.valueOf()) === 4 &&
+					Number(tx.logs[0].args.oldValue.valueOf()) === Number(preValue) &&
+					Number(tx.logs[0].args.newValue.valueOf()) === 100,
+				'wrong argument emitted'
+			);
+		});
+
+		it('non admin should not be able to set pre reset waiting blocks', async () => {
+			try {
+				await optionCustodianContract.setValue.call(4, 100, { from: alice });
+
+				assert.isTrue(false, 'non admin can change pre reset waiting block');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('admin should not be able to set with idx 5 and bigger index', async () => {
+			try {
+				await optionCustodianContract.setValue.call(5, 100, {
+					from: creator
+				});
+				assert.isTrue(false, 'can set value with invalid index');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+	});
 });
