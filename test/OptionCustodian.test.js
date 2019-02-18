@@ -318,7 +318,7 @@ contract('OptionCustodian', accounts => {
 		});
 	});
 
-	describe.only('creation', () => {
+	describe('creation', () => {
 		const strike = 500;
 		const strikeIsCall = true;
 		const strikeIsRelative = true;
