@@ -37,6 +37,6 @@ workflows:
                   cron: '0 4 * * *'
                   filters:
                       branches:
-                          only: CI
+                          only: master
         jobs:
             - build-duo-contract
