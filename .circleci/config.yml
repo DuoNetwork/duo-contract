@@ -12,10 +12,7 @@ jobs:
                   name: Fix host authenticity for 192.30.253.113
                   command: |
                       ssh-keyscan 192.30.253.113 >> ~/.ssh/known_hosts
-            - run: git clone git@192.30.253.113:FinBook/duo-contract.git /home/circleci/duo-contract
-            - run: cd /home/circleci/duo-contract
-            - restore_cache:
-                  key: dependency-cache-{{ .Environment.CIRCLE_SHA1 }}
+            - checkout
             - run:
                   name: Install npm wee
                   command: npm install
@@ -26,10 +23,6 @@ jobs:
             - run:
                   name: test
                   command: npm test
-            - save_cache:
-                  key: dependency-cache-{{ .Environment.CIRCLE_SHA1 }}
-                  paths:
-                      - /home/circleci/duo-contract
 workflows:
     version: 2
     build_test_deploy:
