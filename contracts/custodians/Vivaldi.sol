@@ -101,7 +101,7 @@ contract Vivaldi is OptionCustodian {
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
 		
-		if (strike.isPositive) {
+		if (strike.isCall) {
 			if (priceInWei > roundStrikeInWei 
 			|| priceInWei == roundStrikeInWei 
 			&& strike.isInclusive)

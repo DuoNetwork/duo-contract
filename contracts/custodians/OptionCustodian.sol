@@ -12,7 +12,7 @@ contract OptionCustodian is Erc20Custodian {
      */
 	struct Strike {
 		uint strikeInWei;
-		bool isPositive;
+		bool isCall;
 		bool isRelative;
 		bool isInclusive;
 	}
@@ -75,7 +75,7 @@ contract OptionCustodian is Erc20Custodian {
 		address bAddr,
 		address oracleAddr,
 		uint strikeInWei,
-		bool strikeIsPositive,
+		bool strikeIsCall,
 		bool strikeIsRelative,
 		bool strikeIsInclusive
 		) 
@@ -90,7 +90,7 @@ contract OptionCustodian is Erc20Custodian {
 		bToken = ICustodianToken(bTokenAddress);
 		oracleAddress = oracleAddr;
 		oracle = IOracle(oracleAddress);
-		strike = Strike(strikeInWei, strikeIsPositive, strikeIsRelative, strikeIsInclusive);
+		strike = Strike(strikeInWei, strikeIsCall, strikeIsRelative, strikeIsInclusive);
 		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
 		require(priceInWei > 0 && timeInSecond > 0);
 		resetPriceTimeInSecond = timeInSecond;
