@@ -49,18 +49,24 @@ contract Vivaldi is OptionCustodian {
 
 	// @dev start round
 	function startRound() public inState(State.Trading) returns (bool) {
-		// can only start once before the round is ended
-		require(lastPriceTimeInSecond < resetPriceTimeInSecond);
-		uint currentTime = getNowTimestamp();
-		uint minAllowedTime = resetPriceTimeInSecond.add(priceFetchCoolDown);
-		require(currentTime > minAllowedTime);
-		(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
-		require(timeInSecond > minAllowedTime && timeInSecond <= currentTime && priceInWei > 0);
-		lastPriceInWei = priceInWei;
-		lastPriceTimeInSecond = timeInSecond;
-		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		if (priceFetchCoolDown > 0) {
+			// can only start once before the round is ended
+			require(lastPriceTimeInSecond < resetPriceTimeInSecond);
+			uint currentTime = getNowTimestamp();
+			uint minAllowedTime = resetPriceTimeInSecond.add(priceFetchCoolDown);
+			require(currentTime > minAllowedTime);
+			(uint priceInWei, uint timeInSecond) = oracle.getLastPrice();
+			require(timeInSecond > minAllowedTime && timeInSecond <= currentTime && priceInWei > 0);
+			lastPriceInWei = priceInWei;
+			lastPriceTimeInSecond = timeInSecond;
+			emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		} else {
+			lastPriceInWei = resetPriceInWei;
+			lastPriceTimeInSecond = resetPriceTimeInSecond;
+		}
+		
 		if (strike.isRelative) 
-			roundStrikeInWei = priceInWei.mul(strike.strikeInWei).div(WEI_DENOMINATOR);
+			roundStrikeInWei = lastPriceInWei.mul(strike.strikeInWei).div(WEI_DENOMINATOR);
 		else
 			roundStrikeInWei = strike.strikeInWei;
 		return true;
@@ -152,10 +158,12 @@ contract Vivaldi is OptionCustodian {
 			if(maturityInSecond > 0 && getNowTimestamp() >= maturityInSecond) {
 				state = State.Matured;
 				emit Matured(navAInWei, navBInWei);
-			}else 
+			} else {
 				state = State.Trading;
+				emit StartTrading(navAInWei, navBInWei);
+			}
+
 			delete users;
-			emit StartTrading(navAInWei, navBInWei);
 			return true;
 		} else {
 			nextResetAddrIndex = localResetAddrIndex;
