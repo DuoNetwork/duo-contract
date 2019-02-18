@@ -23,7 +23,7 @@ jobs:
             - run:
                   name: coverage
                   command: npm run coverage
-             - run:
+            - run:
                   name: post coverage
                   command: cat ./coverage/lcov.info | ./node_modules/.bin/coveralls
 workflows:
