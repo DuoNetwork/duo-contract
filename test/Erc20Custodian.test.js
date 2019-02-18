@@ -165,7 +165,7 @@ contract('Erc20Custodian', accounts => {
 		});
 	});
 
-	describe.only('collectFee', () => {
+	describe('collectFee', () => {
 		const initFee = '10';
 		const feeCollectAmtMore = '20';
 		const feeCollectAmtLess = '1';

@@ -131,6 +131,26 @@
 		"preResetWaitBlk": 10,
 		"minimumBalance": 0.01
 	},
+	"OptionCustodian": {
+		"redeemComm": 100,
+		"clearComm": 100,
+		"TokenA": {
+			"tokenName": "sETH-M19",
+			"tokenSymbol": "sETH-M19"
+		},
+		"TokenB": {
+			"tokenName": "LETH-M19",
+			"tokenSymbol": "LETH-M19"
+		}
+	},
+	"Vivaldi": {
+		"PPT": {
+			"iteGasTh": 65000
+		},
+		"M19": {
+			"iteGasTh": 65000
+		}
+	},
 	"Managed": {
 		"optCoolDown": 3600
 	},
