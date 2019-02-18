@@ -24,11 +24,11 @@
     "ganache-cli": "^6.2.5",
     "moment": "^2.24.0",
     "rimraf": "^2.6.3",
-    "solidity-coverage": "^0.5.11",
-    "solium": "^1.2.2",
-    "truffle": "5.0.2"
+    "solidity-coverage": "git+https://github.com/leapdao/solidity-coverage.git",
+    "solium": "^1.2.2"
   },
   "dependencies": {
+    "truffle": "5.0.2",
     "web3": "^1.0.0-beta.37"
   }
 }
