@@ -149,7 +149,7 @@ contract Vivaldi is OptionCustodian {
 		if (localResetAddrIndex >= users.length) {
 			tokenCollateralInWei = 0;
 			nextResetAddrIndex = 0;
-			if(getNowTimestamp() >= maturityInSecond) 
+			if(maturityInSecond > 0 && getNowTimestamp() >= maturityInSecond ) 
 				state = State.Matured;
 			else 
 				state = State.Trading;
