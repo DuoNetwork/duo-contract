@@ -1,6 +1,7 @@
 const web3 = require('web3');
 const SafeMath = artifacts.require('./SafeMath.sol');
 const Beethoven = artifacts.require('./Beethoven.sol');
+const Vivaldi = artifacts.require('./Vivaldi.sol');
 const Mozart = artifacts.require('./Mozart.sol');
 const Magi = artifacts.require('./Magi.sol');
 const Esplanade = artifacts.require('./Esplanade.sol');
@@ -9,6 +10,8 @@ const CustodianToken = artifacts.require('./CustodianToken.sol');
 const InitParas = require('./contractInitParas.json');
 const DuoInit = InitParas['DUO'];
 const MagiInit = InitParas['Magi'];
+const Erc20CustodianInit = InitParas['Erc20Custodian'];
+const OptionCustodianInit = InitParas['OptionCustodian'];
 const RoleManagerInit = InitParas['RoleManager'];
 const deployInfoSaver = require('./deployInfoSaver');
 
@@ -183,7 +186,64 @@ module.exports = async (deployer, network, accounts) => {
 		);
 		MagiInit.esplanadeAddr = Esplanade.address;
 		await deployInfoSaver.saveGeneralContractInfo('MAGI', Magi.address, MagiInit);
-	} else {
+	} else if (process.env.CONTRACT_TYPE === 'VVD') {
+		let VVD_INIT_PARAS = InitParas.Vivaldi.PPT;
+		if (process.env.TENOR) VVD_INIT_PARAS = InitParas.Vivaldi[process.env.TENOR];
+		// 74748
+		await deployer.deploy(SafeMath, {
+			from: creator
+		});
+		await deployer.link(SafeMath, Beethoven);
+		await deployer.deploy(
+			Vivaldi,
+			VVD_INIT_PARAS.name,
+			VVD_INIT_PARAS.collateralTokenAddress,
+			VVD_INIT_PARAS.maturity,
+			VVD_INIT_PARAS.roleManagerContractAddress,
+			fc,
+			Erc20CustodianInit.comm,
+			OptionCustodianInit.redeemComm,
+			OptionCustodianInit.clearComm,
+			VVD_INIT_PARAS.pd,
+			Erc20CustodianInit.optCoolDown,
+			Erc20CustodianInit.pxFetchCoolDown,
+			Erc20CustodianInit.preResetWaitBlk,
+			web3.utils.toWei(Erc20CustodianInit.minimumBalance + ''),
+			VVD_INIT_PARAS.iteGasTh,
+			{ from: creator }
+		);
+		// // 1094050
+		await deployer.deploy(
+			CustodianToken,
+			VVD_INIT_PARAS.TokenA.tokenName,
+			VVD_INIT_PARAS.TokenA.tokenSymbol,
+			Beethoven.address,
+			0,
+			{
+				from: creator
+			}
+		);
+		VVD_INIT_PARAS.TokenA.address;
+		// 1094370
+		await deployer.deploy(
+			CustodianToken,
+			VVD_INIT_PARAS.TokenB.tokenName,
+			VVD_INIT_PARAS.TokenB.tokenSymbol,
+			Beethoven.address,
+			1,
+			{ from: creator }
+		);
+		VVD_INIT_PARAS.TokenB.address;
+
+		await deployInfoSaver.saveDualCustodianInfo(
+			'VVD',
+			process.env.TENOR,
+			Vivaldi.address,
+			VVD_INIT_PARAS
+		);
+	}
+	
+	else {
 		console.log('contract type does not exist');
 	}
 };

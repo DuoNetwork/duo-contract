@@ -389,7 +389,10 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 
 			const targetRoundStrikePrice = ethInitPrice * 1.05;
-			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE_IN_WEI);
+			const roundPrice = await util.getState(
+				vivaldiContract,
+				VIVALDI_STATE.ROUND_STRIKE_IN_WEI
+			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(roundPrice), targetRoundStrikePrice),
 				'roundStrikeprice updated incorrectly'
@@ -412,7 +415,10 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.setStrike(util.toWei(100), true, false);
 			await vivaldiContract.startRound({ from: creator });
 
-			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE_IN_WEI);
+			const roundPrice = await util.getState(
+				vivaldiContract,
+				VIVALDI_STATE.ROUND_STRIKE_IN_WEI
+			);
 			assert.isTrue(
 				util.isEqual(util.fromWei(roundPrice), 100),
 				'roundStrikeprice updated incorrectly'
@@ -1181,7 +1187,7 @@ contract('Vivaldi', accounts => {
 				);
 				const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 				await vivaldiContract.setTimestamp(requiredTime);
-				oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
+				oracleContract.setLastPrice(util.toWei(endPrice), requiredTime, pf1);
 				const lastPriceTime = await util.getState(
 					vivaldiContract,
 					VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
