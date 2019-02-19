@@ -53,7 +53,7 @@ const assertState = async (contract, state) => {
 	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
-contract.only('Vivaldi', accounts => {
+contract('Vivaldi', accounts => {
 	let vivaldiContract;
 	let roleManagerContract;
 	let collateralTokenContract;
