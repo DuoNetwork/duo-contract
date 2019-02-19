@@ -161,22 +161,6 @@
 				"tokenName": "ETH-100P-3H",
 				"tokenSymbol": "ETH-100P-3H"
 			}
-		},
-		"M19": {
-			"iteGasTh": 65000,
-			"collateralTokenAddress": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
-			"name": " VIVALDI-100C-3H",
-			"maturity":100000000000,
-			"roleManagerContractAddress": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
-			"pd":10800,
-			"inToken": {
-				"tokenName": "ETH-100C-3H",
-				"tokenSymbol": "ETH-100C-3H"
-			},
-			"outToken": {
-				"tokenName": "ETH-100P-3H",
-				"tokenSymbol": "ETH-100P-3H"
-			}
 		}
 	},
 	"Managed": {
