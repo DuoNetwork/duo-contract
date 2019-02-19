@@ -128,7 +128,7 @@ contract Vivaldi is OptionCustodian {
 		address currentAddress;
 		uint localResetAddrIndex = nextResetAddrIndex;
 		bool localIsKnockedIn = isKnockedIn;
-		uint localIterationGasThreshold = iterationGasThreshold
+		uint localIterationGasThreshold = iterationGasThreshold;
 		while (localResetAddrIndex < users.length && gasleft() > localIterationGasThreshold) {
 			currentAddress = users[localResetAddrIndex];
 			uint collateralTokenAmtInWei = 0;

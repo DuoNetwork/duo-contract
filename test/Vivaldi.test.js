@@ -29,23 +29,23 @@ const VIVALDI_STATE = {
 	MIN_BALANCE: 3,
 	TOTAL_SUPPLYA: 4,
 	TOTAL_SUPPLYB: 5,
-	TOKEN_COLLATERAL_INWEI: 6,
-	LAST_PRICE_INWEI: 7,
-	LAST_PRICETIME_INSECOND: 8,
-	RESET_PRICE_INWEI: 9,
-	RESET_PRICETIME_INSECOND: 10,
-	CREATE_COMMINBP: 11,
-	REDEEM_COMMINBP: 12,
-	CLEAR_COMMINBP: 13,
+	TOKEN_COLLATERAL_IN_WEI: 6,
+	LAST_PRICE_IN_WEI: 7,
+	LAST_PRICETIME_IN_SECOND: 8,
+	RESET_PRICE_IN_WEI: 9,
+	RESET_PRICETIME_IN_SECOND: 10,
+	CREATE_COMM_IN_BP: 11,
+	REDEEM_COMM_IN_BP: 12,
+	CLEAR_COMM_IN_BP: 13,
 	PERIOD: 14,
-	MATURITY_IN_SECOND: 15,
+	MATURITY: 15,
 	PRERESET_WAITING_BLOCKS: 16,
 	PRICE_FETCH_COOLDOWN: 17,
 	NEXT_RESET_ADDR_INDEX: 18,
 	TOTAL_USERS: 19,
-	TOKEN_FEE_BALANCE_INWEI: 20,
+	TOKEN_FEE_BALANCE_IN_WEI: 20,
 	ITERATION_GAS_THRESHOLD: 21,
-	ROUND_STRIKE: 22
+	ROUND_STRIKE_IN_WEI: 22
 };
 
 const assertState = async (contract, state) => {
@@ -1007,7 +1007,7 @@ contract('Vivaldi', accounts => {
 		it('should only transit to reset state after a given number of blocks but not before that', async () => {
 			let preResetWaitBlk = await util.getState(
 				vivaldiContract,
-				CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
+				VIVALDI_STATE.PRERESET_WAITING_BLOCKS
 			);
 
 			for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
@@ -1196,7 +1196,7 @@ contract('Vivaldi', accounts => {
 
 				let preResetWaitBlk = await util.getState(
 					vivaldiContract,
-					CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
+					VIVALDI_STATE.PRERESET_WAITING_BLOCKS
 				);
 
 				for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
