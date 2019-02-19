@@ -129,18 +129,12 @@ contract Vivaldi is OptionCustodian {
 		uint localResetAddrIndex = nextResetAddrIndex;
 		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
 			currentAddress = users[localResetAddrIndex];
-			uint collateralTokenAmtInWei;
+			uint collateralTokenAmtInWei = 0;
 			uint feeInWei;
-			if (isKnockedIn) {
-				if(balanceOf[0][currentAddress] > 0) 
-					(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
-				else 
-					collateralTokenAmtInWei = 0;
-			} else {
-				if(balanceOf[1][currentAddress] > 0)
-					(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
-				else collateralTokenAmtInWei = 0;
-			} 
+			if (isKnockedIn && balanceOf[0][currentAddress] > 0)  
+				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
+			else if (!isKnockedIn && balanceOf[1][currentAddress] > 0)
+				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
 			balanceOf[0][currentAddress] = 0;
 			balanceOf[1][currentAddress] = 0;
 			delete existingUsers[currentAddress];
