@@ -87,6 +87,7 @@ contract Vivaldi is OptionCustodian {
 		inState(State.Trading) 
 		returns (bool) 
 	{
+
 		uint currentTime = getNowTimestamp();
 		uint requiredTime = resetPriceTimeInSecond.add(period);
 		require(currentTime > requiredTime && timeInSecond == requiredTime && priceInWei > 0);
@@ -114,6 +115,7 @@ contract Vivaldi is OptionCustodian {
 	// start of reset function
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
+			state = State.Reset;
 			emit TotalSupply(totalSupplyA, totalSupplyB);
 			emit StartReset(nextResetAddrIndex, users.length);
 		} else 
@@ -122,7 +124,7 @@ contract Vivaldi is OptionCustodian {
 	}
 
 	/// @dev start pre reset
-	function startReset() public inState(State.PreReset) returns (bool success) {
+	function startReset() public inState(State.Reset) returns (bool success) {
 		address currentAddress;
 		uint localResetAddrIndex = nextResetAddrIndex;
 		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
