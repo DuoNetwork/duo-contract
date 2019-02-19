@@ -832,7 +832,7 @@ contract('DualClassCustodian', accounts => {
 		});
 	});
 
-	describe('redempAll', () => {
+	describe('redeemAll', () => {
 		let prevBalanceA, prevBalanceB, navA, navB;
 
 		before(async () => {
