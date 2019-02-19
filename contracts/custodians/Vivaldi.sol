@@ -132,14 +132,20 @@ contract Vivaldi is OptionCustodian {
 			uint collateralTokenAmtInWei;
 			uint feeInWei;
 			if (isKnockedIn) {
-				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
+				if(balanceOf[0][currentAddress] > 0) 
+					(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
+				else 
+					collateralTokenAmtInWei = 0;
 			} else {
-				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
+				if(balanceOf[1][currentAddress] > 0)
+					(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
+				else collateralTokenAmtInWei = 0;
 			} 
 			balanceOf[0][currentAddress] = 0;
 			balanceOf[1][currentAddress] = 0;
 			delete existingUsers[currentAddress];
-			collateralToken.transfer(currentAddress, collateralTokenAmtInWei);
+			if(collateralTokenAmtInWei > 0) 
+				collateralToken.transfer(currentAddress, collateralTokenAmtInWei);
 			localResetAddrIndex++;
 		}
 

@@ -14,10 +14,12 @@ const CST = require('./constants');
 
 const ethInitPrice = 100;
 const PERTETUAL_NAME = 'Vivaldi perpetual';
-// const TERM_NAME = 'Vivaldi term6';
+const TERM_NAME = 'Vivaldi term6';
 
 const EVENT_ACCEPT_PX = 'AcceptPrice';
 const EVENT_START_PRE_RESET = 'StartPreReset';
+const EVENT_START_TRADING = 'StartTrading';
+const EVENT_MATURED = 'Matured';
 
 const TOTAL_SUPPLY = 1000000000;
 const VIVALDI_STATE = {
@@ -66,8 +68,9 @@ contract('Vivaldi', accounts => {
 	const fc = accounts[4];
 	const alice = accounts[5];
 	const bob = accounts[6];
-	const newModerator = accounts[7];
-	const newModerator2 = accounts[8];
+	const charles = accounts[7];
+	const newModerator = accounts[8];
+	const newModerator2 = accounts[9];
 
 	const initContracts = async (contractCode, maturity) => {
 		collateralTokenContract = await CollateralToken.new(
@@ -841,7 +844,6 @@ contract('Vivaldi', accounts => {
 		});
 	});
 
-	
 	describe('pre reset', () => {
 		let time;
 		const strike = 1.05;
@@ -849,17 +851,13 @@ contract('Vivaldi', accounts => {
 		const strikeIsRelative = true;
 		before(async () => {
 			await initContracts(PERTETUAL_NAME, 0);
-			await collateralTokenContract.transfer(alice, util.toWei( 3), {
+			await collateralTokenContract.transfer(alice, util.toWei(3), {
 				from: creator
 			});
-			
-			await collateralTokenContract.approve(
-				vivaldiContract.address,
-				util.toWei(3),
-				{
-					from: alice
-				}
-			);
+
+			await collateralTokenContract.approve(vivaldiContract.address, util.toWei(3), {
+				from: alice
+			});
 			await vivaldiContract.setPriceFetchCoolDown(0);
 			time = await oracleContract.timestamp.call();
 			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
@@ -891,10 +889,7 @@ contract('Vivaldi', accounts => {
 		});
 
 		it('should be in state preReset', async () => {
-			let state = await util.getState(
-				vivaldiContract,
-				VIVALDI_STATE.STATE
-			);
+			let state = await util.getState(vivaldiContract, VIVALDI_STATE.STATE);
 			assert.equal(
 				state.valueOf(),
 				CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET,
@@ -1028,6 +1023,408 @@ contract('Vivaldi', accounts => {
 				'wrong events emitted'
 			);
 			await assertState(vivaldiContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
+		});
+	});
+
+	describe('resets', () => {
+		function resetFunc(
+			prevBalanceA,
+			prevBalanceB,
+			lastPrice,
+			endPrice,
+			strike,
+			isCall,
+			isRelative,
+			clearFee
+		) {
+			let strikePrice;
+
+			if (isRelative) strikePrice = lastPrice * strike;
+			else strikePrice = strike;
+			let isKnockedIn = false;
+
+			if (isCall) isKnockedIn = endPrice >= strikePrice;
+			else isKnockedIn = endPrice <= strikePrice;
+
+			return isKnockedIn ? prevBalanceA * (1 - clearFee) : prevBalanceB * (1 - clearFee);
+		}
+
+		function resetTest(
+			endPrice,
+			transferABRequired,
+			maturity,
+			resetGas,
+			strike,
+			strikeIsCall,
+			strikeIsRelative
+		) {
+			let time;
+			let lastAcceptPrice;
+			let prevBalanceAalice, prevBalanceBalice;
+			let prevBalanceAbob, prevBalanceBbob;
+			let prevBalanceAcharles, prevBalanceBcharles;
+			before(async () => {
+				if (maturity === 0) {
+					await initContracts(PERTETUAL_NAME, 0);
+				} else {
+					await initContracts(TERM_NAME, maturity);
+				}
+
+				await vivaldiContract.setPriceFetchCoolDown(0);
+				time = await oracleContract.timestamp.call();
+				await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+				await vivaldiContract.startCustodian(
+					custodianTokenContractA.address,
+					custodianTokenContractB.address,
+					oracleContract.address,
+					util.toWei(strike),
+					strikeIsCall,
+					strikeIsRelative,
+					{ from: creator }
+				);
+
+				await vivaldiContract.startRound({ from: creator });
+				const lastPriceInWei = (await util.getState(
+					vivaldiContract,
+					VIVALDI_STATE.LAST_PRICE_INWEI
+				)).valueOf();
+				lastAcceptPrice = util.fromWei(lastPriceInWei);
+
+				await collateralTokenContract.transfer(alice, util.toWei(3), {
+					from: creator
+				});
+				await collateralTokenContract.approve(vivaldiContract.address, util.toWei(3), {
+					from: alice
+				});
+				await vivaldiContract.create(util.toWei(1), {
+					from: alice
+				});
+				await collateralTokenContract.transfer(bob, util.toWei(3), {
+					from: creator
+				});
+				await collateralTokenContract.approve(vivaldiContract.address, util.toWei(3), {
+					from: bob
+				});
+				await vivaldiContract.create(util.toWei(1.2), {
+					from: bob
+				});
+				await collateralTokenContract.transfer(charles, util.toWei(3), {
+					from: creator
+				});
+				await collateralTokenContract.approve(vivaldiContract.address, util.toWei(3), {
+					from: charles
+				});
+				await vivaldiContract.create(util.toWei(1.5), {
+					from: charles
+				});
+
+				if (transferABRequired) {
+					let aliceA = await vivaldiContract.balanceOf.call(0, alice);
+
+					vivaldiContract.transfer(
+						0,
+						CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+						bob,
+						aliceA.valueOf(),
+						{
+							from: alice
+						}
+					);
+					await vivaldiContract.balanceOf.call(1, bob).then(bobB => {
+						vivaldiContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							bobB.valueOf(),
+							{
+								from: bob
+							}
+						);
+					});
+
+					await vivaldiContract.balanceOf.call(1, charles).then(charlesB => {
+						vivaldiContract.transfer(
+							1,
+							CST.DUAL_CUSTODIAN.ADDRESS.DUMMY_ADDR,
+							alice,
+							charlesB.valueOf(),
+							{
+								from: charles
+							}
+						);
+					});
+				}
+
+				await vivaldiContract.balanceOf
+					.call(0, alice)
+					.then(aliceA => (prevBalanceAalice = aliceA.valueOf() / CST.WEI_DENOMINATOR));
+				let aliceB = await vivaldiContract.balanceOf.call(1, alice);
+				prevBalanceBalice = aliceB.valueOf() / CST.WEI_DENOMINATOR;
+
+				await vivaldiContract.balanceOf
+					.call(0, bob)
+					.then(bobA => (prevBalanceAbob = bobA.valueOf() / CST.WEI_DENOMINATOR));
+				let bobB = await vivaldiContract.balanceOf.call(1, bob);
+				prevBalanceBbob = bobB.valueOf() / CST.WEI_DENOMINATOR;
+
+				await vivaldiContract.balanceOf
+					.call(0, charles)
+					.then(
+						charlesA => (prevBalanceAcharles = charlesA.valueOf() / CST.WEI_DENOMINATOR)
+					);
+				let charlesB = await vivaldiContract.balanceOf.call(1, charles);
+				prevBalanceBcharles = charlesB.valueOf() / CST.WEI_DENOMINATOR;
+
+				const resetPriceTime = await util.getState(
+					vivaldiContract,
+					VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				);
+				const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+				await vivaldiContract.setTimestamp(requiredTime);
+				oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
+				const lastPriceTime = await util.getState(
+					vivaldiContract,
+					VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				);
+				const lastPrice = await util.getState(
+					vivaldiContract,
+					VIVALDI_STATE.LAST_PRICE_INWEI
+				);
+				await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
+
+				await vivaldiContract.endRound({ from: creator });
+
+				let preResetWaitBlk = await util.getState(
+					vivaldiContract,
+					CST.DUAL_CUSTODIAN.STATE_INDEX.PRERESET_WAITING_BLOCKS
+				);
+
+				for (let i = 0; i < preResetWaitBlk.valueOf() - 1; i++)
+					await vivaldiContract.startPreReset();
+
+				await assertState(vivaldiContract, CST.DUAL_CUSTODIAN.STATE.STATE_PRE_RESET);
+
+				let tx = await vivaldiContract.startPreReset();
+				assert.isTrue(
+					tx.logs.length === 2 &&
+						tx.logs[1].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_TOTAL_SUPPLY,
+					'wrong events emitted'
+				);
+				await assertState(vivaldiContract, CST.DUAL_CUSTODIAN.STATE.STATE_RESET);
+			});
+
+			it('should have three users', async () => {
+				let userSize = await util.getState(vivaldiContract, VIVALDI_STATE.TOTAL_USERS);
+				assert.equal(userSize.valueOf(), 3, 'num of users incorrect');
+			});
+
+			it('should have correct setup', async () => {
+				if (transferABRequired)
+					assert.isTrue(
+						prevBalanceAalice === 0 &&
+							prevBalanceBalice > 0 &&
+							prevBalanceAbob > 0 &&
+							prevBalanceBbob === 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles === 0,
+						'Wrong setup'
+					);
+				else
+					assert.isTrue(
+						prevBalanceAalice > 0 &&
+							prevBalanceBalice > 0 &&
+							prevBalanceAbob > 0 &&
+							prevBalanceBbob > 0 &&
+							prevBalanceAcharles > 0 &&
+							prevBalanceBcharles > 0,
+						'Wrong setup'
+					);
+
+				const totalUsers = await util.getState(vivaldiContract, VIVALDI_STATE.TOTAL_USERS);
+				assert.isTrue(
+					util.isEqual(Number(totalUsers.valueOf()), 3),
+					'totalUsers updtded wronly'
+				);
+			});
+
+			it('should process reset for only one user', async () => {
+				const prevColateralBalanceOfAlice = await collateralTokenContract.balanceOf.call(
+					alice
+				);
+				let tx = await vivaldiContract.startReset({ gas: resetGas });
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
+					'not only one user processed'
+				);
+
+				let nextIndex = await vivaldiContract.getNextResetAddrIndex.call();
+				assert.equal(nextIndex.valueOf(), '1', 'not moving to next user');
+				let currentBalanceAalice = await vivaldiContract.balanceOf.call(0, alice);
+				let currentBalanceBalice = await vivaldiContract.balanceOf.call(1, alice);
+				let collateralTokenAmt = resetFunc(
+					prevBalanceAalice,
+					prevBalanceBalice,
+					lastAcceptPrice,
+					endPrice,
+					strike,
+					strikeIsCall,
+					strikeIsRelative,
+					OptionCustodianInit.clearComm / CST.BP_DENOMINATOR
+				);
+
+				const currentColateralBalanceOfAlice = await collateralTokenContract.balanceOf.call(
+					alice
+				);
+
+				assert.isTrue(
+					util.isEqual(
+						Number(util.fromWei(prevColateralBalanceOfAlice.valueOf())) +
+							Number(collateralTokenAmt),
+						Number(util.fromWei(currentColateralBalanceOfAlice.valueOf()))
+					),
+					'collateral balnace not updated correctly'
+				);
+
+				assert.isTrue(
+					util.isEqual(util.fromWei(currentBalanceAalice.valueOf()), '0') &&
+						util.isEqual(util.fromWei(currentBalanceBalice.valueOf()), '0'),
+					'Balance A and B not updated correctly'
+				);
+			});
+
+			if (!transferABRequired) {
+				it('should complete reset for second user', async () => {
+					const prevColateralBalanceOfBob = await collateralTokenContract.balanceOf.call(
+						bob
+					);
+					let tx = await vivaldiContract.startReset({ gas: resetGas });
+					assert.isTrue(
+						tx.logs.length === 1 &&
+							tx.logs[0].event === CST.DUAL_CUSTODIAN.EVENT.EVENT_START_RESET,
+						'reset not completed'
+					);
+					let nextIndex = await vivaldiContract.getNextResetAddrIndex.call();
+					assert.equal(nextIndex.valueOf(), '2', 'not moving to next user');
+					let currentBalanceAbob = await vivaldiContract.balanceOf.call(0, alice);
+					let currentBalanceBbob = await vivaldiContract.balanceOf.call(1, alice);
+					let collateralTokenAmt = resetFunc(
+						prevBalanceAbob,
+						prevBalanceBbob,
+						lastAcceptPrice,
+						endPrice,
+						strike,
+						strikeIsCall,
+						strikeIsRelative,
+						OptionCustodianInit.clearComm / CST.BP_DENOMINATOR
+					);
+
+					const currentColateralBalanceOfBob = await collateralTokenContract.balanceOf.call(
+						bob
+					);
+
+					assert.isTrue(
+						util.isEqual(
+							Number(util.fromWei(prevColateralBalanceOfBob.valueOf())) +
+								Number(collateralTokenAmt),
+							Number(util.fromWei(currentColateralBalanceOfBob.valueOf()))
+						),
+						'collateral balnace not updated correctly'
+					);
+
+					assert.isTrue(
+						util.isEqual(util.fromWei(currentBalanceAbob.valueOf()), '0') &&
+							util.isEqual(util.fromWei(currentBalanceBbob.valueOf()), '0'),
+						'Balance A and B not updated correctly'
+					);
+				});
+			}
+
+			it('should complete reset for third user and transit to trading', async () => {
+				const prevColateralBalanceOfCharles = await collateralTokenContract.balanceOf.call(
+					charles
+				);
+				let tx = await vivaldiContract.startReset({ gas: resetGas });
+				assert.isTrue(
+					tx.logs.length === 1 &&
+						tx.logs[0].event === (maturity === 0 ? EVENT_START_TRADING : EVENT_MATURED),
+					'reset not completed'
+				);
+				let nextIndex = await vivaldiContract.getNextResetAddrIndex.call();
+				assert.equal(nextIndex.valueOf(), '0', 'not moving to first user');
+
+				let currentBalanceACharles = await vivaldiContract.balanceOf.call(0, charles);
+				let currentBalanceBCharles = await vivaldiContract.balanceOf.call(1, charles);
+				let collateralTokenAmt = resetFunc(
+					prevBalanceAcharles,
+					prevBalanceBcharles,
+					lastAcceptPrice,
+					endPrice,
+					strike,
+					strikeIsCall,
+					strikeIsRelative,
+					OptionCustodianInit.clearComm / CST.BP_DENOMINATOR
+				);
+
+				const currentColateralBalanceOfCharles = await collateralTokenContract.balanceOf.call(
+					charles
+				);
+
+				assert.isTrue(
+					util.isEqual(
+						Number(util.fromWei(prevColateralBalanceOfCharles.valueOf())) +
+							Number(collateralTokenAmt),
+						Number(util.fromWei(currentColateralBalanceOfCharles.valueOf()))
+					),
+					'collateral balnace not updated correctly'
+				);
+
+				assert.isTrue(
+					util.isEqual(util.fromWei(currentBalanceACharles.valueOf()), '0') &&
+						util.isEqual(util.fromWei(currentBalanceBCharles.valueOf()), '0'),
+					'Balance A and B not updated correctly'
+				);
+
+				const totalUsers = await util.getState(vivaldiContract, VIVALDI_STATE.TOTAL_USERS);
+				assert.isTrue(
+					util.isEqual(Number(totalUsers.valueOf()), 0),
+					'totalUsers updtded wronly'
+				);
+
+				const state = await util.getState(vivaldiContract, VIVALDI_STATE.STATE);
+				assert.isTrue(
+					util.isEqual(
+						state.valueOf(),
+						maturity === 0
+							? CST.DUAL_CUSTODIAN.STATE.STATE_TRADING
+							: CST.DUAL_CUSTODIAN.STATE.STATE_MATURITY
+					),
+					'totalUsers updtded wronly'
+				);
+			});
+		}
+
+		let resetGasAmt = process.env.SOLIDITY_COVERAGE ? 160000 : 120000;
+
+		//case 1:
+		describe('knockedIn: case 1', () => {
+			resetTest(1000, false, 0, resetGasAmt, 1.05, true, true);
+		});
+
+		//case 2:
+		describe('knockedOut: case 2', () => {
+			resetTest(100, false, 0, resetGasAmt, 1.05, true, true);
+		});
+
+		//case 3:
+		describe('knockedOut: case 3', () => {
+			resetTest(100, true, 0, resetGasAmt, 1.05, true, true);
+		});
+
+		//case 4:
+		describe('knockedOut: case 4', () => {
+			resetTest(1000, false, 100, resetGasAmt, 1.05, true, true);
 		});
 	});
 });
