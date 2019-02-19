@@ -127,13 +127,15 @@ contract Vivaldi is OptionCustodian {
 	function startReset() public inState(State.Reset) returns (bool success) {
 		address currentAddress;
 		uint localResetAddrIndex = nextResetAddrIndex;
-		while (localResetAddrIndex < users.length && gasleft() > iterationGasThreshold) {
+		bool localIsKnockedIn = isKnockedIn;
+		uint localIterationGasThreshold = iterationGasThreshold
+		while (localResetAddrIndex < users.length && gasleft() > localIterationGasThreshold) {
 			currentAddress = users[localResetAddrIndex];
 			uint collateralTokenAmtInWei = 0;
 			uint feeInWei;
-			if (isKnockedIn && balanceOf[0][currentAddress] > 0)  
+			if (localIsKnockedIn && balanceOf[0][currentAddress] > 0)  
 				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[0][currentAddress], clearCommInBP);
-			else if (!isKnockedIn && balanceOf[1][currentAddress] > 0)
+			else if (!localIsKnockedIn && balanceOf[1][currentAddress] > 0)
 				(collateralTokenAmtInWei, feeInWei) = deductFee(balanceOf[1][currentAddress], clearCommInBP);
 			balanceOf[0][currentAddress] = 0;
 			balanceOf[1][currentAddress] = 0;
