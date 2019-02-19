@@ -2,7 +2,7 @@ const fs = require('fs');
 const moment = require('moment');
 const path = './deployHistory.json';
 
-const deployHistory = JSON.parse(fs.readFileSync(path, 'utf8'));
+const deployHistory = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : {};
 console.log(deployHistory);
 
 module.exports = {
