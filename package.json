@@ -10,14 +10,12 @@
     "clean": "rimraf build",
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8550 -a 20",
     "startCoverage": "testrpc-sc --defaultBalanceEther 1000 --gasLimit 0xfffffffffff --port 8555 -a 20",
-    "copyAbi": "copyfiles -f .\\build\\contracts\\Custodian.json .\\build\\contracts\\DUO.json .\\build\\contracts\\TokenA.json .\\build\\contracts\\TokenB.json ..\\duo-admin\\src\\static\\",
     "deploy": "cross-env CONTRACT_TYPE=BTV TENOR= truffle migrate --reset --compile-all",
     "deployKovan": "cross-env CONTRACT_TYPE=MZT TENOR=M19 truffle migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle migrate --reset --compile-all --network ropsten",
     "deployLive": "npm run clean && truffle migrate --reset --compile-all --network live"
   },
   "devDependencies": {
-    "copyfiles": "^2.1.0",
     "coveralls": "^3.0.2",
     "cross-env": "^5.2.0",
     "eslint": "^5.12.1",
