@@ -194,6 +194,8 @@ module.exports = async (deployer, network, accounts) => {
 			from: creator
 		});
 		await deployer.link(SafeMath, Vivaldi);
+
+		//6202415
 		await deployer.deploy(
 			Vivaldi,
 			VVD_INIT_PARAS.name,
@@ -212,7 +214,7 @@ module.exports = async (deployer, network, accounts) => {
 			VVD_INIT_PARAS.iteGasTh,
 			{ from: creator }
 		);
-		// // 1094050
+		// 1298519
 		await deployer.deploy(
 			CustodianToken,
 			VVD_INIT_PARAS.inToken.tokenName,
@@ -223,7 +225,7 @@ module.exports = async (deployer, network, accounts) => {
 				from: creator
 			}
 		);
-		// 1094370
+		// 1318383
 		await deployer.deploy(
 			CustodianToken,
 			VVD_INIT_PARAS.outToken.tokenName,
