@@ -1433,4 +1433,34 @@ contract('Vivaldi', accounts => {
 			resetTest(1000, false, 100, resetGasAmt, 1.05, true, true);
 		});
 	});
+
+	describe('getAddresses', () => {
+		before(() => initContracts(PERTETUAL_NAME, 0));
+
+		it('should get addresses', async () => {
+			const time = await oracleContract.timestamp.call();
+			await oracleContract.setLastPrice(util.toWei(ethInitPrice), time.valueOf(), pf1);
+			await vivaldiContract.startCustodian(
+				custodianTokenContractA.address,
+				custodianTokenContractB.address,
+				oracleContract.address,
+				util.toWei(1.05),
+				true,
+				true,
+				{ from: creator }
+			);
+			const addrs = await vivaldiContract.getAddresses.call();
+
+			assert.isTrue(
+				addrs[0].toLowerCase() === roleManagerContract.address.toLowerCase() &&
+					addrs[1].toLowerCase() === creator.toLowerCase() &&
+					addrs[2].toLowerCase() === fc.toLowerCase() &&
+					addrs[3].toLowerCase() === oracleContract.address.toLowerCase() &&
+					addrs[4].toLowerCase() === custodianTokenContractA.address.toLowerCase() &&
+					addrs[5].toLowerCase() === custodianTokenContractB.address.toLowerCase() &&
+					addrs[6].toLowerCase() === collateralTokenContract.address.toLowerCase(),
+				'address wrongly updted'
+			);
+		});
+	});
 });
