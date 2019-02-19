@@ -215,25 +215,23 @@ module.exports = async (deployer, network, accounts) => {
 		// // 1094050
 		await deployer.deploy(
 			CustodianToken,
-			VVD_INIT_PARAS.TokenA.tokenName,
-			VVD_INIT_PARAS.TokenA.tokenSymbol,
-			Beethoven.address,
+			VVD_INIT_PARAS.inToken.tokenName,
+			VVD_INIT_PARAS.inToken.tokenSymbol,
+			Vivaldi.address,
 			0,
 			{
 				from: creator
 			}
 		);
-		VVD_INIT_PARAS.TokenA.address;
 		// 1094370
 		await deployer.deploy(
 			CustodianToken,
-			VVD_INIT_PARAS.TokenB.tokenName,
-			VVD_INIT_PARAS.TokenB.tokenSymbol,
-			Beethoven.address,
+			VVD_INIT_PARAS.outToken.tokenName,
+			VVD_INIT_PARAS.outToken.tokenSymbol,
+			Vivaldi.address,
 			1,
 			{ from: creator }
 		);
-		VVD_INIT_PARAS.TokenB.address;
 
 		await deployInfoSaver.saveDualCustodianInfo(
 			'VVD',
