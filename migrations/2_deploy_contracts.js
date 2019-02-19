@@ -193,7 +193,7 @@ module.exports = async (deployer, network, accounts) => {
 		await deployer.deploy(SafeMath, {
 			from: creator
 		});
-		await deployer.link(SafeMath, Beethoven);
+		await deployer.link(SafeMath, Vivaldi);
 		await deployer.deploy(
 			Vivaldi,
 			VVD_INIT_PARAS.name,
