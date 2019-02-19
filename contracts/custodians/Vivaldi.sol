@@ -101,6 +101,7 @@ contract Vivaldi is OptionCustodian {
 		state = State.PreReset;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;
+		lastPreResetBlockNo = block.number;
 		
 		if (strike.isCall) 
 			isKnockedIn = priceInWei >= roundStrikeInWei;

@@ -195,7 +195,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.setResetPrice(util.toWei(ethInitPrice));
 			const resetTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			await vivaldiContract.setTimestamp(
 				Erc20CustodianInit.pxFetchCoolDown + Number(resetTime.valueOf())
@@ -332,10 +332,10 @@ contract('Vivaldi', accounts => {
 				'wrong event args emission'
 			);
 
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
 			assert.isTrue(
 				Number(lastPriceTime.valueOf()) === Number(currentTime.valueOf()) &&
@@ -360,10 +360,10 @@ contract('Vivaldi', accounts => {
 			);
 
 			await vivaldiContract.startRound({ from: creator });
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
 			assert.isTrue(
 				Number(lastPriceTime.valueOf()) === Number(time.valueOf()) &&
@@ -389,7 +389,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 
 			const targetRoundStrikePrice = ethInitPrice * 1.05;
-			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE);
+			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE_IN_WEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(roundPrice), targetRoundStrikePrice),
 				'roundStrikeprice updated incorrectly'
@@ -412,7 +412,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.setStrike(util.toWei(100), true, false);
 			await vivaldiContract.startRound({ from: creator });
 
-			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE);
+			const roundPrice = await util.getState(vivaldiContract, VIVALDI_STATE.ROUND_STRIKE_IN_WEI);
 			assert.isTrue(
 				util.isEqual(util.fromWei(roundPrice), 100),
 				'roundStrikeprice updated incorrectly'
@@ -446,7 +446,7 @@ contract('Vivaldi', accounts => {
 		it('cannot endRound if currentTime < requiredTime', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime - 10);
@@ -461,7 +461,7 @@ contract('Vivaldi', accounts => {
 		it('cannot endRound if timeInSecond != requiredTime', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
@@ -477,7 +477,7 @@ contract('Vivaldi', accounts => {
 		it('cannot endRound if timeInSecond > currentTime', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 20);
@@ -493,7 +493,7 @@ contract('Vivaldi', accounts => {
 		it('cannot endRound if priceInWei = 0', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
@@ -510,7 +510,7 @@ contract('Vivaldi', accounts => {
 		it('cannot endRound if lastPriceTimeinSecond <= resetPriceTimeInSecond', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
@@ -527,16 +527,16 @@ contract('Vivaldi', accounts => {
 		it('should endRound, isCall, isNotKnockedIn', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 
 			let tx = await vivaldiContract.endRound({ from: creator });
@@ -561,16 +561,16 @@ contract('Vivaldi', accounts => {
 		it('should endRound, isCall, isKnockedIn', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(1000), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 
 			let tx = await vivaldiContract.endRound({ from: creator });
@@ -595,16 +595,16 @@ contract('Vivaldi', accounts => {
 		it('should endRound, isPut , isNotKnockedIn', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(1000), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 			await vivaldiContract.setStrike(util.toWei(1.05), false, true);
 
@@ -630,16 +630,16 @@ contract('Vivaldi', accounts => {
 		it('should endRound, isPut , isKnockedIn', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 			await vivaldiContract.setStrike(util.toWei(1.05), false, true);
 
@@ -699,7 +699,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime - 10);
@@ -724,7 +724,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
@@ -750,7 +750,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
@@ -776,7 +776,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
@@ -819,7 +819,7 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
@@ -874,16 +874,16 @@ contract('Vivaldi', accounts => {
 			await vivaldiContract.startRound({ from: creator });
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.RESET_PRICETIME_INSECOND
+				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
 				vivaldiContract,
-				VIVALDI_STATE.LAST_PRICETIME_INSECOND
+				VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 			);
-			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_INWEI);
+			const lastPrice = await util.getState(vivaldiContract, VIVALDI_STATE.LAST_PRICE_IN_WEI);
 			await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 			await vivaldiContract.endRound({ from: creator });
 		});
@@ -1086,7 +1086,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound({ from: creator });
 				const lastPriceInWei = (await util.getState(
 					vivaldiContract,
-					VIVALDI_STATE.LAST_PRICE_INWEI
+					VIVALDI_STATE.LAST_PRICE_IN_WEI
 				)).valueOf();
 				lastAcceptPrice = util.fromWei(lastPriceInWei);
 
@@ -1177,18 +1177,18 @@ contract('Vivaldi', accounts => {
 
 				const resetPriceTime = await util.getState(
 					vivaldiContract,
-					VIVALDI_STATE.RESET_PRICETIME_INSECOND
+					VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 				);
 				const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 				await vivaldiContract.setTimestamp(requiredTime);
 				oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 				const lastPriceTime = await util.getState(
 					vivaldiContract,
-					VIVALDI_STATE.LAST_PRICETIME_INSECOND
+					VIVALDI_STATE.LAST_PRICETIME_IN_SECOND
 				);
 				const lastPrice = await util.getState(
 					vivaldiContract,
-					VIVALDI_STATE.LAST_PRICE_INWEI
+					VIVALDI_STATE.LAST_PRICE_IN_WEI
 				);
 				await vivaldiContract.setLastPrice(lastPrice, Number(lastPriceTime) + 10);
 
