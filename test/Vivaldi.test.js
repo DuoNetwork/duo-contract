@@ -12,7 +12,7 @@ const MagiInit = InitParas['Magi'];
 const util = require('./util');
 const CST = require('./constants');
 
-const ethInitPrice = 100;
+const ethInitPrice = 500;
 const PERTETUAL_NAME = 'Vivaldi perpetual';
 const TERM_NAME = 'Vivaldi term6';
 
@@ -53,7 +53,7 @@ const assertState = async (contract, state) => {
 	assert.isTrue(util.isEqual(_state.valueOf(), state));
 };
 
-contract('Vivaldi', accounts => {
+contract.only('Vivaldi', accounts => {
 	let vivaldiContract;
 	let roleManagerContract;
 	let collateralTokenContract;
