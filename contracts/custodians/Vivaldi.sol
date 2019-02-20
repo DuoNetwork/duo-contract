@@ -97,7 +97,7 @@ contract Vivaldi is OptionCustodian {
 
 	function endRoundInternal(uint priceInWei, uint timeInSecond) internal returns (bool) {
 		// can only end once before the next round is started
-		require(lastPriceTimeInSecond > resetPriceTimeInSecond);
+		require(lastPriceTimeInSecond >= resetPriceTimeInSecond);
 		state = State.PreReset;
 		resetPriceInWei = priceInWei;
 		resetPriceTimeInSecond = timeInSecond;

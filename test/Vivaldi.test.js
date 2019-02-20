@@ -513,14 +513,14 @@ contract('Vivaldi', accounts => {
 			}
 		});
 
-		it('cannot endRound if lastPriceTimeinSecond <= resetPriceTimeInSecond', async () => {
+		it('cannot endRound if lastPriceTimeinSecond < resetPriceTimeInSecond', async () => {
 			const resetPriceTime = await util.getState(
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
-			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
+			oracleContract.setLastPrice(util.toWei(100), requiredTime - 5, pf1);
 
 			try {
 				await vivaldiContract.endRound.call({ from: creator });

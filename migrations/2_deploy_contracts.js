@@ -208,7 +208,7 @@ module.exports = async (deployer, network, accounts) => {
 			OptionCustodianInit.clearComm,
 			VVD_INIT_PARAS.pd,
 			Erc20CustodianInit.optCoolDown,
-			Erc20CustodianInit.pxFetchCoolDown,
+			VVD_INIT_PARAS.pxFetchCoolDown,
 			Erc20CustodianInit.preResetWaitBlk,
 			web3.utils.toWei(Erc20CustodianInit.minimumBalance + ''),
 			VVD_INIT_PARAS.iteGasTh,
