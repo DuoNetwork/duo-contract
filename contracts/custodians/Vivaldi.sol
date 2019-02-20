@@ -116,6 +116,8 @@ contract Vivaldi is OptionCustodian {
 	// start of reset function
 	function startPreReset() public inState(State.PreReset) returns (bool success) {
 		if (block.number - lastPreResetBlockNo >= preResetWaitingBlocks) {
+			totalSupplyA = 0;
+			totalSupplyB = 0;
 			state = State.Reset;
 			emit TotalSupply(totalSupplyA, totalSupplyB);
 			emit StartReset(nextResetAddrIndex, users.length);
