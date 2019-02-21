@@ -20,6 +20,9 @@ const EVENT_ACCEPT_PX = 'AcceptPrice';
 const EVENT_START_PRE_RESET = 'StartPreReset';
 const EVENT_START_TRADING = 'StartTrading';
 const EVENT_MATURED = 'Matured';
+const EVENT_START_ROUND = 'StartRound';
+const EVENT_END_ROUND = 'EndRound';
+const EVENT_UPDATE_OPERATOR = 'UpdateOperator';
 
 const TOTAL_SUPPLY = 1000000000;
 const VIVALDI_STATE = {
@@ -323,7 +326,8 @@ contract('Vivaldi', accounts => {
 
 			let tx = await vivaldiContract.startRound({ from: creator });
 			assert.isTrue(
-				tx.logs.length === 1 && tx.logs[0].event === EVENT_ACCEPT_PX,
+				tx.logs.length === 2 && tx.logs[0].event === EVENT_ACCEPT_PX &&
+				tx.logs[1].event === EVENT_START_ROUND,
 				'wrong event name emission'
 			);
 			assert.isTrue(
@@ -548,9 +552,10 @@ contract('Vivaldi', accounts => {
 			let tx = await vivaldiContract.endRound({ from: creator });
 
 			assert.isTrue(
-				tx.logs.length === 2 &&
+				tx.logs.length === 3 &&
 					tx.logs[0].event === EVENT_START_PRE_RESET &&
-					tx.logs[1].event === EVENT_ACCEPT_PX,
+					tx.logs[1].event === EVENT_ACCEPT_PX &&
+					tx.logs[2].event === EVENT_END_ROUND,
 				'wrong event emission'
 			);
 
@@ -582,9 +587,10 @@ contract('Vivaldi', accounts => {
 			let tx = await vivaldiContract.endRound({ from: creator });
 
 			assert.isTrue(
-				tx.logs.length === 2 &&
+				tx.logs.length === 3 &&
 					tx.logs[0].event === EVENT_START_PRE_RESET &&
-					tx.logs[1].event === EVENT_ACCEPT_PX,
+					tx.logs[1].event === EVENT_ACCEPT_PX &&
+					tx.logs[2].event === EVENT_END_ROUND,
 				'wrong event emission'
 			);
 
@@ -617,9 +623,10 @@ contract('Vivaldi', accounts => {
 			let tx = await vivaldiContract.endRound({ from: creator });
 
 			assert.isTrue(
-				tx.logs.length === 2 &&
+				tx.logs.length === 3 &&
 					tx.logs[0].event === EVENT_START_PRE_RESET &&
-					tx.logs[1].event === EVENT_ACCEPT_PX,
+					tx.logs[1].event === EVENT_ACCEPT_PX &&
+					tx.logs[2].event === EVENT_END_ROUND,
 				'wrong event emission'
 			);
 
@@ -652,8 +659,9 @@ contract('Vivaldi', accounts => {
 			let tx = await vivaldiContract.endRound({ from: creator });
 
 			assert.isTrue(
-				tx.logs.length === 2 &&
+				tx.logs.length === 3 &&
 					tx.logs[0].event === EVENT_START_PRE_RESET &&
+					tx.logs[2].event === EVENT_END_ROUND &&
 					tx.logs[1].event === EVENT_ACCEPT_PX,
 				'wrong event emission'
 			);
@@ -835,10 +843,11 @@ contract('Vivaldi', accounts => {
 			});
 
 			assert.isTrue(
-				tx.logs.length === 3 &&
-					tx.logs[0].event === 'UpdateOperator' &&
-					tx.logs[1].event === 'StartPreReset' &&
-					tx.logs[2].event === 'AcceptPrice',
+				tx.logs.length === 4 &&
+					tx.logs[0].event === EVENT_UPDATE_OPERATOR &&
+					tx.logs[1].event === EVENT_START_PRE_RESET &&
+					tx.logs[2].event === EVENT_ACCEPT_PX &&
+					tx.logs[3].event === EVENT_END_ROUND,
 				'wrong event emission'
 			);
 

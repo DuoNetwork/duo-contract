@@ -12,6 +12,12 @@ contract Vivaldi is OptionCustodian {
 	bool public isKnockedIn = false;
 
 	/*
+     * Event
+     */
+	event StartRound(uint startPriceInWei, uint startTimeInSecond, uint strikePriceInWei);
+	event EndRound(uint endPriceInWei, uint endTimeInSecond, bool isKnockedIn);
+
+	/*
      *  Constructor
      */
 	constructor(
@@ -69,6 +75,7 @@ contract Vivaldi is OptionCustodian {
 			roundStrikeInWei = lastPriceInWei.mul(strike.strikeInWei).div(WEI_DENOMINATOR);
 		else
 			roundStrikeInWei = strike.strikeInWei;
+		emit StartRound(lastPriceInWei, lastPriceTimeInSecond, roundStrikeInWei);
 		return true;
 	}
 
@@ -110,6 +117,7 @@ contract Vivaldi is OptionCustodian {
 		
 		emit StartPreReset();
 		emit AcceptPrice(priceInWei, timeInSecond, navAInWei, navBInWei);
+		emit EndRound(priceInWei, timeInSecond, isKnockedIn);
 		return true;
 	}
 

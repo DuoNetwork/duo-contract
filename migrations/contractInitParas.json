@@ -126,7 +126,7 @@
 		"preResetWaitBlk": 10
 	},
 	"Erc20Custodian": {
-		"comm": 100,
+		"comm": 0,
 		"pd": 86400,
 		"optCoolDown": 86400,
 		"pxFetchCoolDown": 43200,
@@ -135,7 +135,7 @@
 	},
 	"OptionCustodian": {
 		"redeemComm": 100,
-		"clearComm": 100,
+		"clearComm": 200,
 		"TokenA": {
 			"tokenName": "sETH-M19",
 			"tokenSymbol": "sETH-M19"
