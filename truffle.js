@@ -24,7 +24,8 @@ module.exports = {
 		live: {
 			host: 'localhost',
 			port: 8545,
-			network_id: '*' // Match any network id,
+			network_id: '1', // Match any network id,
+			from: '0xEA9a5D3fb1fD82D152A30D71c2f9140798e6d877' //ropsten
 			// gas:5000000
 		},
 		coverage: {

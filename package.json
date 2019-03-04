@@ -13,7 +13,7 @@
     "deploy": "cross-env CONTRACT_TYPE=BTV TENOR= truffle migrate --reset --compile-all",
     "deployKovan": "cross-env CONTRACT_TYPE=VVD TENOR= truffle migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle migrate --reset --compile-all --network ropsten",
-    "deployLive": "npm run clean && truffle migrate --reset --compile-all --network live"
+    "deployLive": "cross-env CONTRACT_TYPE=BTV TENOR= truffle migrate --reset --compile-all --network live"
   },
   "devDependencies": {
     "coveralls": "^3.0.2",

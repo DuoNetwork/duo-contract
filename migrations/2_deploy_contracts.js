@@ -38,6 +38,12 @@ module.exports = async (deployer, network, accounts) => {
 		pf2 = accounts[2];
 		pf3 = accounts[3];
 		fc = accounts[4];
+	} else if (network == 'live') {
+		creator = "0xEA9a5D3fb1fD82D152A30D71c2f9140798e6d877",
+		pf1 = '0x8cff57292AB098728F26F7D2e2BdFc6b1729DDDB';
+		pf2 = '0xB1e6A9a089c63D690d9312F8C1c93b6Ab86021e8';
+		pf3 = '0xE81Bf853ab451E52ed926797eDe98e4Ac6E7C562';
+		fc = '0x597bE94b5491da37F26aB36650971367cdfd2b3C';
 	}
 
 	if (process.env.CONTRACT_TYPE === 'DUO') {
