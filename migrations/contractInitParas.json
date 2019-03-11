@@ -127,40 +127,30 @@
 	},
 	"Erc20Custodian": {
 		"comm": 0,
-		"pd": 86400,
 		"optCoolDown": 86400,
-		"pxFetchCoolDown": 43200,
-		"preResetWaitBlk": 10,
+		"preResetWaitBlk": 5,
 		"minimumBalance": 0.01
 	},
 	"OptionCustodian": {
-		"redeemComm": 100,
-		"clearComm": 200,
-		"TokenA": {
-			"tokenName": "sETH-M19",
-			"tokenSymbol": "sETH-M19"
-		},
-		"TokenB": {
-			"tokenName": "LETH-M19",
-			"tokenSymbol": "LETH-M19"
-		}
+		"redeemComm": 25,
+		"clearComm": 50
 	},
 	"Vivaldi": {
 		"PPT": {
 			"iteGasTh": 65000,
 			"collateralTokenAddress": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
-			"name": "VIVALDI-100C-3H",
+			"name": "VIVALDI-100C-1H",
 			"maturity":0,
 			"roleManagerContractAddress": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
-			"pd":10800,
+			"pd":3600,
 			"pxFetchCoolDown": 0,
 			"inToken": {
-				"tokenName": "ETH-100C-3H",
-				"tokenSymbol": "ETH-100C-3H"
+				"tokenName": "ETH-100C-1H",
+				"tokenSymbol": "ETH-100C-1H"
 			},
 			"outToken": {
-				"tokenName": "ETH-100P-3H",
-				"tokenSymbol": "ETH-100P-3H"
+				"tokenName": "ETH-100P-1H",
+				"tokenSymbol": "ETH-100P-1H"
 			}
 		}
 	},
