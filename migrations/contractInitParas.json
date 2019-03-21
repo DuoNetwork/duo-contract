@@ -138,10 +138,10 @@
 	"Vivaldi": {
 		"PPT": {
 			"iteGasTh": 65000,
-			"collateralTokenAddress": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
+			"collateralTokenAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
 			"name": "VIVALDI-100C-1H",
 			"maturity":0,
-			"roleManagerContractAddress": "0xD728681490d63582047A6Cd2fC80B1343C6AbA20",
+			"roleManagerContractAddress": "0xbaa6a5B0b63597bCF8a81b2B3E12BEcF591B77a9",
 			"pd":3600,
 			"pxFetchCoolDown": 0,
 			"inToken": {
