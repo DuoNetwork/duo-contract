@@ -68,6 +68,17 @@ contract('Stake', accounts => {
 			}
 		});
 
+		it('cannot stake to not whitelisted addr', async () => {
+			try {
+				await stakeContract.stake(nonPf, util.toWei(50), {
+					from: creator
+				});
+				assert.isTrue(false, 'can stake to not whitelisted addr');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
 	});
 
 });
