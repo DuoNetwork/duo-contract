@@ -10,7 +10,7 @@
     "clean": "rimraf build",
     "start": "ganache-cli --defaultBalanceEther 1000 --gasLimit 7990000 --port 8550 -a 20",
     "startCoverage": "testrpc-sc --defaultBalanceEther 1000 --gasLimit 0xfffffffffff --port 8555 -a 20",
-    "deploy": "cross-env CONTRACT_TYPE=BTV TENOR= truffle migrate --reset --compile-all",
+    "deploy": "cross-env CONTRACT_TYPE=VVD TENOR= truffle migrate --reset --compile-all",
     "deployKovan": "cross-env CONTRACT_TYPE=VVD TENOR= truffle migrate --reset --compile-all --network kovan",
     "deployRopsten": "npm run clean && truffle migrate --reset --compile-all --network ropsten",
     "deployLive": "cross-env CONTRACT_TYPE=VVD TENOR= truffle migrate --reset --compile-all --network live"
