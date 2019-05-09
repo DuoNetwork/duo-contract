@@ -4,6 +4,9 @@
 		"tokenName": "Test DUO.Network Token",
 		"tokenSymbol": "DUO"
 	},
+	"Stake": {
+		"minStakeTs": "0"
+	},
 	"BTV": {
 		"PPT": {
 			"name": "BEETHOVEN-PPT",
