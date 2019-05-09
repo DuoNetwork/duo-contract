@@ -24,14 +24,14 @@ contract Stake {
      */
 	address public duoTokenAddress;
 	IERC20 duoTokenContract;
-	uint lockMinTimeInSecond;
+	uint public lockMinTimeInSecond;
+	uint public MIN_STAKE_AMT_IN_WEI = 500 * 1e18; // dynamiclly tunable
+	uint public MAX_STAKE_PER_PF = 200000 * 1e18;  // dynamiclly tunable
 
-	// uint public totalFeeders;
-	// committers
 	mapping (address => bool) public isWhiteListCommitter;
-	
 	mapping (address => QueueIdx) public userQueueIdx;
 	mapping (address => mapping (uint => Stake)) public userStakeQueue;
+	mapping (address => uint) totalStakAmtInWei;
 
 	/*
      * Modifier
@@ -71,20 +71,25 @@ contract Stake {
      */
 	function addStake(address addr, uint amtInWei) public isPriceFeed(addr) returns(bool){
 		address sender = msg.sender;
+		require(amtInWei >= MIN_STAKE_AMT_IN_WEI);
+		require(totalStakAmtInWei[addr].add(amtInWei) <= MAX_STAKE_PER_PF);
 		require(duoTokenContract.transferFrom(sender, address(this), amtInWei));
 		userQueueIdx[sender].last +=1;
 		userStakeQueue[sender][userQueueIdx[sender].last] = Stake(addr, block.timestamp, amtInWei);
+		totalStakAmtInWei[addr] = totalStakAmtInWei[addr].add(amtInWei);
 		emit AddStake(sender, addr, amtInWei);
 		return true;
 	}
 
-	function unStake(address addr) public returns(bool) {
+	function unStake(address addr) public isPriceFeed(addr) returns(bool) {
 		address sender = msg.sender;
-		require(userQueueIdx[sender].last >= userQueueIdx[sender].first);  // non-empty queue
+		require(userQueueIdx[sender].last >= userQueueIdx[sender].first && userQueueIdx[sender].last > 0);  // non-empty queue
 		Stake memory stake = userStakeQueue[sender][userQueueIdx[sender].first];
 		require(block.timestamp.sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
 		delete userStakeQueue[sender][userQueueIdx[sender].first];
 		userQueueIdx[sender].first += 1;
+		totalStakAmtInWei[addr] = totalStakAmtInWei[addr].sub(stake.amtInWei);
+		require(duoTokenContract.transfer(sender, stake.amtInWei));
 		emit UnStake(sender, stake.pf, stake.amtInWei);
 		return true;
 	}

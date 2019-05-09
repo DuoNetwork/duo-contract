@@ -9,7 +9,7 @@ const StakeInit = InitParas['Stake'];
 
 const EVENT_ADD_STAKE = 'AddStake';
 
-contract('Stake', accounts => {
+contract.only('Stake', accounts => {
 	let duoContract, stakeContract;
 
 	const creator = accounts[0];
@@ -83,9 +83,9 @@ contract('Stake', accounts => {
 		// });
 
 		it('can addStake', async () => {
-			await duoContract.approve(stakeContract.address, util.toWei(100));
+			await duoContract.approve(stakeContract.address, util.toWei(1000));
 			
-			let tx = await stakeContract.addStake(pf1, util.toWei(50), {
+			let tx = await stakeContract.addStake(pf1, util.toWei(500), {
 				from: creator
 			});
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ADD_STAKE, 'log events incorrect');
