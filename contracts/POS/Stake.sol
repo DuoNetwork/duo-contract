@@ -84,14 +84,14 @@ contract Stake {
 		return true;
 	}
 
-	function unStake(address addr) public isPriceFeed(addr) returns(bool) {
+	function unStake() public returns(bool) {
 		address sender = msg.sender;
 		require(userQueueIdx[sender].last >= userQueueIdx[sender].first && userQueueIdx[sender].last > 0);  // non-empty queue
 		Stake memory stake = userStakeQueue[sender][userQueueIdx[sender].first];
 		require(block.timestamp.sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
 		delete userStakeQueue[sender][userQueueIdx[sender].first];
 		userQueueIdx[sender].first += 1;
-		totalStakAmtInWei[addr] = totalStakAmtInWei[addr].sub(stake.amtInWei);
+		totalStakAmtInWei[stake.pf] = totalStakAmtInWei[stake.pf].sub(stake.amtInWei);
 		require(duoTokenContract.transfer(sender, stake.amtInWei));
 		emit UnStake(sender, stake.pf, stake.amtInWei);
 		return true;
