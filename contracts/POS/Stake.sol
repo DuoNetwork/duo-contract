@@ -8,6 +8,9 @@ import { IERC20 } from "../interfaces/IERC20.sol";
 contract Stake {
 	using SafeMath for uint;
 
+	/*
+     * Struct
+     */
 	struct QueueIdx {
 		uint first;
 		uint last;
@@ -20,7 +23,7 @@ contract Stake {
 	}
 
 	/*
-     * Storage
+     * State
      */
 	address public duoTokenAddress;
 	IERC20 duoTokenContract;
