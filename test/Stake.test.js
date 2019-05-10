@@ -72,7 +72,9 @@ contract.only('Stake', accounts => {
 		});
 
 		it('lockMinTime should be set correctly', async () => {
-			// TODO
+			const lockMinTimeInSecond = await stakeContract.lockMinTimeInSecond.call();
+			assert.isTrue(util.isEqual(lockMinTimeInSecond.valueOf(), StakeInit.minStakeTs), 'lockMinTime not updated correctly');
+
 		});
 
 		it('roleManagerAddress should be set correctly', async () => {

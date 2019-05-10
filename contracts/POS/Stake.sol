@@ -28,14 +28,17 @@ contract Stake is Managed {
      */
 	address public duoTokenAddress;
 	IERC20 duoTokenContract;
+	bool public openForStake;
 	uint public lockMinTimeInSecond;
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
 	uint public maxStakePerPf = 200000 * 1e18;  // dynamiclly tunable
+	uint public totalAwardsToDistribute = 0;
 
 	mapping (address => bool) public isWhiteListCommitter;
 	mapping (address => QueueIdx) public userQueueIdx;
 	mapping (address => mapping (uint => StakeLot)) public userStakeQueue;
 	mapping (address => uint) totalStakAmtInWei;
+	mapping (address => uint) public awards;
 
 	/*
      * Modifier
@@ -45,12 +48,19 @@ contract Stake is Managed {
 		_;
 	}
 
+	modifier isOpenForStake() {
+		require(openForStake);
+		_;
+	}
+
 	/*
      * Events
      */
 	event AddStake(address indexed from, address indexed pf, uint amtInWei);
 	event UnStake(address indexed from, address indexed pf, uint amtInWei);
 	event SetValue(uint index, uint oldValue, uint newValue);
+	event AddAward(address staker, uint awardAmtInWei);
+	event ReduceAward(address staker, uint awardAmtInWei);
 	/*
      * Constructor
      */
@@ -71,14 +81,14 @@ contract Stake is Managed {
 			isWhiteListCommitter[pfList[i]] = true;
 		}
 		lockMinTimeInSecond = lockTime;
-
+		openForStake = true;
 	}
 
 
 	/*
      * Public Functions
      */
-	function addStake(address addr, uint amtInWei) public isPriceFeed(addr) returns(bool){
+	function addStake(address addr, uint amtInWei) public isPriceFeed(addr) isOpenForStake() returns(bool){
 		address sender = msg.sender;
 		require(amtInWei >= minStakeAmtInWei);
 		require(totalStakAmtInWei[addr].add(amtInWei) <= maxStakePerPf);
@@ -90,7 +100,7 @@ contract Stake is Managed {
 		return true;
 	}
 
-	function unStake() public returns(bool) {
+	function unStake() public isOpenForStake() returns(bool) {
 		address sender = msg.sender;
 		require(userQueueIdx[sender].last >= userQueueIdx[sender].first && userQueueIdx[sender].last > 0);  // non-empty queue
 		StakeLot memory stake = userStakeQueue[sender][userQueueIdx[sender].first];
@@ -100,6 +110,49 @@ contract Stake is Managed {
 		totalStakAmtInWei[stake.pf] = totalStakAmtInWei[stake.pf].sub(stake.amtInWei);
 		require(duoTokenContract.transfer(sender, stake.amtInWei));
 		emit UnStake(sender, stake.pf, stake.amtInWei);
+		return true;
+	}
+
+	function batchAddAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+		require(!openForStake);
+		for(uint i = 0;i<addrsList.length; i++) {
+			awards[addrsList[i]] = awards[addrsList[i]].add(amtInWeiList[i]);
+			totalAwardsToDistribute= totalAwardsToDistribute.add(amtInWeiList[i]);
+			emit AddAward(addrsList[i], amtInWeiList[i]);
+		}
+		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistribute);
+		return true;
+	}
+
+	function batchReduceAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+		require(!openForStake);
+		for(uint i = 0;i<addrsList.length; i++) {
+			awards[addrsList[i]] = awards[addrsList[i]].sub(amtInWeiList[i]);
+			totalAwardsToDistribute= totalAwardsToDistribute.sub(amtInWeiList[i]);
+			emit ReduceAward(addrsList[i], amtInWeiList[i]);
+		}
+		return true;
+	}
+
+	function claimAward(bool isAll, uint amtInWei) public isOpenForStake() returns(bool) {
+		address sender = msg.sender;
+		if(isAll && awards[sender] > 0) {
+			duoTokenContract.transfer(sender, awards[sender]);
+			awards[sender] = 0;
+			totalAwardsToDistribute= totalAwardsToDistribute.sub(awards[sender]);
+			return true;
+		} else if (!isAll && amtInWei> 0 && amtInWei<=awards[sender] ){
+			duoTokenContract.transfer(sender, amtInWei);
+			awards[sender] = awards[sender].sub(amtInWei);
+			totalAwardsToDistribute= totalAwardsToDistribute.sub(amtInWei);
+			return true;
+		} else {
+			revert();
+		}
+	}
+
+	function toggleIsOpen() public only(operator) returns(bool) {
+		openForStake = !openForStake;
 		return true;
 	}
 
