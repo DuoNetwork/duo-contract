@@ -5,7 +5,8 @@
 		"tokenSymbol": "DUO"
 	},
 	"Stake": {
-		"minStakeTs": "0"
+		"minStakeTs": "0",
+		"optCoolDown": 86400
 	},
 	"BTV": {
 		"PPT": {
