@@ -6,7 +6,9 @@
 	},
 	"Stake": {
 		"minStakeTs": "0",
-		"optCoolDown": 86400
+		"optCoolDown": 86400,
+		"minStakeAmt": 500,
+		"maxStakePerPf": 200000
 	},
 	"BTV": {
 		"PPT": {

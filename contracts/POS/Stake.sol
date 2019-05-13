@@ -31,7 +31,7 @@ contract Stake is Managed {
 	bool public openForStake;
 	uint public lockMinTimeInSecond;
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
-	uint public maxStakePerPf = 200000 * 1e18;  // dynamiclly tunable
+	uint public maxStakePerPfInWei = 200000 * 1e18;  // dynamiclly tunable
 	uint public totalAwardsToDistribute = 0;
 
 	mapping (address => bool) public isWhiteListCommitter;
@@ -68,6 +68,8 @@ contract Stake is Managed {
 		address duoTokenAddr,
 		address[] memory pfList,
 		uint lockTime,
+		uint minStakeAmt,
+		uint maxStakePerPf,
 		address roleManagerAddr,
 		address opt,
 		uint optCoolDown
@@ -81,7 +83,9 @@ contract Stake is Managed {
 			isWhiteListCommitter[pfList[i]] = true;
 		}
 		lockMinTimeInSecond = lockTime;
-		openForStake = true;
+		openForStake = false;
+		minStakeAmtInWei = minStakeAmt;
+		maxStakePerPfInWei = maxStakePerPf;
 	}
 
 
@@ -91,9 +95,11 @@ contract Stake is Managed {
 	function addStake(address addr, uint amtInWei) public isPriceFeed(addr) isOpenForStake() returns(bool){
 		address sender = msg.sender;
 		require(amtInWei >= minStakeAmtInWei);
-		require(totalStakAmtInWei[addr].add(amtInWei) <= maxStakePerPf);
+		require(totalStakAmtInWei[addr].add(amtInWei) <= maxStakePerPfInWei);
 		require(duoTokenContract.transferFrom(sender, address(this), amtInWei));
 		userQueueIdx[sender].last +=1;
+		if(userQueueIdx[sender].first == 0) 
+			userQueueIdx[sender].first +=1;
 		userStakeQueue[sender][userQueueIdx[sender].last] = StakeLot(addr, block.timestamp, amtInWei);
 		totalStakAmtInWei[addr] = totalStakAmtInWei[addr].add(amtInWei);
 		emit AddStake(sender, addr, amtInWei);
@@ -169,8 +175,8 @@ contract Stake is Managed {
 			oldValue = minStakeAmtInWei;
 			minStakeAmtInWei = newValue;
 		} else if (idx == 1) {
-			oldValue = maxStakePerPf;
-			maxStakePerPf = newValue;
+			oldValue = maxStakePerPfInWei;
+			maxStakePerPfInWei = newValue;
 		}  else {
 			revert();
 		}

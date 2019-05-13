@@ -9,6 +9,8 @@ contract StakeMock is Stake {
 		address duoTokenAddr,
 		address[] memory pfList,
 		uint lockTime,
+		uint minStakeAmt,
+		uint maxStakePerPf,
 		address roleManagerAddr,
 		address opt,
 		uint optCoolDown
@@ -16,6 +18,8 @@ contract StakeMock is Stake {
 		duoTokenAddr,
 		pfList,
 		lockTime,
+		minStakeAmt,
+		maxStakePerPf,
 		roleManagerAddr,
 		opt,
 		optCoolDown
