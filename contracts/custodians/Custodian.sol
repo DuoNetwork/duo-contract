@@ -54,7 +54,6 @@ contract Custodian is Managed {
 	uint maturityInSecond; // set to 0 for perpetuals
 	uint preResetWaitingBlocks;
 	uint priceFetchCoolDown;
-	
 	// cycle state variables
 	uint lastPreResetBlockNo = 0;
 	uint nextResetAddrIndex;

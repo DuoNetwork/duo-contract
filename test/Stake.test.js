@@ -79,9 +79,14 @@ contract('Stake', accounts => {
 			assert.isTrue(util.isEqual(lockMinTimeInSecond.valueOf(), StakeInit.minStakeTs), 'lockMinTime not updated correctly');
 		});
 
-		it("openForStake should be set correctly", async () => {
-			const openForStake = await stakeContract.openForStake.call();
-			assert.isFalse(openForStake.valueOf(), 'openForStake not updated correctly');
+		it("canStake should be set correctly", async () => {
+			const canStake = await stakeContract.canStake.call();
+			assert.isFalse(canStake.valueOf(), 'canStake not updated correctly');
+		});
+
+		it("canUnstake should be set correctly", async () => {
+			const canUnstake = await stakeContract.canUnstake.call();
+			assert.isFalse(canUnstake.valueOf(), 'canUnstake not updated correctly');
 		});
 
 		it('minStakeAmt should be set correctly', async () => {
@@ -111,7 +116,7 @@ contract('Stake', accounts => {
 		});
 	});
 
-	describe('addStake', () => {
+	describe('stake', () => {
 		beforeEach(async () => {
 			await initContracts();
 			await duoContract.transfer(alice, util.toWei(400000), {from: creator});
@@ -120,7 +125,7 @@ contract('Stake', accounts => {
 
 		it('cannot stake when contract state not open', async () => {
 			try {
-				await stakeContract.addStake(pf1, util.toWei(1000), {
+				await stakeContract.stake(pf1, util.toWei(1000), {
 					from: alice
 				});
 				assert.isTrue(false, 'can stake when contract is not open');
@@ -130,21 +135,21 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot stake for non pf address', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.toggleIsOpen(true, {from: operator});
 			try {
-				await stakeContract.addStake(nonPf, util.toWei(1000), {
+				await stakeContract.stake(nonPf, util.toWei(1000), {
 					from: alice
 				});
-				assert.isTrue(false, 'can addStake for non pf address');
+				assert.isTrue(false, 'can stake for non pf address');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
 			}
 		});
 
 		it('cannot stake less than minStakeAmt', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.toggleIsOpen(true, {from: operator});
 			try {
-				await stakeContract.addStake(pf1, util.toWei(50), {
+				await stakeContract.stake(pf1, util.toWei(50), {
 					from: alice
 				});
 				assert.isTrue(false, 'can  stake less than minStakeAmt');
@@ -155,9 +160,9 @@ contract('Stake', accounts => {
 
 		it('cannot stake without approving for DUO token trafer', async () => {
 			await duoContract.approve(stakeContract.address, 0, {from: alice});
-			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.toggleIsOpen(true, {from: operator});
 			try {
-				await stakeContract.addStake(pf1, util.toWei(1000), {
+				await stakeContract.stake(pf1, util.toWei(1000), {
 					from: alice
 				});
 				assert.isTrue(false, 'can stake without approving for DUO token trafer');
@@ -167,9 +172,9 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot stake more than DUO token balance', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.toggleIsOpen(true, {from: operator});
 			try {
-				await stakeContract.addStake(pf1, util.toWei(400001), {
+				await stakeContract.stake(pf1, util.toWei(400001), {
 					from: alice
 				});
 				assert.isTrue(false, 'can stake more than DUO token balance');
@@ -178,9 +183,9 @@ contract('Stake', accounts => {
 			}
 		});
 
-		it('can addStake', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
-			let tx = await stakeContract.addStake(pf1, util.toWei(1000), {
+		it('can stake', async () => {
+			await stakeContract.toggleIsOpen(true, {from: operator});
+			let tx = await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ADD_STAKE, 'log events incorrect');
@@ -192,7 +197,7 @@ contract('Stake', accounts => {
 				"event logs not emitted correctly"
 			);
 
-			const queIdx = await stakeContract.userQueueIdx.call(alice);
+			const queIdx = await stakeContract.userQueueIdx.call(pf1, alice);
 			assert.isTrue( 
 				util.isEqual(queIdx.first.valueOf(), 1) && 
 				util.isEqual(queIdx.last.valueOf(), 1),
@@ -202,13 +207,13 @@ contract('Stake', accounts => {
 		});
 
 		it('each pf address cannot receive stake more than maxStakePerPf', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
-			await stakeContract.addStake(pf1, util.toWei(1000), {
+			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
 
 			try {
-				await stakeContract.addStake(pf1, util.toWei(200000), {
+				await stakeContract.stake(pf1, util.toWei(200000), {
 					from: alice
 				});
 				assert.isTrue(false, 'can stake more than maxStakePerPf');
@@ -217,12 +222,12 @@ contract('Stake', accounts => {
 			}
 		});
 
-		it('can addStake second time', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
-			await stakeContract.addStake(pf1, util.toWei(1000), {
+		it('can stake second time', async () => {
+			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
-			const tx = await stakeContract.addStake(pf1, util.toWei(1000), {
+			const tx = await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ADD_STAKE, 'log events incorrect');
@@ -234,7 +239,7 @@ contract('Stake', accounts => {
 				"event logs not emitted correctly"
 			);
 
-			const queIdx = await stakeContract.userQueueIdx.call(alice);
+			const queIdx = await stakeContract.userQueueIdx.call(pf1, alice);
 			assert.isTrue( 
 				util.isEqual(queIdx.first.valueOf(), 1) && 
 				util.isEqual(queIdx.last.valueOf(), 2),
@@ -246,22 +251,22 @@ contract('Stake', accounts => {
 
 	});
 
-	describe('unStake', () => {
+	describe('unstake', () => {
 		beforeEach(async () => {
 			await initContracts();
 			await duoContract.transfer(alice, util.toWei(400000), {from: creator});
 			await duoContract.approve(stakeContract.address, util.toWei(400000), {from: alice});
-			await stakeContract.toggleIsOpen({from: operator});
-			await stakeContract.addStake(pf1, util.toWei(1000), {
+			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
 		});
 
 
 		it('cannot unstake within locking period', async () => {
-			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.toggleIsOpen(false, {from: operator});
 			try {
-				await stakeContract.unStake( {
+				await stakeContract.unstake(pf1, {
 					from: alice
 				});
 				assert.isTrue(false, 'can unstake within locking period');
