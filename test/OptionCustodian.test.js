@@ -6,6 +6,7 @@ const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const RoleManagerInit = InitParas['RoleManager'];
 const Erc20CustodianInit = InitParas['Erc20Custodian'];
+const CustodianInit = InitParas['Custodian'];
 const OptionCustodianInit = InitParas['OptionCustodian'];
 const PptParas = InitParas['Vivaldi']['PPT'];
 const MagiInit = InitParas['Magi'];
@@ -68,7 +69,6 @@ contract('OptionCustodian', accounts => {
 		roleManagerContract = await RoleManager.new(RoleManagerInit.optCoolDown, {
 			from: creator
 		});
-
 		optionCustodianContract = await OptionCustodian.new(
 			contractCode,
 			collateralTokenContract.address,
@@ -78,9 +78,9 @@ contract('OptionCustodian', accounts => {
 			Erc20CustodianInit.comm,
 			OptionCustodianInit.redeemComm,
 			OptionCustodianInit.clearComm,
-			Erc20CustodianInit.pd,
+			CustodianInit.pd,
 			Erc20CustodianInit.optCoolDown,
-			Erc20CustodianInit.pxFetchCoolDown,
+			CustodianInit.pxFetchCoolDown,
 			Erc20CustodianInit.preResetWaitBlk,
 			util.toWei(Erc20CustodianInit.minimumBalance),
 			PptParas.iteGasTh,

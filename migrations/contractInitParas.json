@@ -139,7 +139,15 @@
 	},
 	"OptionCustodian": {
 		"redeemComm": 25,
-		"clearComm": 50
+		"clearComm": 50,
+		"TokenA": {
+			"tokenName": "tokenAName",
+			"tokenSymbol": "tokenAName"
+		},
+		"TokenB": {
+			"tokenName": "tokenBName",
+			"tokenSymbol": "tokenBName"
+		}
 	},
 	"Vivaldi": {
 		"PPT": {

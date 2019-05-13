@@ -5,6 +5,7 @@ const util = require('./util');
 const InitParas = require('../migrations/contractInitParas.json');
 const RoleManagerInit = InitParas['RoleManager'];
 const Erc20CustodianInit = InitParas['Erc20Custodian'];
+const CustodianInit = InitParas['Custodian'];
 const CST = require('./constants');
 
 const EVENT_COLLECT_FEE = 'CollectFee';
@@ -70,9 +71,9 @@ contract('Erc20Custodian', accounts => {
 			roleManagerContract.address,
 			fc,
 			Erc20CustodianInit.comm,
-			Erc20CustodianInit.pd,
+			CustodianInit.pd,
 			Erc20CustodianInit.optCoolDown,
-			Erc20CustodianInit.pxFetchCoolDown,
+			CustodianInit.pxFetchCoolDown,
 			Erc20CustodianInit.preResetWaitBlk,
 			util.toWei(Erc20CustodianInit.minimumBalance),
 			{
@@ -114,7 +115,7 @@ contract('Erc20Custodian', accounts => {
 
 		it('period should equal specified value', async () => {
 			let pd = await util.getState(erc20CustodianContract, CUSTODIAN_STATE.PERIOD);
-			assert.equal(pd.valueOf(), Erc20CustodianInit.pd, 'period specified incorrect');
+			assert.equal(pd.valueOf(), CustodianInit.pd, 'period specified incorrect');
 		});
 
 		it('preResetWaitingBlks should equal specified value', async () => {
@@ -136,7 +137,7 @@ contract('Erc20Custodian', accounts => {
 			);
 			assert.equal(
 				pxFetchCoolDown.valueOf(),
-				Erc20CustodianInit.pxFetchCoolDown,
+				CustodianInit.pxFetchCoolDown,
 				'pxFetchCoolDown specified incorrect'
 			);
 		});

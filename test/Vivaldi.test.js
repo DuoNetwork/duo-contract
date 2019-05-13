@@ -6,6 +6,7 @@ const Magi = artifacts.require('../contracts/mocks/MagiMock.sol');
 const InitParas = require('../migrations/contractInitParas.json');
 const RoleManagerInit = InitParas['RoleManager'];
 const Erc20CustodianInit = InitParas['Erc20Custodian'];
+const CustodianInit = InitParas['Custodian'];
 const OptionCustodianInit = InitParas['OptionCustodian'];
 const PptParas = InitParas['Vivaldi']['PPT'];
 const MagiInit = InitParas['Magi'];
@@ -98,9 +99,9 @@ contract('Vivaldi', accounts => {
 			Erc20CustodianInit.comm,
 			OptionCustodianInit.redeemComm,
 			OptionCustodianInit.clearComm,
-			Erc20CustodianInit.pd,
+			CustodianInit.pd,
 			Erc20CustodianInit.optCoolDown,
-			Erc20CustodianInit.pxFetchCoolDown,
+			CustodianInit.pxFetchCoolDown,
 			Erc20CustodianInit.preResetWaitBlk,
 			util.toWei(Erc20CustodianInit.minimumBalance),
 			PptParas.iteGasTh,
@@ -201,7 +202,7 @@ contract('Vivaldi', accounts => {
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
 			await vivaldiContract.setTimestamp(
-				Erc20CustodianInit.pxFetchCoolDown + Number(resetTime.valueOf())
+				CustodianInit.pxFetchCoolDown + Number(resetTime.valueOf())
 			);
 			try {
 				await vivaldiContract.startRound.call({ from: creator });
@@ -458,7 +459,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime - 10);
 			try {
 				await vivaldiContract.endRound.call({ from: creator });
@@ -473,7 +474,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime + 5, pf1);
 			try {
@@ -489,7 +490,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 20);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime + 30, pf1);
 			try {
@@ -505,7 +506,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(0), requiredTime, pf1);
 
@@ -522,7 +523,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime - 5, pf1);
 
@@ -539,7 +540,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
@@ -574,7 +575,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(1000), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
@@ -609,7 +610,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(1000), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
@@ -645,7 +646,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
@@ -715,7 +716,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime - 10);
 			try {
 				await vivaldiContract.forceEndRound(util.toWei(forcePrice), time.valueOf());
@@ -740,7 +741,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
 
 			try {
@@ -766,7 +767,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
 
 			try {
@@ -792,7 +793,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
 
 			try {
@@ -835,7 +836,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime + 10);
 			await vivaldiContract.setLastPrice(util.toWei(ethInitPrice), requiredTime);
 			let tx = await vivaldiContract.forceEndRound(util.toWei(forcePrice), requiredTime, {
@@ -891,7 +892,7 @@ contract('Vivaldi', accounts => {
 				vivaldiContract,
 				VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 			);
-			const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+			const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 			await vivaldiContract.setTimestamp(requiredTime);
 			oracleContract.setLastPrice(util.toWei(100), requiredTime, pf1);
 			const lastPriceTime = await util.getState(
@@ -1194,7 +1195,7 @@ contract('Vivaldi', accounts => {
 					vivaldiContract,
 					VIVALDI_STATE.RESET_PRICETIME_IN_SECOND
 				);
-				const requiredTime = Number(resetPriceTime.valueOf()) + Erc20CustodianInit.pd;
+				const requiredTime = Number(resetPriceTime.valueOf()) + CustodianInit.pd;
 				await vivaldiContract.setTimestamp(requiredTime);
 				oracleContract.setLastPrice(util.toWei(endPrice), requiredTime, pf1);
 				const lastPriceTime = await util.getState(

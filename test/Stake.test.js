@@ -11,7 +11,7 @@ const RoleManagerInit = InitParas['RoleManager'];
 
 const EVENT_ADD_STAKE = 'AddStake';
 
-contract.only('Stake', accounts => {
+contract('Stake', accounts => {
 	let duoContract, stakeContract, roleManagerContract;
 
 	const creator = accounts[0];
@@ -111,7 +111,7 @@ contract.only('Stake', accounts => {
 		});
 	});
 
-	describe.only('addStake', () => {
+	describe('addStake', () => {
 		beforeEach(async () => {
 			await initContracts();
 			await duoContract.transfer(alice, util.toWei(400000), {from: creator});
@@ -246,26 +246,42 @@ contract.only('Stake', accounts => {
 
 	});
 
-	// describe('unStake', () => {
-	// 	before(initContracts);
+	describe('unStake', () => {
+		beforeEach(async () => {
+			await initContracts();
+			await duoContract.transfer(alice, util.toWei(400000), {from: creator});
+			await duoContract.approve(stakeContract.address, util.toWei(400000), {from: alice});
+			await stakeContract.toggleIsOpen({from: operator});
+			await stakeContract.addStake(pf1, util.toWei(1000), {
+				from: alice
+			});
+		});
 
-	// 	it('cannot unStake without previously staking', async () => {
-	// 		// TODO
-	// 	});
 
-	// 	it('cannot unstake within locking period', async () => {
-	// 		// TODO
-	// 	});
+		it('cannot unstake within locking period', async () => {
+			await stakeContract.toggleIsOpen({from: operator});
+			try {
+				await stakeContract.unStake( {
+					from: alice
+				});
+				assert.isTrue(false, 'can unstake within locking period');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
 
+		it('cannot unStake without previously staking', async () => {
+			// TODO
+		});
 
-	// 	it('can unStake', async () => {
-	// 		// TODO
-	// 		// update first correctly
-	// 		// totalStakereceivedFor Pf is updated correctly
-	// 		// DUO token balance should be updated correctly
-	// 		// event should be emitted correctly
-	// 	});
+		it('can unStake', async () => {
+			// TODO
+			// update first correctly
+			// totalStakereceivedFor Pf is updated correctly
+			// DUO token balance should be updated correctly
+			// event should be emitted correctly
+		});
 
-	// });
+	});
 
 });
