@@ -9,7 +9,8 @@ const DuoInit = InitParas['DUO'];
 const StakeInit = InitParas['Stake'];
 const RoleManagerInit = InitParas['RoleManager'];
 
-const EVENT_ADD_STAKE = 'AddStake';
+const EVENT_STAKE = 'AddStake';
+const EVENT_UNSTAKE = 'Unstake';
 
 contract('Stake', accounts => {
 	let duoContract, stakeContract, roleManagerContract;
@@ -188,7 +189,7 @@ contract('Stake', accounts => {
 			let tx = await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
-			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ADD_STAKE, 'log events incorrect');
+			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_STAKE, 'log events incorrect');
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
@@ -197,11 +198,18 @@ contract('Stake', accounts => {
 				"event logs not emitted correctly"
 			);
 
-			const queIdx = await stakeContract.userQueueIdx.call(pf1, alice);
+			const queIdx = await stakeContract.userQueueIdx.call(alice, pf1);
 			assert.isTrue( 
 				util.isEqual(queIdx.first.valueOf(), 1) && 
 				util.isEqual(queIdx.last.valueOf(), 1),
 				"queueIndex not updated correctly"
+			);
+
+			const queueStake = await stakeContract.userStakeQueue.call(alice, pf1, 1);
+			assert.isTrue(
+				queueStake.pf === pf1 &&
+				util.isEqual( util.fromWei(queueStake.amtInWei), 1000 ),
+				'stakequeue not updated correctly'
 			);
 			
 		});
@@ -230,7 +238,7 @@ contract('Stake', accounts => {
 			const tx = await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
-			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_ADD_STAKE, 'log events incorrect');
+			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_STAKE, 'log events incorrect');
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
@@ -239,7 +247,7 @@ contract('Stake', accounts => {
 				"event logs not emitted correctly"
 			);
 
-			const queIdx = await stakeContract.userQueueIdx.call(pf1, alice);
+			const queIdx = await stakeContract.userQueueIdx.call(alice, pf1);
 			assert.isTrue( 
 				util.isEqual(queIdx.first.valueOf(), 1) && 
 				util.isEqual(queIdx.last.valueOf(), 2),
@@ -254,16 +262,17 @@ contract('Stake', accounts => {
 	describe('unstake', () => {
 		beforeEach(async () => {
 			await initContracts();
-			await duoContract.transfer(alice, util.toWei(400000), {from: creator});
-			await duoContract.approve(stakeContract.address, util.toWei(400000), {from: alice});
+			await duoContract.transfer(alice, util.toWei(StakeInit.maxStakePerPf * 2), {from: creator});
+			await duoContract.approve(stakeContract.address, util.toWei(StakeInit.maxStakePerPf * 2), {from: alice});
 			await stakeContract.toggleIsOpen(true, {from: operator});
-			await stakeContract.stake(pf1, util.toWei(1000), {
-				from: alice
-			});
+			
 		});
 
 
 		it('cannot unstake within locking period', async () => {
+			await stakeContract.stake(pf1, util.toWei(StakeInit.minStakeAmt * 2), {
+				from: alice
+			});
 			await stakeContract.toggleIsOpen(false, {from: operator});
 			try {
 				await stakeContract.unstake(pf1, {
@@ -276,15 +285,48 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot unStake without previously staking', async () => {
-			// TODO
+			let currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp(currentTs.toNumber() + Number(StakeInit.minStakeTs) + 15*60);
+			
+			try {
+				await stakeContract.unstake(pf1, {
+					from: alice
+				});
+				assert.isTrue(false, 'can unstake without previously staking');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('can unStake', async () => {
-			// TODO
-			// update first correctly
-			// totalStakereceivedFor Pf is updated correctly
-			// DUO token balance should be updated correctly
-			// event should be emitted correctly
+			await stakeContract.stake(pf1, util.toWei(StakeInit.minStakeAmt * 2), {
+				from: alice
+			});
+			const currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp(currentTs.toNumber() + Number(StakeInit.minStakeTs) + 15*60);
+			const tx = await stakeContract.unstake(pf1, {
+				from: alice
+			});
+
+			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_UNSTAKE);
+			const eventArgs = tx.logs[0].args;
+			assert.isTrue(eventArgs.from === alice && eventArgs.pf === pf1 && 
+				util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2), 'event args wrong' );
+
+			const queIdx = await stakeContract.userQueueIdx.call(alice, pf1);
+			assert.isTrue( 
+				util.isEqual(queIdx.first.valueOf(), 2) && 
+				util.isEqual(queIdx.last.valueOf(), 1),
+				"queueIndex not updated correctly"
+			);
+
+			const totalStakAmtInWei = await stakeContract.totalStakAmtInWei.call(pf1);
+			assert.isTrue( util.isEqual(util.fromWei(totalStakAmtInWei.valueOf()),0), 'totalStakereceived updated wrongly' );
+			
+
+			const contractDuoBalance = await duoContract.balanceOf.call(stakeContract.address);
+			assert.isTrue( util.isEqual(util.fromWei(contractDuoBalance.valueOf()),0), 'contractDuoBalance updated wrongly' );
+			
 		});
 
 	});

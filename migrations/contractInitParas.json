@@ -5,7 +5,7 @@
 		"tokenSymbol": "DUO"
 	},
 	"Stake": {
-		"minStakeTs": "0",
+		"minStakeTs": 1209600,
 		"optCoolDown": 86400,
 		"minStakeAmt": 500,
 		"maxStakePerPf": 200000

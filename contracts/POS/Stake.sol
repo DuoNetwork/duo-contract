@@ -56,10 +56,12 @@ contract Stake is Managed {
      * Events
      */
 	event AddStake(address indexed from, address indexed pf, uint amtInWei);
-	event UnStake(address indexed from, address indexed pf, uint amtInWei);
+	event Unstake(address indexed from, address indexed pf, uint amtInWei);
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event AddAward(address staker, uint awardAmtInWei);
 	event ReduceAward(address staker, uint awardAmtInWei);
+		
+	event CurrentTime(uint ts);
 	/*
      * Constructor
      */
@@ -93,34 +95,34 @@ contract Stake is Managed {
 	/*
      * Public Functions
      */
-	function stake(address addr, uint amtInWei) public isPriceFeed(addr) returns(bool){
+	function stake(address pfAddr, uint amtInWei) public isPriceFeed(pfAddr) returns(bool){
 		require(canStake);
 		address sender = msg.sender;
 		require(amtInWei >= minStakeAmtInWei);
-		require(totalStakAmtInWei[addr].add(amtInWei) <= maxStakePerPfInWei);
-		require(duoTokenContract.transferFrom(sender, address(this), amtInWei));
-		userQueueIdx[addr][sender].last +=1;
+		require(totalStakAmtInWei[pfAddr].add(amtInWei) <= maxStakePerPfInWei);
+		duoTokenContract.transferFrom(sender, address(this), amtInWei);
+		userQueueIdx[sender][pfAddr].last +=1;
 
 
-		if(userQueueIdx[addr][sender].first == 0) 
-			userQueueIdx[addr][sender].first +=1;
-		userStakeQueue[sender][addr][userQueueIdx[addr][sender].last] = StakeLot(addr, block.timestamp, amtInWei);
-		totalStakAmtInWei[addr] = totalStakAmtInWei[addr].add(amtInWei);
-		emit AddStake(sender, addr, amtInWei);
+		if(userQueueIdx[sender][pfAddr].first == 0) 
+			userQueueIdx[sender][pfAddr].first +=1;
+		userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].last] = StakeLot(pfAddr, getNowTimestamp(), amtInWei);
+		totalStakAmtInWei[pfAddr] = totalStakAmtInWei[pfAddr].add(amtInWei);
+		emit AddStake(sender, pfAddr, amtInWei);
 		return true;
 	}
 
-	function unstake(address addr) public returns(bool) {
+	function unstake(address pfAddr) public returns(bool) {
 		require(canUnstake);
 		address sender = msg.sender;
-		require(userQueueIdx[addr][sender].last >= userQueueIdx[addr][sender].first && userQueueIdx[addr][sender].last > 0);  // non-empty queue
-		StakeLot memory stake = userStakeQueue[addr][sender][userQueueIdx[addr][sender].first];
-		require(block.timestamp.sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
-		delete userStakeQueue[addr][sender][userQueueIdx[addr][sender].first];
-		userQueueIdx[addr][sender].first += 1;
+		require(userQueueIdx[sender][pfAddr].last >= userQueueIdx[sender][pfAddr].first && userQueueIdx[sender][pfAddr].last > 0);  // non-empty queue
+		StakeLot memory stake = userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].first];
+		require(getNowTimestamp().sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
+		delete userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].first];
+		userQueueIdx[sender][pfAddr].first += 1;
 		totalStakAmtInWei[stake.pf] = totalStakAmtInWei[stake.pf].sub(stake.amtInWei);
+		emit Unstake(sender, stake.pf, stake.amtInWei);
 		require(duoTokenContract.transfer(sender, stake.amtInWei));
-		emit UnStake(sender, stake.pf, stake.amtInWei);
 		return true;
 	}
 
@@ -199,6 +201,10 @@ contract Stake is Managed {
 
 		emit SetValue(idx, oldValue, newValue);
 		return true;
+	}
+
+	function getNowTimestamp() internal view returns (uint) {
+		return now;
 	}
 
 }

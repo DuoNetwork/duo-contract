@@ -5,6 +5,7 @@ import { Stake } from "../POS/Stake.sol";
 contract StakeMock is Stake {
 	uint public timestamp = now;
 
+
 	constructor(
 		address duoTokenAddr,
 		address[] memory pfList,
