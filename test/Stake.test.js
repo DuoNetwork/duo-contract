@@ -331,4 +331,65 @@ contract('Stake', accounts => {
 
 	});
 
+	
+	// TODO
+	describe('batchAddAward', () => {
+		beforeEach(async () => {
+		});
+
+		it('non operator cannot batchAddAward', async () => {
+		});
+
+		it('should not batchAddAward when canStake', async () => {
+		});
+
+		it('should not batchAddAward when canUnstake', async () => {
+		});
+
+		it('contract duo token balance should be more than award', async () => {
+		});
+
+		it('should batchAddAward', async () => {
+		});
+	});
+
+	// TODO
+	describe('batchReduceAward', () => {
+		beforeEach(async () => {
+		});
+
+		it('non operator cannot batchReduceAward', async () => {
+		});
+
+		it('should not batchReduceAward when canStake', async () => {
+		});
+
+		it('should not batchReduceAward when canUnstake', async () => {
+		});
+
+		it('should batchReduceAward', async () => {
+		});
+	});
+
+	// TODO
+	describe('claimAward', () => {
+		beforeEach(async () => {
+		});
+
+		it('should only claim award when canUnstake', async () => {
+		});
+
+		it('calim all award', async () => {
+		});
+
+		it('claim partial award, can only calim less than total award', async () => {
+		});
+
+		it('claim partial award', async () => {
+		});
+
+		it('should revert if isAll', async () => {
+		});
+	});
+
 });
