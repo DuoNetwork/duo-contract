@@ -11,6 +11,9 @@ const RoleManagerInit = InitParas['RoleManager'];
 
 const EVENT_STAKE = 'AddStake';
 const EVENT_UNSTAKE = 'Unstake';
+const EVENT_ADD_AWARD = 'AddAward';
+const EVENT_ReduceAward = 'ReduceAward';
+const EVENT_CLAIM_AWARD = 'ClaimAward';
 
 contract('Stake', accounts => {
 	let duoContract, stakeContract, roleManagerContract;
@@ -23,6 +26,7 @@ contract('Stake', accounts => {
 	const nonPf = accounts[4];
 	const operator = accounts[5];
 	const alice = accounts[6];
+	const bob = accounts[7];
 
 
 	const initContracts = async () => {
@@ -136,7 +140,7 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot stake for non pf address', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			try {
 				await stakeContract.stake(nonPf, util.toWei(1000), {
 					from: alice
@@ -148,7 +152,7 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot stake less than minStakeAmt', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true,{from: operator});
 			try {
 				await stakeContract.stake(pf1, util.toWei(50), {
 					from: alice
@@ -161,7 +165,7 @@ contract('Stake', accounts => {
 
 		it('cannot stake without approving for DUO token trafer', async () => {
 			await duoContract.approve(stakeContract.address, 0, {from: alice});
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			try {
 				await stakeContract.stake(pf1, util.toWei(1000), {
 					from: alice
@@ -173,7 +177,7 @@ contract('Stake', accounts => {
 		});
 
 		it('cannot stake more than DUO token balance', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			try {
 				await stakeContract.stake(pf1, util.toWei(400001), {
 					from: alice
@@ -185,7 +189,7 @@ contract('Stake', accounts => {
 		});
 
 		it('can stake', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			let tx = await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
@@ -215,7 +219,7 @@ contract('Stake', accounts => {
 		});
 
 		it('each pf address cannot receive stake more than maxStakePerPf', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
@@ -231,7 +235,7 @@ contract('Stake', accounts => {
 		});
 
 		it('can stake second time', async () => {
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true, true, {from: operator});
 			await stakeContract.stake(pf1, util.toWei(1000), {
 				from: alice
 			});
@@ -264,7 +268,7 @@ contract('Stake', accounts => {
 			await initContracts();
 			await duoContract.transfer(alice, util.toWei(StakeInit.maxStakePerPf * 2), {from: creator});
 			await duoContract.approve(stakeContract.address, util.toWei(StakeInit.maxStakePerPf * 2), {from: alice});
-			await stakeContract.toggleIsOpen(true, {from: operator});
+			await stakeContract.setStakeFlag(true,  true,{from: operator});
 			
 		});
 
@@ -273,7 +277,7 @@ contract('Stake', accounts => {
 			await stakeContract.stake(pf1, util.toWei(StakeInit.minStakeAmt * 2), {
 				from: alice
 			});
-			await stakeContract.toggleIsOpen(false, {from: operator});
+			await stakeContract.setStakeFlag(false, false, {from: operator});
 			try {
 				await stakeContract.unstake(pf1, {
 					from: alice
@@ -331,64 +335,331 @@ contract('Stake', accounts => {
 
 	});
 
-	
-	// TODO
 	describe('batchAddAward', () => {
 		beforeEach(async () => {
+			await initContracts();
+			await stakeContract.setStakeFlag(false,  false,{from: operator});
+			await duoContract.transfer(stakeContract.address, util.toWei(10000), {from: creator});
+		});
+
+		it('should not add empty award list', async () => {
+			try {
+				await stakeContract.batchAddAward([], [], {
+					from: operator
+				});
+				assert.isTrue(false, 'can add empty award list');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('should not non equal award and addr list', async () => {
+			try {
+				await stakeContract.batchAddAward([alice, bob], [util.toWei(20)], {
+					from: operator
+				});
+				assert.isTrue(false, 'can add non equal award and addr list');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('non operator cannot batchAddAward', async () => {
+					
+			try {
+				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
+					from: alice
+				});
+				assert.isTrue(false, 'non operator can batchAddAward');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should not batchAddAward when canStake', async () => {
+			await stakeContract.setStakeFlag(true,  false,{from: operator});
+			try {
+				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchAddAward when canStake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should not batchAddAward when canUnstake', async () => {
+			await stakeContract.setStakeFlag(false,  true,{from: operator});
+			try {
+				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchAddAward when unstake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+
 		});
 
 		it('contract duo token balance should be more than award', async () => {
+			try {
+				await stakeContract.batchAddAward([alice, bob], [util.toWei(10000), util.toWei(30)], {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchAddAward when contract has not enought duo token');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should batchAddAward', async () => {
+			const addrList = [alice, bob];
+			const awardList = [util.toWei(100), util.toWei(200)];
+			const tx = await stakeContract.batchAddAward(addrList, awardList, {
+				from: operator
+			});
+			for(let i = 0; i < addrList.length; i++){
+				const addr = addrList[i];
+				const award = awardList[i];
+				const awardInContract = await stakeContract.awards.call(addr);
+				assert.isTrue( util.isEqual( util.fromWei(awardInContract.valueOf()), util.fromWei(award)), 'award updated wrongly');
+			
+
+				assert.isTrue(tx.logs[i].event === EVENT_ADD_AWARD, 'event name wrong');
+				assert.isTrue(tx.logs[i].args.staker.valueOf() === addr &&
+				util.isEqual(
+					util.fromWei(tx.logs[i].args.awardAmtInWei.valueOf()), util.fromWei(award)
+				), 
+				'event args emitted wrongly'
+				);
+			}
+
+			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwards = awardList.reduce( (accu, cur) => accu + Number(util.fromWei(cur)), 0);
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), totalAwards),
+				'totalAwards not updated correctly'
+			);
 		});
 	});
 
-	// TODO
 	describe('batchReduceAward', () => {
+		const addrList = [alice, bob];
+		const awardList = [util.toWei(100), util.toWei(200)];
 		beforeEach(async () => {
+			await initContracts();
+			await stakeContract.setStakeFlag(false,  false,{from: operator});
+			await duoContract.transfer(stakeContract.address, util.toWei(10000), {from: creator});
+			await stakeContract.batchAddAward(addrList, awardList, {
+				from: operator
+			});
+		});
+
+		it('should not reduceAward with empty award list', async () => {
+			try {
+				await stakeContract.batchReduceAward([], [], {
+					from: operator
+				});
+				assert.isTrue(false, 'can reduceAward with empty award list');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('should not reduce with non equal award and addr list', async () => {
+			try {
+				await stakeContract.batchReduceAward([alice, bob], [util.toWei(20)], {
+					from: operator
+				});
+				assert.isTrue(false, 'can reduce with non equal award and addr list');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('non operator cannot batchReduceAward', async () => {
+			try {
+				await stakeContract.batchReduceAward(addrList, awardList, {
+					from: alice
+				});
+				assert.isTrue(false, 'non operator can batchReduceAward');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should not batchReduceAward when canStake', async () => {
+			await stakeContract.setStakeFlag(true,  false,{from: operator});
+			try {
+				await stakeContract.batchReduceAward(addrList, awardList, {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchReduceAward when canStake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should not batchReduceAward when canUnstake', async () => {
+			await stakeContract.setStakeFlag(false,  true,{from: operator});
+			try {
+				await stakeContract.batchReduceAward(addrList, awardList, {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchReduceAward when canUnStake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('should not batchReduceAward with more than award', async () => {
+			await stakeContract.setStakeFlag(false,  true,{from: operator});
+			try {
+				await stakeContract.batchReduceAward(addrList, awardList.map(award => util.toWei(Number(util.fromWei(award)) *2)), {
+					from: operator
+				});
+				assert.isTrue(false, 'can batchReduceAward with more than award');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('should batchReduceAward', async () => {
+			const tx = await stakeContract.batchReduceAward(addrList, awardList, {
+				from: operator
+			});
+
+			for(let i = 0; i < addrList.length; i++){
+				const addr = addrList[i];
+				const award = awardList[i];
+				const awardInContract = await stakeContract.awards.call(addr);
+				assert.isTrue( util.isEqual( util.fromWei(awardInContract.valueOf()), 0), 'award updated wrongly');
+			
+
+				assert.isTrue(tx.logs[i].event === EVENT_ReduceAward, 'event name wrong');
+				assert.isTrue(tx.logs[i].args.staker.valueOf() === addr &&
+				util.isEqual(
+					util.fromWei(tx.logs[i].args.awardAmtInWei.valueOf()), util.fromWei(award)
+				), 
+				'event args emitted wrongly'
+				);
+			}
+
+			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), 0),
+				'totalAwards not updated correctly'
+			);
 		});
 	});
 
 	// TODO
 	describe('claimAward', () => {
 		beforeEach(async () => {
+			await initContracts();
+			await stakeContract.setStakeFlag(false,  false,{from: operator});
+			await duoContract.transfer(stakeContract.address, util.toWei(10000), {from: creator});
+			const addrList = [alice, bob];
+			const awardList = [util.toWei(100), util.toWei(200)];
+			await stakeContract.batchAddAward(addrList, awardList, {
+				from: operator
+			});
+			await stakeContract.setStakeFlag(true,  true,{from: operator});
 		});
 
 		it('should only claim award when canUnstake', async () => {
+			await stakeContract.setStakeFlag(true,  false,{from: operator});
+			try {
+				await stakeContract.claimAward(true, 0, {
+					from: alice
+				});
+				assert.isTrue(false, 'can claim award when canUnstake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 
 		it('calim all award', async () => {
+			const totalAwardOfAlice = await stakeContract.awards.call(alice);
+			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalDuoBlance = await duoContract.balanceOf.call(stakeContract.address);
+			const tx = await stakeContract.claimAward(true, 0, {
+				from: alice
+			});
+			const totalAwardsToDistributeAfter = await stakeContract.totalAwardsToDistribute.call();
+			const totalDuoBlanceAfter = await duoContract.balanceOf.call(stakeContract.address);
+			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_CLAIM_AWARD, 'wrong name worngly');
+			assert.isTrue(
+				tx.logs[0].args.claimer.valueOf() === alice &&
+				util.isEqual(util.fromWei(tx.logs[0].args.awardAmtInWei.valueOf()), util.fromWei(totalAwardOfAlice.valueOf())),
+				'event args wrongly'
+			);
+
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), Number(util.fromWei(totalAwardsToDistributeAfter.valueOf())) + 
+				Number(util.fromWei(totalAwardOfAlice))),
+				'totalAward updated worngly'
+			);
+
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalDuoBlance.valueOf()), Number(util.fromWei(totalDuoBlanceAfter.valueOf())) + 
+				Number(util.fromWei(totalAwardOfAlice))),
+				'total DUO balance updated worngly'
+			);
 		});
 
 		it('claim partial award, can only calim less than total award', async () => {
+			try {
+				await stakeContract.claimAward(false, util.toWei(200), {
+					from: alice
+				});
+				assert.isTrue(false, 'can claim award when canUnstake');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
+			
 
 		it('claim partial award', async () => {
+			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalDuoBlance = await duoContract.balanceOf.call(stakeContract.address);
+			const tx = await stakeContract.claimAward(false, util.toWei(50), {
+				from: alice
+			});
+			const totalAwardsToDistributeAfter = await stakeContract.totalAwardsToDistribute.call();
+			const totalDuoBlanceAfter = await duoContract.balanceOf.call(stakeContract.address);
+			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_CLAIM_AWARD, 'wrong name worngly');
+			assert.isTrue(
+				tx.logs[0].args.claimer.valueOf() === alice &&
+				util.isEqual(util.fromWei(tx.logs[0].args.awardAmtInWei.valueOf()), 50),
+				'event args wrongly'
+			);
+
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), Number(util.fromWei(totalAwardsToDistributeAfter.valueOf())) + 
+				50),
+				'totalAward updated worngly'
+			);
+
+			assert.isTrue(
+				util.isEqual(util.fromWei(totalDuoBlance.valueOf()), Number(util.fromWei(totalDuoBlanceAfter.valueOf())) + 
+				50),
+				'total DUO balance updated worngly'
+			);
 		});
 
-		it('should revert if isAll', async () => {
+		it('should revert if isAll and no award', async () => {
+			await stakeContract.claimAward(true, 0, {
+				from: alice
+			});
+			try {
+				await stakeContract.claimAward(true, 0, {
+					from: alice
+				});
+				assert.isTrue(false, 'can claim award when there is non award');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
 		});
 	});
 

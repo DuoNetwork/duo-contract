@@ -60,8 +60,8 @@ contract Stake is Managed {
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event AddAward(address staker, uint awardAmtInWei);
 	event ReduceAward(address staker, uint awardAmtInWei);
-		
-	event CurrentTime(uint ts);
+	event ClaimAward(address claimer, uint awardAmtInWei);
+
 	/*
      * Constructor
      */
@@ -127,6 +127,7 @@ contract Stake is Managed {
 	}
 
 	function batchAddAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+		require(addrsList.length == amtInWeiList.length && addrsList.length >0);
 		require(!canStake && !canUnstake);
 		for(uint i = 0;i<addrsList.length; i++) {
 			awards[addrsList[i]] = awards[addrsList[i]].add(amtInWeiList[i]);
@@ -138,6 +139,7 @@ contract Stake is Managed {
 	}
 
 	function batchReduceAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+		require(addrsList.length == amtInWeiList.length && addrsList.length >0);
 		require(!canStake && !canUnstake);
 		for(uint i = 0;i<addrsList.length; i++) {
 			awards[addrsList[i]] = awards[addrsList[i]].sub(amtInWeiList[i]);
@@ -151,33 +153,35 @@ contract Stake is Managed {
 		require(canUnstake);
 		address sender = msg.sender;
 		if(isAll && awards[sender] > 0) {
-			duoTokenContract.transfer(sender, awards[sender]);
+			uint awardToClaim = awards[sender];
 			awards[sender] = 0;
-			totalAwardsToDistribute= totalAwardsToDistribute.sub(awards[sender]);
+			totalAwardsToDistribute= totalAwardsToDistribute.sub(awardToClaim);
+			duoTokenContract.transfer(sender, awardToClaim);
+			emit ClaimAward(sender, awardToClaim);
 			return true;
 		} else if (!isAll && amtInWei> 0 && amtInWei<=awards[sender] ){
-			duoTokenContract.transfer(sender, amtInWei);
 			awards[sender] = awards[sender].sub(amtInWei);
 			totalAwardsToDistribute= totalAwardsToDistribute.sub(amtInWei);
+			duoTokenContract.transfer(sender, amtInWei);
+			emit ClaimAward(sender, amtInWei);
 			return true;
 		} else {
 			revert();
 		}
 	}
 
-	function toggleIsOpen(bool isEnabled) public only(operator) returns(bool) {
-		if(isEnabled){
-			canStake = true;
-			canUnstake = true;
-		} else {
-			canStake = false;
-			canUnstake = false;
-		}
+	function setStakeFlag(bool stake, bool unstake) public only(operator) returns(bool) {
+		canStake = stake;
+		canUnstake = unstake;
 		return true;
 	}
 
 	function getPfSize() public returns(uint size) {
 		return priceFeedList.length;
+	}
+
+	function getNowTimestamp() internal view returns (uint) {
+		return now;
 	}
 
 	function setValue(
@@ -201,10 +205,6 @@ contract Stake is Managed {
 
 		emit SetValue(idx, oldValue, newValue);
 		return true;
-	}
-
-	function getNowTimestamp() internal view returns (uint) {
-		return now;
 	}
 
 }
