@@ -30,11 +30,10 @@ contract Stake is Managed {
 	bool public canUnstake;
 	address public duoTokenAddress;
 	IERC20 duoTokenContract;
-	bool public openForStake;
 	uint public lockMinTimeInSecond;
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
 	uint public maxStakePerPfInWei = 200000 * 1e18;  // dynamiclly tunable
-	uint public totalAwardsToDistribute = 0;
+	uint public totalAwardsToDistributeInWei = 0;
 
 	mapping (address => bool) public isWhiteListCommitter;
 	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => pf => queueIdx
@@ -131,10 +130,10 @@ contract Stake is Managed {
 		require(!canStake && !canUnstake);
 		for(uint i = 0;i<addrsList.length; i++) {
 			awards[addrsList[i]] = awards[addrsList[i]].add(amtInWeiList[i]);
-			totalAwardsToDistribute= totalAwardsToDistribute.add(amtInWeiList[i]);
+			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.add(amtInWeiList[i]);
 			emit AddAward(addrsList[i], amtInWeiList[i]);
 		}
-		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistribute);
+		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistributeInWei);
 		return true;
 	}
 
@@ -143,7 +142,7 @@ contract Stake is Managed {
 		require(!canStake && !canUnstake);
 		for(uint i = 0;i<addrsList.length; i++) {
 			awards[addrsList[i]] = awards[addrsList[i]].sub(amtInWeiList[i]);
-			totalAwardsToDistribute= totalAwardsToDistribute.sub(amtInWeiList[i]);
+			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(amtInWeiList[i]);
 			emit ReduceAward(addrsList[i], amtInWeiList[i]);
 		}
 		return true;
@@ -155,13 +154,13 @@ contract Stake is Managed {
 		if(isAll && awards[sender] > 0) {
 			uint awardToClaim = awards[sender];
 			awards[sender] = 0;
-			totalAwardsToDistribute= totalAwardsToDistribute.sub(awardToClaim);
+			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(awardToClaim);
 			duoTokenContract.transfer(sender, awardToClaim);
 			emit ClaimAward(sender, awardToClaim);
 			return true;
 		} else if (!isAll && amtInWei> 0 && amtInWei<=awards[sender] ){
 			awards[sender] = awards[sender].sub(amtInWei);
-			totalAwardsToDistribute= totalAwardsToDistribute.sub(amtInWei);
+			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(amtInWei);
 			duoTokenContract.transfer(sender, amtInWei);
 			emit ClaimAward(sender, amtInWei);
 			return true;
