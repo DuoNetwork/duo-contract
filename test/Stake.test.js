@@ -663,4 +663,62 @@ contract('Stake', accounts => {
 		});
 	});
 
+	describe('setValue', () => {
+		beforeEach(initContracts);
+
+		it('non operator should not be able to set minStakeAmtInWei', async () => {
+			try {
+				await stakeContract.setValue.call(0, 10000, { from: alice });
+				assert.isTrue(false, 'non admin can change minStakeAmtInWei');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('operator should be able to set minStakeAmtInWei', async () => {
+			await stakeContract.setValue(0, util.toWei(10000), { from: operator });
+			const minStakeAmt = await stakeContract.minStakeAmtInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(minStakeAmt.valueOf()), 10000, true), 'not set correctly');
+		});
+
+		it('non operator should not be able to set maxStakePerPfInWei', async () => {
+			try {
+				await stakeContract.setValue.call(1, 10000, { from: alice });
+				assert.isTrue(false, 'non admin can change maxStakePerPfInWei');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('operator should be able to set maxStakePerPfInWei', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const maxStakePerPf = await stakeContract.maxStakePerPfInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 10000000), 'not set correctly');
+		});
+		
+		it('operator should not setValue within operation cooldown', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown - 1);
+			try {
+				await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+				assert.isTrue(false, 'can setValue within cooldown');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+			}
+		});
+
+		it('operator should only setValue beyond operation cooldown', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown + 1);
+			await stakeContract.setValue(1, util.toWei(2000000), { from: operator });
+			const maxStakePerPf = await stakeContract.maxStakePerPfInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 2000000), 'not set correctly');
+			
+		});
+
+
+	});
+
 });
