@@ -18,7 +18,6 @@ contract Stake is Managed {
 	}
 
 	struct StakeLot {
-		address pf;
 		uint timestamp;
 		uint amtInWei;
 	}
@@ -105,7 +104,7 @@ contract Stake is Managed {
 
 		if(userQueueIdx[sender][pfAddr].first == 0) 
 			userQueueIdx[sender][pfAddr].first +=1;
-		userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].last] = StakeLot(pfAddr, getNowTimestamp(), amtInWei);
+		userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].last] = StakeLot(getNowTimestamp(), amtInWei);
 		totalStakAmtInWei[pfAddr] = totalStakAmtInWei[pfAddr].add(amtInWei);
 		emit AddStake(sender, pfAddr, amtInWei);
 		return true;
@@ -119,8 +118,8 @@ contract Stake is Managed {
 		require(getNowTimestamp().sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
 		delete userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].first];
 		userQueueIdx[sender][pfAddr].first += 1;
-		totalStakAmtInWei[stake.pf] = totalStakAmtInWei[stake.pf].sub(stake.amtInWei);
-		emit Unstake(sender, stake.pf, stake.amtInWei);
+		totalStakAmtInWei[pfAddr] = totalStakAmtInWei[pfAddr].sub(stake.amtInWei);
+		emit Unstake(sender, pfAddr, stake.amtInWei);
 		require(duoTokenContract.transfer(sender, stake.amtInWei));
 		return true;
 	}

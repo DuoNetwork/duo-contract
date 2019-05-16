@@ -211,7 +211,6 @@ contract('Stake', accounts => {
 
 			const queueStake = await stakeContract.userStakeQueue.call(alice, pf1, 1);
 			assert.isTrue(
-				queueStake.pf === pf1 &&
 				util.isEqual( util.fromWei(queueStake.amtInWei), 1000 ),
 				'stakequeue not updated correctly'
 			);
@@ -434,10 +433,10 @@ contract('Stake', accounts => {
 				);
 			}
 
-			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWei = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalAwards = awardList.reduce( (accu, cur) => accu + Number(util.fromWei(cur)), 0);
 			assert.isTrue(
-				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), totalAwards),
+				util.isEqual(util.fromWei(totalAwardsToDistributeInWei.valueOf()), totalAwards),
 				'totalAwards not updated correctly'
 			);
 		});
@@ -545,9 +544,9 @@ contract('Stake', accounts => {
 				);
 			}
 
-			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWei = await stakeContract.totalAwardsToDistributeInWei.call();
 			assert.isTrue(
-				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), 0),
+				util.isEqual(util.fromWei(totalAwardsToDistributeInWei.valueOf()), 0),
 				'totalAwards not updated correctly'
 			);
 		});
@@ -581,12 +580,12 @@ contract('Stake', accounts => {
 
 		it('calim all award', async () => {
 			const totalAwardOfAlice = await stakeContract.awards.call(alice);
-			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWei = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalDuoBlance = await duoContract.balanceOf.call(stakeContract.address);
 			const tx = await stakeContract.claimAward(true, 0, {
 				from: alice
 			});
-			const totalAwardsToDistributeAfter = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWeiAfter = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalDuoBlanceAfter = await duoContract.balanceOf.call(stakeContract.address);
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_CLAIM_AWARD, 'wrong name worngly');
 			assert.isTrue(
@@ -596,7 +595,7 @@ contract('Stake', accounts => {
 			);
 
 			assert.isTrue(
-				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), Number(util.fromWei(totalAwardsToDistributeAfter.valueOf())) + 
+				util.isEqual(util.fromWei(totalAwardsToDistributeInWei.valueOf()), Number(util.fromWei(totalAwardsToDistributeInWeiAfter.valueOf())) + 
 				Number(util.fromWei(totalAwardOfAlice))),
 				'totalAward updated worngly'
 			);
@@ -621,12 +620,12 @@ contract('Stake', accounts => {
 			
 
 		it('claim partial award', async () => {
-			const totalAwardsToDistribute = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWei = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalDuoBlance = await duoContract.balanceOf.call(stakeContract.address);
 			const tx = await stakeContract.claimAward(false, util.toWei(50), {
 				from: alice
 			});
-			const totalAwardsToDistributeAfter = await stakeContract.totalAwardsToDistribute.call();
+			const totalAwardsToDistributeInWeiAfter = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalDuoBlanceAfter = await duoContract.balanceOf.call(stakeContract.address);
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_CLAIM_AWARD, 'wrong name worngly');
 			assert.isTrue(
@@ -636,7 +635,7 @@ contract('Stake', accounts => {
 			);
 
 			assert.isTrue(
-				util.isEqual(util.fromWei(totalAwardsToDistribute.valueOf()), Number(util.fromWei(totalAwardsToDistributeAfter.valueOf())) + 
+				util.isEqual(util.fromWei(totalAwardsToDistributeInWei.valueOf()), Number(util.fromWei(totalAwardsToDistributeInWeiAfter.valueOf())) + 
 				50),
 				'totalAward updated worngly'
 			);
