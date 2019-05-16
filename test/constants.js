@@ -1,7 +1,21 @@
 module.exports = {
 	WEI_DENOMINATOR : 1e18,
 	BP_DENOMINATOR : 10000,
-	VM_REVERT_MSG: 'Returned error: VM Exception while processing transaction: revert',
+	VM_REVERT_MSG: {
+		canStakeNotSet: 'Returned error: VM Exception while processing transaction: revert canStake is not set -- Reason given: canStake is not set.',
+		notWhiteListOracle: 'Returned error: VM Exception while processing transaction: revert not whitelist oracle -- Reason given: not whitelist oracle.',
+		stakeLessThanMinAmt: 'Returned error: VM Exception while processing transaction: revert staking amt less than min amt required -- Reason given: staking amt less than min amt required.',
+		revert: 'Returned error: VM Exception while processing transaction: revert',
+		exceedingMaxStakeAmt: 'Returned error: VM Exception while processing transaction: revert exceeding the maximum amt allowed -- Reason given: exceeding the maximum amt allowed.',
+		notEnoughAllowanceOrBalance: 'Returned error: VM Exception while processing transaction: revert exceeding the maximum amt allowed -- Reason given: not enough allowance or balance',
+		canUnstakeNotSet: "Returned error: VM Exception while processing transaction: revert canUnstake is not set -- Reason given: canUnstake is not set.",
+		stakingPeriodPassed : "Returned error: VM Exception while processing transaction: revert exceeding the maximum amt allowed -- Reason given: staking period not passed.",
+		tokenTransferFailure : "Returned error: VM Exception while processing transaction: revert exceeding the maximum amt allowed -- Reason given: token transfer failure.",
+		inputParasWrong : "Returned error: VM Exception while processing transaction: revert input parameters wrong -- Reason given: input parameters wrong.",
+		stakingIsNotFrozen: "Returned error: VM Exception while processing transaction: revert staking is not frozen -- Reason given: staking is not frozen.",
+		notEnoughBalanceCoveringAwards :"Returned error: VM Exception while processing transaction: revert not enough balance to give awards -- Reason given: not enough balance to give awards.",
+		emptyQueue: 'Returned error: VM Exception while processing transaction: revert empty queue -- Reason given: empty queue.'
+	},
 	VM_INVALID_OPCODE_MSG:
 		'Returned error: VM Exception while processing transaction: invalid opcode',
 	DUAL_CUSTODIAN: {

@@ -63,13 +63,13 @@ contract('Stake', accounts => {
 
 		it('set pf correctly', async () => {
 			for(const pf of pfList){
-				let isPf = await stakeContract.isWhiteListCommitter.call(pf);
+				let isPf = await stakeContract.isWhiteListOracle.call(pf);
 				assert.isTrue(isPf, 'pf not set correctly');
 			}
 		});
 
 		it('non pf should be set false', async () => {
-			const isPf = await stakeContract.isWhiteListCommitter.call(nonPf);
+			const isPf = await stakeContract.isWhiteListOracle.call(nonPf);
 			assert.isFalse(isPf, 'non pf address not set as false');
 		});
 
@@ -100,8 +100,8 @@ contract('Stake', accounts => {
 		});
 
 		it('stakePerPf should be set correctly', async () => {
-			const maxStakePerPfInWei = await stakeContract.maxStakePerPfInWei.call();
-			assert.isTrue(util.isEqual(util.fromWei(maxStakePerPfInWei.valueOf()), StakeInit.maxStakePerPf), 'stakePerPf not updated correctly');
+			const maxOracleStakeAmtInWei = await stakeContract.maxOracleStakeAmtInWei.call();
+			assert.isTrue(util.isEqual(util.fromWei(maxOracleStakeAmtInWei.valueOf()), StakeInit.maxStakePerPf), 'stakePerPf not updated correctly');
 		});
 
 		it('roleManagerAddress should be set correctly', async () => {
@@ -135,7 +135,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake when contract is not open');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canStakeNotSet, 'transaction not reverted');
 			}
 		});
 
@@ -147,7 +147,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake for non pf address');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.notWhiteListOracle, 'transaction not reverted');
 			}
 		});
 
@@ -159,7 +159,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can  stake less than minStakeAmt');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakeLessThanMinAmt, 'transaction not reverted');
 			}
 		});
 
@@ -172,7 +172,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake without approving for DUO token trafer');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -184,7 +184,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake more than DUO token balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.exceedingMaxStakeAmt, 'transaction not reverted');
 			}
 		});
 
@@ -229,7 +229,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake more than maxStakePerPf');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.exceedingMaxStakeAmt, 'transaction not reverted');
 			}
 		});
 
@@ -283,7 +283,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can unstake within locking period');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotSet, 'transaction not reverted');
 			}
 		});
 
@@ -297,7 +297,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can unstake without previously staking');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.emptyQueue, 'transaction not reverted');
 			}
 		});
 
@@ -348,7 +348,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can add empty award list');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.inputParasWrong, 'transaction not reverted');
 			}
 		});
 
@@ -359,7 +359,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can add non equal award and addr list');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.inputParasWrong, 'transaction not reverted');
 			}
 		});
 
@@ -371,7 +371,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'non operator can batchAddAward');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -383,7 +383,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchAddAward when canStake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakingIsNotFrozen, 'transaction not reverted');
 			}
 		});
 
@@ -395,7 +395,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchAddAward when unstake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakingIsNotFrozen, 'transaction not reverted');
 			}
 
 		});
@@ -407,7 +407,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchAddAward when contract has not enought duo token');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.notEnoughBalanceCoveringAwards, 'transaction not reverted');
 			}
 		});
 
@@ -420,7 +420,7 @@ contract('Stake', accounts => {
 			for(let i = 0; i < addrList.length; i++){
 				const addr = addrList[i];
 				const award = awardList[i];
-				const awardInContract = await stakeContract.awards.call(addr);
+				const awardInContract = await stakeContract.awardsInWei.call(addr);
 				assert.isTrue( util.isEqual( util.fromWei(awardInContract.valueOf()), util.fromWei(award)), 'award updated wrongly');
 			
 
@@ -461,7 +461,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can reduceAward with empty award list');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.inputParasWrong, 'transaction not reverted');
 			}
 		});
 
@@ -472,7 +472,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can reduce with non equal award and addr list');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.inputParasWrong, 'transaction not reverted');
 			}
 		});
 
@@ -483,7 +483,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'non operator can batchReduceAward');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -495,7 +495,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchReduceAward when canStake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakingIsNotFrozen, 'transaction not reverted');
 			}
 		});
 
@@ -507,7 +507,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchReduceAward when canUnStake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakingIsNotFrozen, 'transaction not reverted');
 			}
 		});
 
@@ -519,7 +519,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can batchReduceAward with more than award');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.stakingIsNotFrozen, 'transaction not reverted');
 			}
 		});
 
@@ -531,7 +531,7 @@ contract('Stake', accounts => {
 			for(let i = 0; i < addrList.length; i++){
 				const addr = addrList[i];
 				const award = awardList[i];
-				const awardInContract = await stakeContract.awards.call(addr);
+				const awardInContract = await stakeContract.awardsInWei.call(addr);
 				assert.isTrue( util.isEqual( util.fromWei(awardInContract.valueOf()), 0), 'award updated wrongly');
 			
 
@@ -552,7 +552,6 @@ contract('Stake', accounts => {
 		});
 	});
 
-	// TODO
 	describe('claimAward', () => {
 		beforeEach(async () => {
 			await initContracts();
@@ -574,12 +573,12 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can claim award when canUnstake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotSet, 'transaction not reverted');
 			}
 		});
 
 		it('calim all award', async () => {
-			const totalAwardOfAlice = await stakeContract.awards.call(alice);
+			const totalAwardOfAlice = await stakeContract.awardsInWei.call(alice);
 			const totalAwardsToDistributeInWei = await stakeContract.totalAwardsToDistributeInWei.call();
 			const totalDuoBlance = await duoContract.balanceOf.call(stakeContract.address);
 			const tx = await stakeContract.claimAward(true, 0, {
@@ -614,7 +613,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can claim award when canUnstake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 			
@@ -657,7 +656,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can claim award when there is non award');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 	});
@@ -670,7 +669,7 @@ contract('Stake', accounts => {
 				await stakeContract.setValue.call(0, 10000, { from: alice });
 				assert.isTrue(false, 'non admin can change minStakeAmtInWei');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -680,18 +679,18 @@ contract('Stake', accounts => {
 			assert.isTrue( util.isEqual(util.fromWei(minStakeAmt.valueOf()), 10000, true), 'not set correctly');
 		});
 
-		it('non operator should not be able to set maxStakePerPfInWei', async () => {
+		it('non operator should not be able to set maxOracleStakeAmtInWei', async () => {
 			try {
 				await stakeContract.setValue.call(1, 10000, { from: alice });
-				assert.isTrue(false, 'non admin can change maxStakePerPfInWei');
+				assert.isTrue(false, 'non admin can change maxOracleStakeAmtInWei');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
-		it('operator should be able to set maxStakePerPfInWei', async () => {
+		it('operator should be able to set maxOracleStakeAmtInWei', async () => {
 			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
-			const maxStakePerPf = await stakeContract.maxStakePerPfInWei.call();
+			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
 			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 10000000), 'not set correctly');
 		});
 		
@@ -703,7 +702,7 @@ contract('Stake', accounts => {
 				await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
 				assert.isTrue(false, 'can setValue within cooldown');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -712,7 +711,7 @@ contract('Stake', accounts => {
 			const currentTs = await stakeContract.timestamp.call();
 			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown + 1);
 			await stakeContract.setValue(1, util.toWei(2000000), { from: operator });
-			const maxStakePerPf = await stakeContract.maxStakePerPfInWei.call();
+			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
 			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 2000000), 'not set correctly');
 			
 		});

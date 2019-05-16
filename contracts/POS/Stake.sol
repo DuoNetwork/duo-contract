@@ -3,7 +3,7 @@ import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
 
-/// @title POS
+/// @title Stake
 /// @author duo.network
 
 contract Stake is Managed {
@@ -31,22 +31,21 @@ contract Stake is Managed {
 	IERC20 duoTokenContract;
 	uint public lockMinTimeInSecond;
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
-	uint public maxStakePerPfInWei = 200000 * 1e18;  // dynamiclly tunable
+	uint public maxOracleStakeAmtInWei = 200000 * 1e18;  // dynamiclly tunable
 	uint public totalAwardsToDistributeInWei = 0;
 
-	mapping (address => bool) public isWhiteListCommitter;
+	mapping (address => bool) public isWhiteListOracle;
 	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => pf => queueIdx
 	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => pf => stakeOrder => Stakelot
 	mapping (address => uint) public totalStakAmtInWei;
-	// mapping (address => uint) public priceFeedIndex;
-	address[] public priceFeedList;
-	mapping (address => uint) public awards;
+	address[] public oracleList;
+	mapping (address => uint) public awardsInWei;
 
 	/*
      * Modifier
      */
-	modifier isPriceFeed(address addr) {
-		require(isWhiteListCommitter[addr]);
+	modifier isOracle(address addr) {
+		require(isWhiteListOracle[addr], "not whitelist oracle");
 		_;
 	}
 
@@ -72,19 +71,19 @@ contract Stake is Managed {
 		address roleManagerAddr,
 		address opt,
 		uint optCoolDown
-		) 
+		)
 		public
-		Managed(roleManagerAddr, opt, optCoolDown) 
+		Managed(roleManagerAddr, opt, optCoolDown)
 	{
 		duoTokenAddress = duoTokenAddr;
 		duoTokenContract = IERC20(duoTokenAddr);
-		for(uint i= 0; i <pfList.length; i++){
-			isWhiteListCommitter[pfList[i]] = true;
-			priceFeedList.push(pfList[i]);
+		for(uint i = 0; i<pfList.length; i++) {
+			isWhiteListOracle[pfList[i]] = true;
+			oracleList.push(pfList[i]);
 		}
 		lockMinTimeInSecond = lockTime;
 		minStakeAmtInWei = minStakeAmt;
-		maxStakePerPfInWei = maxStakePerPf;
+		maxOracleStakeAmtInWei = maxStakePerPf;
 		canStake = false;
 		canUnstake = false;
 	}
@@ -93,73 +92,73 @@ contract Stake is Managed {
 	/*
      * Public Functions
      */
-	function stake(address pfAddr, uint amtInWei) public isPriceFeed(pfAddr) returns(bool){
-		require(canStake);
+	function stake(address oracleAddr, uint amtInWei) public isOracle(oracleAddr) returns(bool){
+		require(canStake, "canStake is not set");
 		address sender = msg.sender;
-		require(amtInWei >= minStakeAmtInWei);
-		require(totalStakAmtInWei[pfAddr].add(amtInWei) <= maxStakePerPfInWei);
-		duoTokenContract.transferFrom(sender, address(this), amtInWei);
-		userQueueIdx[sender][pfAddr].last +=1;
-
-
-		if(userQueueIdx[sender][pfAddr].first == 0) 
-			userQueueIdx[sender][pfAddr].first +=1;
-		userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].last] = StakeLot(getNowTimestamp(), amtInWei);
-		totalStakAmtInWei[pfAddr] = totalStakAmtInWei[pfAddr].add(amtInWei);
-		emit AddStake(sender, pfAddr, amtInWei);
+		require(amtInWei >= minStakeAmtInWei, "staking amt less than min amt required");
+		require(totalStakAmtInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
+		require(duoTokenContract.transferFrom(sender, address(this), amtInWei), "not enough allowance or balance");
+		userQueueIdx[sender][oracleAddr].last += 1;
+		if(userQueueIdx[sender][oracleAddr].first == 0)
+			userQueueIdx[sender][oracleAddr].first += 1;
+		userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].last] = StakeLot(getNowTimestamp(), amtInWei);
+		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].add(amtInWei);
+		emit AddStake(sender, oracleAddr, amtInWei);
 		return true;
 	}
 
-	function unstake(address pfAddr) public returns(bool) {
-		require(canUnstake);
+	function unstake(address oracleAddr) public returns(bool) {
+		require(canUnstake, "canUnstake is not set");
 		address sender = msg.sender;
-		require(userQueueIdx[sender][pfAddr].last >= userQueueIdx[sender][pfAddr].first && userQueueIdx[sender][pfAddr].last > 0);  // non-empty queue
-		StakeLot memory stake = userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].first];
-		require(getNowTimestamp().sub(stake.timestamp).sub(lockMinTimeInSecond) > 0); 
-		delete userStakeQueue[sender][pfAddr][userQueueIdx[sender][pfAddr].first];
-		userQueueIdx[sender][pfAddr].first += 1;
-		totalStakAmtInWei[pfAddr] = totalStakAmtInWei[pfAddr].sub(stake.amtInWei);
-		emit Unstake(sender, pfAddr, stake.amtInWei);
-		require(duoTokenContract.transfer(sender, stake.amtInWei));
+		require(
+			userQueueIdx[sender][oracleAddr].last >= userQueueIdx[sender][oracleAddr].first && userQueueIdx[sender][oracleAddr].first > 0, "empty queue"
+		);  // non-empty queue
+		StakeLot memory stake = userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
+		require(getNowTimestamp().sub(stake.timestamp).sub(lockMinTimeInSecond) > 0, "staking period not passed");
+		delete userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
+		userQueueIdx[sender][oracleAddr].first += 1;
+		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].sub(stake.amtInWei);
+		emit Unstake(sender, oracleAddr, stake.amtInWei);
+		require(duoTokenContract.transfer(sender, stake.amtInWei), "token transfer failure");
 		return true;
 	}
 
 	function batchAddAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
-		require(addrsList.length == amtInWeiList.length && addrsList.length >0);
-		require(!canStake && !canUnstake);
+		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
+		require(!canStake && !canUnstake, "staking is not frozen");
 		for(uint i = 0;i<addrsList.length; i++) {
-			awards[addrsList[i]] = awards[addrsList[i]].add(amtInWeiList[i]);
-			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.add(amtInWeiList[i]);
+			awardsInWei[addrsList[i]] = awardsInWei[addrsList[i]].add(amtInWeiList[i]);
+			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.add(amtInWeiList[i]);
 			emit AddAward(addrsList[i], amtInWeiList[i]);
 		}
-		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistributeInWei);
+		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistributeInWei, "not enough balance to give awards");
 		return true;
 	}
 
 	function batchReduceAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
-		require(addrsList.length == amtInWeiList.length && addrsList.length >0);
-		require(!canStake && !canUnstake);
+		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
+		require(!canStake && !canUnstake, "staking is not frozen");
 		for(uint i = 0;i<addrsList.length; i++) {
-			awards[addrsList[i]] = awards[addrsList[i]].sub(amtInWeiList[i]);
-			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(amtInWeiList[i]);
+			awardsInWei[addrsList[i]] = awardsInWei[addrsList[i]].sub(amtInWeiList[i]);
+			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(amtInWeiList[i]);
 			emit ReduceAward(addrsList[i], amtInWeiList[i]);
 		}
 		return true;
 	}
 
 	function claimAward(bool isAll, uint amtInWei) public returns(bool) {
-		require(canUnstake);
+		require(canUnstake, "canUnstake is not set");
 		address sender = msg.sender;
-		if(isAll && awards[sender] > 0) {
-			uint awardToClaim = awards[sender];
-			awards[sender] = 0;
-			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(awardToClaim);
+		if(isAll && awardsInWei[sender] > 0) {
+			uint awardToClaim = awardsInWei[sender];
+			awardsInWei[sender] = 0;
+			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(awardToClaim);
 			duoTokenContract.transfer(sender, awardToClaim);
 			emit ClaimAward(sender, awardToClaim);
 			return true;
-		} else if (!isAll && amtInWei> 0 && amtInWei<=awards[sender] ){
-			awards[sender] = awards[sender].sub(amtInWei);
-			totalAwardsToDistributeInWei= totalAwardsToDistributeInWei.sub(amtInWei);
+		} else if (!isAll && amtInWei > 0 && amtInWei <= awardsInWei[sender]){
+			awardsInWei[sender] = awardsInWei[sender].sub(amtInWei);
+			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(amtInWei);
 			duoTokenContract.transfer(sender, amtInWei);
 			emit ClaimAward(sender, amtInWei);
 			return true;
@@ -174,8 +173,8 @@ contract Stake is Managed {
 		return true;
 	}
 
-	function getPfSize() public returns(uint size) {
-		return priceFeedList.length;
+	function getPfSize() public view returns(uint size) {
+		return oracleList.length;
 	}
 
 	function getNowTimestamp() internal view returns (uint) {
@@ -183,20 +182,20 @@ contract Stake is Managed {
 	}
 
 	function setValue(
-		uint idx, 
+		uint idx,
 		uint newValue
-	) 
-		public 
-		only(operator) 
-		inUpdateWindow() 
+	)
+		public
+		only(operator)
+		inUpdateWindow()
 	returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
 			oldValue = minStakeAmtInWei;
 			minStakeAmtInWei = newValue;
 		} else if (idx == 1) {
-			oldValue = maxStakePerPfInWei;
-			maxStakePerPfInWei = newValue;
+			oldValue = maxOracleStakeAmtInWei;
+			maxOracleStakeAmtInWei = newValue;
 		}  else {
 			revert();
 		}

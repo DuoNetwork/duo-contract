@@ -338,7 +338,7 @@ contract('Custodian', accounts => {
 
 					assert.isTrue(false, 'able to transfer more than balance');
 				} catch (err) {
-					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 				}
 			});
 
@@ -412,7 +412,7 @@ contract('Custodian', accounts => {
 					);
 					assert.isTrue(false, 'can transferFrom of more than allowance');
 				} catch (err) {
-					assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 				}
 			});
 
@@ -506,7 +506,7 @@ contract('Custodian', accounts => {
 				await custodianContract.collectFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'non fc can withdraw');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'non fc can withdraw');
 			}
 		});
 
@@ -562,7 +562,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateOracle.call(newOracleAddr, { from: alice });
 				assert.isTrue(false, 'non operator can update address');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -573,7 +573,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update not passed contract');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -585,7 +585,7 @@ contract('Custodian', accounts => {
 				});
 				assert.isTrue(false, 'can update non passed contract');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -618,7 +618,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: alice });
 				assert.isTrue(false, 'address not in pool can update address');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -627,7 +627,7 @@ contract('Custodian', accounts => {
 				await custodianContract.updateFeeCollector.call({ from: PoolInit[1][0] });
 				assert.isTrue(false, 'hot address can update address');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 

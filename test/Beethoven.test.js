@@ -283,7 +283,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'fetched price 0');
 				} catch (err) {
-					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 				}
 			});
 
@@ -296,7 +296,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'fetched with future time');
 				} catch (err) {
-					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 				}
 			});
 
@@ -311,7 +311,7 @@ contract('Beethoven', accounts => {
 					await beethovenContract.fetchPrice();
 					assert.isTrue(false, 'can fetch within cool down');
 				} catch (err) {
-					assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+					assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 				}
 			});
 
@@ -398,7 +398,7 @@ contract('Beethoven', accounts => {
 						await beethovenContract.fetchPrice();
 						assert.isTrue(false, 'fetched price 0');
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				});
 			}
@@ -560,7 +560,7 @@ contract('Beethoven', accounts => {
 				});
 				assert.isTrue(false, 'still can create');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can create ');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can create ');
 			}
 		});
 
@@ -572,7 +572,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can redeem');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can redeem ');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can redeem ');
 			}
 		});
 
@@ -590,7 +590,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can transfer A token');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer A token');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can transfer A token');
 			}
 		});
 
@@ -608,7 +608,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can transfer B token');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer B token');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can transfer B token');
 			}
 		});
 
@@ -618,7 +618,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set createCommInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set createCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can set createCommInBP');
 			}
 		});
 
@@ -628,7 +628,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set redeemCommInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set redeemCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can set redeemCommInBP');
 			}
 		});
 
@@ -637,7 +637,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(2, 1000, { from: creator });
 				assert.isTrue(false, 'still can set iterationGasThreshold');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set iterationGasThreshold');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still set iterationGasThreshold');
 			}
 		});
 
@@ -646,7 +646,7 @@ contract('Beethoven', accounts => {
 				await beethovenContract.setValue.call(3, 1000, { from: creator });
 				assert.isTrue(false, 'still can set preResetWaitingBlocks');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set preResetWaitingBlocks');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still set preResetWaitingBlocks');
 			}
 		});
 
@@ -656,7 +656,7 @@ contract('Beethoven', accounts => {
 
 				assert.isTrue(false, 'still can set priceTolInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set priceTolInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still set priceTolInBP');
 			}
 		});
 

@@ -205,7 +205,7 @@ contract('OptionCustodian', accounts => {
 				);
 				assert.isTrue(false, 'can start');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -222,7 +222,7 @@ contract('OptionCustodian', accounts => {
 				);
 				assert.isTrue(false, 'can start with oracle not ready');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -361,7 +361,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.create.call(util.toWei(0), { from: alice });
 				assert.isTrue(false, 'can create with 0');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -370,7 +370,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.create.call(util.toWei(amtEth * 2), { from: alice });
 				assert.isTrue(false, 'can create with insufficient allowance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -386,7 +386,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.create.call(util.toWei(amtEth * 4), { from: alice });
 				assert.isTrue(false, 'can create more than allowance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -508,7 +508,7 @@ contract('OptionCustodian', accounts => {
 				});
 				assert.isTrue(false, 'able to redeem more than balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem more than allowed');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'able to redeem more than allowed');
 			}
 		});
 
@@ -677,7 +677,7 @@ contract('OptionCustodian', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -686,7 +686,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.setValue.call(0, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -720,7 +720,7 @@ contract('OptionCustodian', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -729,7 +729,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.setValue.call(1, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -763,7 +763,7 @@ contract('OptionCustodian', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -772,7 +772,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.setValue.call(2, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -805,7 +805,7 @@ contract('OptionCustodian', accounts => {
 				await optionCustodianContract.setValue.call(3, 100000, { from: alice });
 				assert.isTrue(false, 'non admin can change gas threshhold');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -839,7 +839,7 @@ contract('OptionCustodian', accounts => {
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -850,7 +850,7 @@ contract('OptionCustodian', accounts => {
 				});
 				assert.isTrue(false, 'can set value with invalid index');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 	});

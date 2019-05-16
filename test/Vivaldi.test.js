@@ -156,7 +156,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -178,7 +178,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -208,7 +208,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -239,7 +239,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -270,7 +270,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -297,7 +297,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.startRound.call({ from: creator });
 				assert.isTrue(false, 'can startRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -465,7 +465,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.endRound.call({ from: creator });
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -481,7 +481,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.endRound.call({ from: creator });
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -497,7 +497,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.endRound.call({ from: creator });
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -514,7 +514,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.endRound.call({ from: creator });
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -531,7 +531,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.endRound.call({ from: creator });
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -697,7 +697,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.forceEndRound(util.toWei(forcePrice), time.valueOf());
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -722,7 +722,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.forceEndRound(util.toWei(forcePrice), time.valueOf());
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -748,7 +748,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.forceEndRound(util.toWei(forcePrice), requiredTime + 1);
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -774,7 +774,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.forceEndRound(util.toWei(0), requiredTime);
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -800,7 +800,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.forceEndRound(util.toWei(forcePrice), requiredTime);
 				assert.isTrue(false, 'can endRound');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -920,7 +920,7 @@ contract('Vivaldi', accounts => {
 				});
 				assert.isTrue(false, 'still can create');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can create ');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can create ');
 			}
 		});
 
@@ -932,7 +932,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can redeem');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can redeem ');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can redeem ');
 			}
 		});
 
@@ -950,7 +950,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can transfer A token');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer A token');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can transfer A token');
 			}
 		});
 
@@ -968,7 +968,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can transfer B token');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can transfer B token');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can transfer B token');
 			}
 		});
 
@@ -978,7 +978,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can set createCommInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set createCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can set createCommInBP');
 			}
 		});
 
@@ -988,7 +988,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can set redeemCommInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set redeemCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can set redeemCommInBP');
 			}
 		});
 
@@ -998,7 +998,7 @@ contract('Vivaldi', accounts => {
 
 				assert.isTrue(false, 'still can set redeemCommInBP');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still can set redeemCommInBP');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still can set redeemCommInBP');
 			}
 		});
 
@@ -1007,7 +1007,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.setValue.call(3, 1000, { from: creator });
 				assert.isTrue(false, 'still can set iterationGasThreshold');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set iterationGasThreshold');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still set iterationGasThreshold');
 			}
 		});
 
@@ -1016,7 +1016,7 @@ contract('Vivaldi', accounts => {
 				await vivaldiContract.setValue.call(4, 1000, { from: creator });
 				assert.isTrue(false, 'still can set preResetWaitingBlocks');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'still set preResetWaitingBlocks');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'still set preResetWaitingBlocks');
 			}
 		});
 

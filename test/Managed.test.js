@@ -84,7 +84,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager.call(roleManagerContract.address);
 				assert.isTrue(false, 'can set not passed role manager contract');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -94,7 +94,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager.call(alice);
 				assert.isTrue(false, 'can set role manager contract without moderator');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -121,7 +121,7 @@ contract('Managed', accounts => {
 				await managedContract.updateRoleManager(new2RoleManagerContract.address);
 				assert.isTrue(false, 'can set within cool down');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 	});
@@ -134,7 +134,7 @@ contract('Managed', accounts => {
 				await managedContract.updateOperator({ from: alice });
 				assert.isTrue(false, 'address not in pool can update');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -168,7 +168,7 @@ contract('Managed', accounts => {
 				await custodianContract.updateOperator({ from: bob });
 				assert.isTrue(false, 'hot addr can update');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 	});

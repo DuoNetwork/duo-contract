@@ -176,7 +176,7 @@ contract('CustodianToken', accounts => {
 				});
 				assert.isTrue(false, 'can transfer of more than balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -213,7 +213,7 @@ contract('CustodianToken', accounts => {
 				});
 				assert.isTrue(false, 'can transfer of more than balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -224,7 +224,7 @@ contract('CustodianToken', accounts => {
 				});
 				assert.isTrue(false, 'non custodian can call emitTransfer');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 

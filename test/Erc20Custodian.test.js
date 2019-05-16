@@ -196,7 +196,7 @@ contract('Erc20Custodian', accounts => {
 				await erc20CustodianContract.collectFee.call(util.toWei(1), { from: alice });
 				assert.isTrue(false, 'non fc can withDrawFee');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'non fc can withdraw');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'non fc can withdraw');
 			}
 		});
 

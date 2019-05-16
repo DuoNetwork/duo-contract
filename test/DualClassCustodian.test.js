@@ -277,7 +277,7 @@ contract('DualClassCustodian', accounts => {
 				);
 				assert.isTrue(false, 'can start');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -291,7 +291,7 @@ contract('DualClassCustodian', accounts => {
 				);
 				assert.isTrue(false, 'can start with oracle not ready');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 			}
 		});
 
@@ -424,13 +424,13 @@ contract('DualClassCustodian', accounts => {
 						);
 						assert.isTrue(false, 'can create with 0');
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				} else {
 					try {
 						await dualClassCustodianContract.create.call({ from: alice, value: 0 });
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				}
 			});
@@ -445,7 +445,7 @@ contract('DualClassCustodian', accounts => {
 						);
 						assert.isTrue(false, 'can create with insufficient allowance');
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				});
 
@@ -465,7 +465,7 @@ contract('DualClassCustodian', accounts => {
 						);
 						assert.isTrue(false, 'can create more than allowance');
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				});
 
@@ -481,7 +481,7 @@ contract('DualClassCustodian', accounts => {
 						);
 						assert.isTrue(false, 'can create with 0x0');
 					} catch (err) {
-						assert.equal(err.message, CST.VM_REVERT_MSG, 'not reverted');
+						assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
 					}
 				});
 			}
@@ -713,7 +713,7 @@ contract('DualClassCustodian', accounts => {
 				});
 				assert.isTrue(false, 'able to redeem more than balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem more than allowed');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'able to redeem more than allowed');
 			}
 		});
 
@@ -863,7 +863,7 @@ contract('DualClassCustodian', accounts => {
 				});
 				assert.isTrue(false, 'able to redeem in trading state');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeem in trading state');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'able to redeem in trading state');
 			}
 		});
 
@@ -888,7 +888,7 @@ contract('DualClassCustodian', accounts => {
 				});
 				assert.isTrue(false, 'able to redeemAll with 0 balance');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'able to redeemAll with 0 balance');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'able to redeemAll with 0 balance');
 			}
 		});
 
@@ -973,7 +973,7 @@ contract('DualClassCustodian', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -982,7 +982,7 @@ contract('DualClassCustodian', accounts => {
 				await dualClassCustodianContract.setValue.call(0, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -1016,7 +1016,7 @@ contract('DualClassCustodian', accounts => {
 
 				assert.isTrue(false, 'admin can set comission higher than 10000');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -1025,7 +1025,7 @@ contract('DualClassCustodian', accounts => {
 				await dualClassCustodianContract.setValue.call(1, 100, { from: alice });
 				assert.isTrue(false, 'non admin can change comm');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -1058,7 +1058,7 @@ contract('DualClassCustodian', accounts => {
 				await dualClassCustodianContract.setValue.call(2, 100000, { from: alice });
 				assert.isTrue(false, 'non admin can change gas threshhold');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -1092,7 +1092,7 @@ contract('DualClassCustodian', accounts => {
 
 				assert.isTrue(false, 'non admin can change pre reset waiting block');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 
@@ -1103,7 +1103,7 @@ contract('DualClassCustodian', accounts => {
 				});
 				assert.isTrue(false, 'can set value with invalid index');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
 		});
 	});
