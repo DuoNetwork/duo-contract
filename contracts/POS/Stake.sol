@@ -33,6 +33,8 @@ contract Stake is Managed {
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
 	uint public maxOracleStakeAmtInWei = 200000 * 1e18;  // dynamiclly tunable
 	uint public totalAwardsToDistributeInWei = 0;
+	address[] public users;
+	mapping (address => uint) public existingUsers;
 
 	mapping (address => bool) public isWhiteListOracle;
 	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => pf => queueIdx
@@ -103,6 +105,7 @@ contract Stake is Managed {
 			userQueueIdx[sender][oracleAddr].first += 1;
 		userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].last] = StakeLot(getNowTimestamp(), amtInWei);
 		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].add(amtInWei);
+		checkUser(sender);
 		emit AddStake(sender, oracleAddr, amtInWei);
 		return true;
 	}
@@ -120,6 +123,7 @@ contract Stake is Managed {
 		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].sub(stake.amtInWei);
 		emit Unstake(sender, oracleAddr, stake.amtInWei);
 		require(duoTokenContract.transfer(sender, stake.amtInWei), "token transfer failure");
+		checkUser(sender);
 		return true;
 	}
 
@@ -173,8 +177,45 @@ contract Stake is Managed {
 		return true;
 	}
 
+	function checkUser(address user) internal {
+
+		bool isUser = false;
+		for(uint i = 0; i < oracleList.length; i ++){
+			QueueIdx memory queueIdx = userQueueIdx[user][oracleList[i]];
+
+			if(queueIdx.last >= queueIdx.first && queueIdx.first > 0){
+				isUser = true;
+			}
+		}
+
+		uint userIdx = existingUsers[user];
+
+		if(userIdx > 0){
+			if(!isUser) {
+				uint lastIdx = users.length;
+				address lastUser = users[lastIdx - 1];
+				if (userIdx < lastIdx) {
+					users[userIdx - 1] = lastUser;
+					existingUsers[lastUser] = userIdx;
+				}
+				delete users[lastIdx - 1];
+				existingUsers[user] = 0;
+				users.length--;
+			}
+		} else {
+			if(isUser) {
+				users.push(user);
+				existingUsers[user] = users.length;
+			}
+		}
+	}
+
 	function getPfSize() public view returns(uint size) {
 		return oracleList.length;
+	}
+
+	function getUserSize() public view returns (uint) {
+		return users.length;
 	}
 
 	function getNowTimestamp() internal view returns (uint) {
