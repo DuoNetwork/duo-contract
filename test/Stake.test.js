@@ -197,7 +197,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
-				util.isEqual(tx.logs[0].args.pf.valueOf(), pf1) && 
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) && 
 				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				"event logs not emitted correctly"
 			);
@@ -245,7 +245,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
-				util.isEqual(tx.logs[0].args.pf.valueOf(), pf1) && 
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) && 
 				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				"event logs not emitted correctly"
 			);
@@ -313,7 +313,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_UNSTAKE);
 			const eventArgs = tx.logs[0].args;
-			assert.isTrue(eventArgs.from === alice && eventArgs.pf === pf1 && 
+			assert.isTrue(eventArgs.from === alice && eventArgs.oracle === pf1 && 
 				util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2), 'event args wrong' );
 
 			const queIdx = await stakeContract.userQueueIdx.call(alice, pf1);

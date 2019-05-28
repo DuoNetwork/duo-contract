@@ -37,8 +37,8 @@ contract Stake is Managed {
 	mapping (address => uint) public existingUsers;
 
 	mapping (address => bool) public isWhiteListOracle;
-	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => pf => queueIdx
-	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => pf => stakeOrder => Stakelot
+	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => oracle => queueIdx
+	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => oracle => stakeOrder => Stakelot
 	mapping (address => uint) public totalStakAmtInWei;
 	address[] public oracleList;
 	mapping (address => uint) public awardsInWei;
@@ -54,8 +54,8 @@ contract Stake is Managed {
 	/*
      * Events
      */
-	event AddStake(address indexed from, address indexed pf, uint amtInWei);
-	event Unstake(address indexed from, address indexed pf, uint amtInWei);
+	event AddStake(address indexed from, address indexed oracle, uint amtInWei);
+	event Unstake(address indexed from, address indexed oracle, uint amtInWei);
 	event SetValue(uint index, uint oldValue, uint newValue);
 	event AddAward(address staker, uint awardAmtInWei);
 	event ReduceAward(address staker, uint awardAmtInWei);
@@ -66,10 +66,10 @@ contract Stake is Managed {
      */
 	constructor(
 		address duoTokenAddr,
-		address[] memory pfList,
+		address[] memory oracleAddrList,
 		uint lockTime,
 		uint minStakeAmt,
-		uint maxStakePerPf,
+		uint maxStakePerOracle,
 		address roleManagerAddr,
 		address opt,
 		uint optCoolDown
@@ -79,13 +79,13 @@ contract Stake is Managed {
 	{
 		duoTokenAddress = duoTokenAddr;
 		duoTokenContract = IERC20(duoTokenAddr);
-		for(uint i = 0; i<pfList.length; i++) {
-			isWhiteListOracle[pfList[i]] = true;
-			oracleList.push(pfList[i]);
+		for(uint i = 0; i<oracleAddrList.length; i++) {
+			isWhiteListOracle[oracleAddrList[i]] = true;
+			oracleList.push(oracleAddrList[i]);
 		}
 		lockMinTimeInSecond = lockTime;
 		minStakeAmtInWei = minStakeAmt;
-		maxOracleStakeAmtInWei = maxStakePerPf;
+		maxOracleStakeAmtInWei = maxStakePerOracle;
 		canStake = false;
 		canUnstake = false;
 	}
@@ -210,7 +210,7 @@ contract Stake is Managed {
 		}
 	}
 
-	function getPfSize() public view returns(uint size) {
+	function getOracleSize() public view returns(uint size) {
 		return oracleList.length;
 	}
 
