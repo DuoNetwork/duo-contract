@@ -197,7 +197,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
-				util.isEqual(tx.logs[0].args.pf.valueOf(), pf1) && 
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) && 
 				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				"event logs not emitted correctly"
 			);
@@ -214,6 +214,9 @@ contract('Stake', accounts => {
 				util.isEqual( util.fromWei(queueStake.amtInWei), 1000 ),
 				'stakequeue not updated correctly'
 			);
+
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 1, 'userLenght wrong');
 			
 		});
 
@@ -245,7 +248,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue( 
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) && 
-				util.isEqual(tx.logs[0].args.pf.valueOf(), pf1) && 
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) && 
 				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				"event logs not emitted correctly"
 			);
@@ -313,7 +316,7 @@ contract('Stake', accounts => {
 
 			assert.isTrue(tx.logs.length ===1 && tx.logs[0].event === EVENT_UNSTAKE);
 			const eventArgs = tx.logs[0].args;
-			assert.isTrue(eventArgs.from === alice && eventArgs.pf === pf1 && 
+			assert.isTrue(eventArgs.from === alice && eventArgs.oracle === pf1 && 
 				util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2), 'event args wrong' );
 
 			const queIdx = await stakeContract.userQueueIdx.call(alice, pf1);
@@ -329,6 +332,9 @@ contract('Stake', accounts => {
 
 			const contractDuoBalance = await duoContract.balanceOf.call(stakeContract.address);
 			assert.isTrue( util.isEqual(util.fromWei(contractDuoBalance.valueOf()),0), 'contractDuoBalance updated wrongly' );
+
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 			
 		});
 
@@ -658,6 +664,15 @@ contract('Stake', accounts => {
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
+		});
+	});
+
+	describe('getUserSize', () => {
+		before(initContracts);
+
+		it('userLenght should be 0', async () => {
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
 	});
 
