@@ -214,6 +214,9 @@ contract('Stake', accounts => {
 				util.isEqual( util.fromWei(queueStake.amtInWei), 1000 ),
 				'stakequeue not updated correctly'
 			);
+
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 1, 'userLenght wrong');
 			
 		});
 
@@ -329,6 +332,9 @@ contract('Stake', accounts => {
 
 			const contractDuoBalance = await duoContract.balanceOf.call(stakeContract.address);
 			assert.isTrue( util.isEqual(util.fromWei(contractDuoBalance.valueOf()),0), 'contractDuoBalance updated wrongly' );
+
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 			
 		});
 
@@ -658,6 +664,15 @@ contract('Stake', accounts => {
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
+		});
+	});
+
+	describe('getUserSize', () => {
+		before(initContracts);
+
+		it('userLenght should be 0', async () => {
+			let userSize = await stakeContract.getUserSize.call();
+			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
 	});
 
