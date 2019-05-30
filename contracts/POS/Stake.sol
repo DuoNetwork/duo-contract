@@ -185,6 +185,7 @@ contract Stake is Managed {
 
 			if(queueIdx.last >= queueIdx.first && queueIdx.first > 0){
 				isUser = true;
+				break;
 			}
 		}
 
