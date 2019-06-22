@@ -19,7 +19,7 @@ const EVENT_ReduceAward = 'ReduceAward';
 const EVENT_CLAIM_AWARD = 'ClaimAward';
 const EVENT_UPDATE_UPLOADER = 'UpdateUploader';
 
-contract.only('Stake', accounts => {
+contract('Stake', accounts => {
 	let duoContract, stakeContract, roleManagerContract, custodianContracct;
 	let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
