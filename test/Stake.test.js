@@ -1,10 +1,13 @@
 const Stake = artifacts.require('../contracts/mocks/StakeMock.sol');
 const DUO = artifacts.require('../contracts/tokens/DUO.sol');
 const RoleManager = artifacts.require('../contracts/mocks/EsplanadeMock.sol');
+const Custodian = artifacts.require('../contracts/mocks/CustodianMock.sol');
 const CST = require('./constants');
 const util = require('./util');
 
 const InitParas = require('../migrations/contractInitParas.json');
+const Pool = InitParas['Pool'];
+const BeethovenInit = InitParas['BTV']['PPT'];
 const DuoInit = InitParas['DUO'];
 const StakeInit = InitParas['Stake'];
 const RoleManagerInit = InitParas['RoleManager'];
@@ -14,9 +17,11 @@ const EVENT_UNSTAKE = 'Unstake';
 const EVENT_ADD_AWARD = 'AddAward';
 const EVENT_ReduceAward = 'ReduceAward';
 const EVENT_CLAIM_AWARD = 'ClaimAward';
+const EVENT_UPDATE_UPLOADER = 'UpdateUploader';
 
-contract('Stake', accounts => {
-	let duoContract, stakeContract, roleManagerContract;
+contract.only('Stake', accounts => {
+	let duoContract, stakeContract, roleManagerContract, custodianContracct;
+	let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
 	const creator = accounts[0];
 	const pf1 = accounts[1];
@@ -25,8 +30,30 @@ contract('Stake', accounts => {
 	const pfList = [pf1,pf2,pf3];
 	const nonPf = accounts[4];
 	const operator = accounts[5];
-	const alice = accounts[6];
-	const bob = accounts[7];
+	const uploader = accounts[6];
+	const alice = accounts[7];
+	const bob = accounts[8];
+	const fc = accounts[9];
+	const newModerator = accounts[10];
+
+	const initCustodian = async () => {
+		custodianContracct = await Custodian.new(
+			'contract code',
+			0,
+			roleManagerContract.address,
+			fc,
+			BeethovenInit.comm,
+			BeethovenInit.pd,
+			BeethovenInit.preResetWaitBlk,
+			BeethovenInit.pxFetchCoolDown,
+			creator,
+			BeethovenInit.optCoolDown,
+			util.toWei(BeethovenInit.minimumBalance),
+			{
+				from: creator
+			}
+		);
+	};
 
 
 	const initContracts = async () => {
@@ -51,6 +78,7 @@ contract('Stake', accounts => {
 			util.toWei(StakeInit.maxStakePerPf),
 			roleManagerContract.address,
 			operator,
+			uploader,
 			StakeInit.optCoolDown,
 			{
 				from: creator
@@ -112,6 +140,12 @@ contract('Stake', accounts => {
 		it('operator address should be set correctly', async () => {
 			const operator = await stakeContract.operator.call();
 			assert.isTrue(operator.valueOf() === operator, 'operator not updated correctly');		
+
+		});
+
+		it('uploader address should be set correctly', async () => {
+			const uploader = await stakeContract.uploader.call();
+			assert.isTrue(uploader.valueOf() === uploader, 'uploader not updated correctly');		
 
 		});
 
@@ -350,7 +384,7 @@ contract('Stake', accounts => {
 		it('should not add empty award list', async () => {
 			try {
 				await stakeContract.batchAddAward([], [], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can add empty award list');
 			} catch (err) {
@@ -361,7 +395,7 @@ contract('Stake', accounts => {
 		it('should not non equal award and addr list', async () => {
 			try {
 				await stakeContract.batchAddAward([alice, bob], [util.toWei(20)], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can add non equal award and addr list');
 			} catch (err) {
@@ -369,13 +403,13 @@ contract('Stake', accounts => {
 			}
 		});
 
-		it('non operator cannot batchAddAward', async () => {
+		it('non uploader cannot batchAddAward', async () => {
 					
 			try {
 				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
 					from: alice
 				});
-				assert.isTrue(false, 'non operator can batchAddAward');
+				assert.isTrue(false, 'non uploader can batchAddAward');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
@@ -385,7 +419,7 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(true,  false,{from: operator});
 			try {
 				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchAddAward when canStake');
 			} catch (err) {
@@ -397,7 +431,7 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(false,  true,{from: operator});
 			try {
 				await stakeContract.batchAddAward([alice, bob], [util.toWei(20), util.toWei(30)], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchAddAward when unstake');
 			} catch (err) {
@@ -409,7 +443,7 @@ contract('Stake', accounts => {
 		it('contract duo token balance should be more than award', async () => {
 			try {
 				await stakeContract.batchAddAward([alice, bob], [util.toWei(10000), util.toWei(30)], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchAddAward when contract has not enought duo token');
 			} catch (err) {
@@ -421,7 +455,7 @@ contract('Stake', accounts => {
 			const addrList = [alice, bob];
 			const awardList = [util.toWei(100), util.toWei(200)];
 			const tx = await stakeContract.batchAddAward(addrList, awardList, {
-				from: operator
+				from: uploader
 			});
 			for(let i = 0; i < addrList.length; i++){
 				const addr = addrList[i];
@@ -456,14 +490,14 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(false,  false,{from: operator});
 			await duoContract.transfer(stakeContract.address, util.toWei(10000), {from: creator});
 			await stakeContract.batchAddAward(addrList, awardList, {
-				from: operator
+				from: uploader
 			});
 		});
 
 		it('should not reduceAward with empty award list', async () => {
 			try {
 				await stakeContract.batchReduceAward([], [], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can reduceAward with empty award list');
 			} catch (err) {
@@ -474,7 +508,7 @@ contract('Stake', accounts => {
 		it('should not reduce with non equal award and addr list', async () => {
 			try {
 				await stakeContract.batchReduceAward([alice, bob], [util.toWei(20)], {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can reduce with non equal award and addr list');
 			} catch (err) {
@@ -482,12 +516,12 @@ contract('Stake', accounts => {
 			}
 		});
 
-		it('non operator cannot batchReduceAward', async () => {
+		it('non uploader cannot batchReduceAward', async () => {
 			try {
 				await stakeContract.batchReduceAward(addrList, awardList, {
 					from: alice
 				});
-				assert.isTrue(false, 'non operator can batchReduceAward');
+				assert.isTrue(false, 'non uploader can batchReduceAward');
 			} catch (err) {
 				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
 			}
@@ -497,7 +531,7 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(true,  false,{from: operator});
 			try {
 				await stakeContract.batchReduceAward(addrList, awardList, {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchReduceAward when canStake');
 			} catch (err) {
@@ -509,7 +543,7 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(false,  true,{from: operator});
 			try {
 				await stakeContract.batchReduceAward(addrList, awardList, {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchReduceAward when canUnStake');
 			} catch (err) {
@@ -521,7 +555,7 @@ contract('Stake', accounts => {
 			await stakeContract.setStakeFlag(false,  true,{from: operator});
 			try {
 				await stakeContract.batchReduceAward(addrList, awardList.map(award => util.toWei(Number(util.fromWei(award)) *2)), {
-					from: operator
+					from: uploader
 				});
 				assert.isTrue(false, 'can batchReduceAward with more than award');
 			} catch (err) {
@@ -531,7 +565,7 @@ contract('Stake', accounts => {
 
 		it('should batchReduceAward', async () => {
 			const tx = await stakeContract.batchReduceAward(addrList, awardList, {
-				from: operator
+				from: uploader
 			});
 
 			for(let i = 0; i < addrList.length; i++){
@@ -566,7 +600,7 @@ contract('Stake', accounts => {
 			const addrList = [alice, bob];
 			const awardList = [util.toWei(100), util.toWei(200)];
 			await stakeContract.batchAddAward(addrList, awardList, {
-				from: operator
+				from: uploader
 			});
 			await stakeContract.setStakeFlag(true,  true,{from: operator});
 		});
@@ -674,6 +708,71 @@ contract('Stake', accounts => {
 			let userSize = await stakeContract.getUserSize.call();
 			assert.equal(userSize.valueOf(), 0, 'userLenght wrong');
 		});
+	});
+
+	describe('updateUpdater', () => {
+	
+		before(async () => {
+			await initContracts();
+			await initCustodian();
+		});
+
+		it('hot address cannot updateUpdater', async () => {
+			try {
+				await stakeContract.updateUploader.call( { from: alice });
+				assert.isTrue(false, 'hot address can update updateUpdater');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
+			}
+		});
+
+		it('should updateUpdater', async () => {
+			await roleManagerContract.addCustodian(custodianContracct
+				.address, {
+				from: creator
+			});
+			await roleManagerContract.setModerator(newModerator);
+			await roleManagerContract.skipCooldown(1);
+			await roleManagerContract.addOtherContracts(stakeContract.address, {
+				from: newModerator
+			});
+			await roleManagerContract.setPool(0, 0, alice);
+			let tx = await stakeContract.updateUploader({ from: alice });
+
+			let newUplAdddress = await stakeContract.uploader.call();
+			assert.isTrue(
+				validHotPool.includes(util.toChecksumAddress(newUplAdddress)),
+				'address not from hot pool'
+			);
+			let statusOfAlice = await roleManagerContract.addrStatus.call(alice);
+			let statusOfNewAddr = await roleManagerContract.addrStatus.call(newUplAdddress);
+			assert.isTrue(
+				Number(statusOfAlice.valueOf()) === 3 &&
+					Number(statusOfNewAddr.valueOf()) === 3,
+				'status updated incorrectly'
+			);
+			assert.isTrue(
+				tx.logs.length === 1 && tx.logs[0].event === EVENT_UPDATE_UPLOADER,
+				'wrong events'
+			);
+			assert.isTrue(
+				tx.logs[0].args.updater === alice &&
+					tx.logs[0].args.newUploader === newUplAdddress.valueOf(),
+				'wrong event args'
+			);
+		});
+
+		it('should not update uploader in cooldown period', async () => {
+			await roleManagerContract.setPool(0, 0, bob);
+			try {
+				await stakeContract.updateUploader( { from: bob });
+				assert.isTrue(false, 'can update uploadere in cool down period');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'not reverted');
+			}
+		});
+	
+
 	});
 
 	describe('setValue', () => {

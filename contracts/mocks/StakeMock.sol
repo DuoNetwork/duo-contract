@@ -14,6 +14,7 @@ contract StakeMock is Stake {
 		uint maxStakePerPf,
 		address roleManagerAddr,
 		address opt,
+		address upl,
 		uint optCoolDown
 	) Stake(
 		duoTokenAddr,
@@ -23,6 +24,7 @@ contract StakeMock is Stake {
 		maxStakePerPf,
 		roleManagerAddr,
 		opt,
+		upl,
 		optCoolDown
 	)
 		public {
