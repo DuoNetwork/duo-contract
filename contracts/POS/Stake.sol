@@ -28,7 +28,9 @@ contract Stake is Managed {
 	bool public canStake;
 	bool public canUnstake;
 	address public duoTokenAddress;
+	address public uploader;
 	IERC20 duoTokenContract;
+
 	uint public lockMinTimeInSecond;
 	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
 	uint public maxOracleStakeAmtInWei = 200000 * 1e18;  // dynamiclly tunable
@@ -60,6 +62,8 @@ contract Stake is Managed {
 	event AddAward(address staker, uint awardAmtInWei);
 	event ReduceAward(address staker, uint awardAmtInWei);
 	event ClaimAward(address claimer, uint awardAmtInWei);
+	event UpdateUploader(address updater, address newUploader);
+
 
 	/*
      * Constructor
@@ -72,11 +76,13 @@ contract Stake is Managed {
 		uint maxStakePerOracle,
 		address roleManagerAddr,
 		address opt,
+		address upl,
 		uint optCoolDown
 		)
 		public
 		Managed(roleManagerAddr, opt, optCoolDown)
 	{
+		uploader = upl;
 		duoTokenAddress = duoTokenAddr;
 		duoTokenContract = IERC20(duoTokenAddr);
 		for(uint i = 0; i<oracleAddrList.length; i++) {
@@ -127,7 +133,7 @@ contract Stake is Managed {
 		return true;
 	}
 
-	function batchAddAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+	function batchAddAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool){
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 		require(!canStake && !canUnstake, "staking is not frozen");
 		for(uint i = 0;i<addrsList.length; i++) {
@@ -139,7 +145,7 @@ contract Stake is Managed {
 		return true;
 	}
 
-	function batchReduceAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(operator) returns(bool){
+	function batchReduceAward(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool){
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 		require(!canStake && !canUnstake, "staking is not frozen");
 		for(uint i = 0;i<addrsList.length; i++) {
@@ -221,6 +227,14 @@ contract Stake is Managed {
 
 	function getNowTimestamp() internal view returns (uint) {
 		return now;
+	}
+
+	function updateUploader() public inUpdateWindow() returns (bool) {
+		address updater = msg.sender;
+		address newAddr = roleManager.provideAddress(updater, 1);
+		uploader = newAddr;
+		emit UpdateUploader(updater, newAddr);
+		return true;
 	}
 
 	function setValue(
