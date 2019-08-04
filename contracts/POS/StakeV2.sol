@@ -31,8 +31,9 @@ contract StakeV2 is Managed {
      * State
      */
 	bool public requireBurn;
-	bool public canStake;
-	bool public canUnstake;
+	// bool public canStake;
+	// bool public canUnstake;
+	bool public stakingEnabled;
 	address public duoTokenAddress;
 	address public uploader;
 	IERC20 duoTokenContract;
@@ -112,8 +113,8 @@ contract StakeV2 is Managed {
 		lockMinTimeInSecond = lockTime;
 		minStakeAmtInWei = minStakeAmt;
 		maxOracleStakeAmtInWei = maxStakePerOracle;
-		canStake = false;
-		canUnstake = false;
+		stakingEnabled = false;
+		// canUnstake = false;
 	}
 
 
@@ -121,7 +122,7 @@ contract StakeV2 is Managed {
      * Public Functions
      */
 	function stake(address oracleAddr, uint amtInWei) public isOracle(oracleAddr) returns(bool){
-		require(canStake, "canStake is not set");
+		require(stakingEnabled, "staking is not enabled");
 		require(amtInWei >= minStakeAmtInWei, "staking amt less than min amt required");
 		address sender = msg.sender;
 		stakeInternal(sender, oracleAddr, amtInWei);
@@ -143,7 +144,7 @@ contract StakeV2 is Managed {
 	}
 
 	function unstake(address oracleAddr) public returns(bool) {
-		require(canUnstake, "canUnstake is not set");
+		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
 		require(
 			userQueueIdx[sender][oracleAddr].last >= userQueueIdx[sender][oracleAddr].first && userQueueIdx[sender][oracleAddr].first > 0, "empty queue"
@@ -194,7 +195,7 @@ contract StakeV2 is Managed {
 	}
 
 	function commitAward(uint numOfAwards) public only(operator) returns(bool) {
-		require(!canStake && !canUnstake, "staking is not frozen");
+		require(!stakingEnabled, "staking is enabled");
 		uint numOfAwardsToAdd = addAwardListLastIdx - addAwardListFirstIdx + 1;
 		uint numOfAwardsToReduce = reduceAwardListLastIdx - reduceAwardListFirstIdx + 1;
 		if (numOfAwards == 0 || numOfAwards >= (numOfAwardsToAdd + numOfAwardsToReduce)) { //commit all staged awards
@@ -252,7 +253,7 @@ contract StakeV2 is Managed {
 	}
 
 	function autoRoll(address oracleAddress, uint amtInWei) public returns(bool) {
-		require(canStake, "canStake is not set");
+		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
 		uint amtToStakeInWei = amtInWei> awardsInWei[sender]? awardsInWei[sender]:amtInWei;
 		stakeInternal(sender, oracleAddress, amtToStakeInWei);
@@ -261,7 +262,7 @@ contract StakeV2 is Managed {
 
 
 	function claimAward(bool isAll, uint amtInWei) public returns(bool) {
-		require(canUnstake, "canUnstake is not set");
+		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
 		if(isAll && awardsInWei[sender] > 0) {
 			uint awardToClaim = awardsInWei[sender];
@@ -281,9 +282,8 @@ contract StakeV2 is Managed {
 		}
 	}
 
-	function setStakeFlag(bool stake, bool unstake) public only(operator) returns(bool) {
-		canStake = stake;
-		canUnstake = unstake;
+	function setStakeFlag(bool isEnabled) public only(operator) returns(bool) {
+		stakingEnabled = isEnabled;
 		return true;
 	}
 
