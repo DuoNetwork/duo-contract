@@ -48,7 +48,7 @@ contract Stake is Managed {
 	uint reduceAwardListFirstIdx;
 	uint reduceAwardListLastIdx;
 
-	mapping (address => uint) public stagedUserAwardInWei;
+	// mapping (address => uint) public stagedUserAwardInWei;
 
 	address[] public users;
 	mapping (address => uint) public existingUsers;
@@ -164,7 +164,7 @@ contract Stake is Managed {
 			address user = addrsList[i];
 			uint awardInWei = amtInWeiList[i];
 			addAwardListLastIdx += 1;
-			stagedUserAwardInWei[user]= stagedUserAwardInWei[user].add(awardInWei);
+			// stagedUserAwardInWei[user]= stagedUserAwardInWei[user].add(awardInWei);
 			stagedAddAwardList[addAwardListLastIdx] = AwardLot(user, awardInWei);
 			emit StageAddAward(user, awardInWei);
 		}
@@ -181,7 +181,7 @@ contract Stake is Managed {
 			address user = addrsList[i];
 			uint awardInWei = amtInWeiList[i];
 			reduceAwardListLastIdx += 1;
-			stagedUserAwardInWei[user]= stagedUserAwardInWei[user].sub(awardInWei);
+			// stagedUserAwardInWei[user]= stagedUserAwardInWei[user].sub(awardInWei);
 			stagedReduceAwardList[reduceAwardListLastIdx] = AwardLot(user, awardInWei);
 			emit StageReduceAward(user, awardInWei);
 		}
