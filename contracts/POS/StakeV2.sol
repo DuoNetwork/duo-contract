@@ -3,10 +3,10 @@ import { SafeMath } from "../common/SafeMath.sol";
 import { Managed } from "../common/Managed.sol";
 import { IERC20 } from "../interfaces/IERC20.sol";
 
-/// @title Stake
+/// @title StakeV2
 /// @author duo.network
 
-contract Stake is Managed {
+contract StakeV2 is Managed {
 	using SafeMath for uint;
 
 	/*
@@ -30,6 +30,7 @@ contract Stake is Managed {
 	/*
      * State
      */
+	bool public requireBurn;
 	bool public canStake;
 	bool public canUnstake;
 	address public duoTokenAddress;
@@ -86,6 +87,7 @@ contract Stake is Managed {
      * Constructor
      */
 	constructor(
+		bool needsBurnStakedDuo,
 		address duoTokenAddr,
 		address[] memory oracleAddrList,
 		uint lockTime,
@@ -99,6 +101,7 @@ contract Stake is Managed {
 		public
 		Managed(roleManagerAddr, opt, optCoolDown)
 	{
+		requireBurn = needsBurnStakedDuo;
 		uploader = upl;
 		duoTokenAddress = duoTokenAddr;
 		duoTokenContract = IERC20(duoTokenAddr);
@@ -127,7 +130,9 @@ contract Stake is Managed {
 
 	function stakeInternal(address sender, address oracleAddr, uint amtInWei) internal returns(bool) {
 		require(totalStakAmtInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
-		require(duoTokenContract.transferFrom(sender, duoTokenAddress, amtInWei), "failed burining duo");
+
+		require(duoTokenContract.transferFrom(sender, requireBurn? duoTokenAddress: address(this), amtInWei), "not enough duo balance");
+
 		userQueueIdx[sender][oracleAddr].last += 1;
 		if(userQueueIdx[sender][oracleAddr].first == 0)
 			userQueueIdx[sender][oracleAddr].first += 1;
