@@ -272,6 +272,7 @@ contract StakeV2 is Managed {
 		return true;
 	}
 
+
 	function checkUser(address user) internal {
 		bool isUser = false;
 		for(uint i = 0; i < oracleList.length; i ++){
@@ -335,6 +336,14 @@ contract StakeV2 is Managed {
 		require(oracleAddr != address(0));
 		isWhiteListOracle[oracleAddr] = true;
 		oracleList.push(oracleAddr);
+		return true;
+	}
+
+	function resetStagingAwards() public only(operator) returns(bool) {
+		addRewardStagingIdx.first = 0;
+		addRewardStagingIdx.last = 0;
+		reduceRewardStagingIdx.first = 0;
+		reduceRewardStagingIdx.last = 0;
 		return true;
 	}
 
