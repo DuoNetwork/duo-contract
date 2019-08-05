@@ -169,7 +169,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can stake when contract is not open');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.canStakeNotSet, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canStakeNotEnabled, 'transaction not reverted');
 			}
 		});
 
@@ -320,7 +320,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can unstake within locking period');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotSet, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotEnabled, 'transaction not reverted');
 			}
 		});
 
@@ -334,7 +334,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can unstake without previously staking');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.emptyQueue, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.queueIsEmpty, 'transaction not reverted');
 			}
 		});
 
@@ -613,7 +613,7 @@ contract('Stake', accounts => {
 				});
 				assert.isTrue(false, 'can claim award when canUnstake');
 			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotSet, 'transaction not reverted');
+				assert.equal(err.message, CST.VM_REVERT_MSG.canUnstakeNotEnabled, 'transaction not reverted');
 			}
 		});
 
@@ -710,6 +710,65 @@ contract('Stake', accounts => {
 		});
 	});
 
+
+	describe('setValue', () => {
+		beforeEach(initContracts);
+
+		it('non operator should not be able to set minStakeAmtInWei', async () => {
+			try {
+				await stakeContract.setValue.call(0, 10000, { from: alice });
+				assert.isTrue(false, 'non admin can change minStakeAmtInWei');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
+			}
+		});
+
+		it('operator should be able to set minStakeAmtInWei', async () => {
+			await stakeContract.setValue(0, util.toWei(10000), { from: operator });
+			const minStakeAmt = await stakeContract.minStakeAmtInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(minStakeAmt.valueOf()), 10000, true), 'not set correctly');
+		});
+
+		it('non operator should not be able to set maxOracleStakeAmtInWei', async () => {
+			try {
+				await stakeContract.setValue.call(1, 10000, { from: alice });
+				assert.isTrue(false, 'non admin can change maxOracleStakeAmtInWei');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
+			}
+		});
+
+		it('operator should be able to set maxOracleStakeAmtInWei', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 10000000), 'not set correctly');
+		});
+		
+		it('operator should not setValue within operation cooldown', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown - 1);
+			try {
+				await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+				assert.isTrue(false, 'can setValue within cooldown');
+			} catch (err) {
+				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
+			}
+		});
+
+		it('operator should only setValue beyond operation cooldown', async () => {
+			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
+			const currentTs = await stakeContract.timestamp.call();
+			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown + 1);
+			await stakeContract.setValue(1, util.toWei(2000000), { from: operator });
+			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
+			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 2000000), 'not set correctly');
+			
+		});
+
+
+	});
+
 	describe('updateUpdater', () => {
 	
 		before(async () => {
@@ -775,62 +834,5 @@ contract('Stake', accounts => {
 
 	});
 
-	describe('setValue', () => {
-		beforeEach(initContracts);
-
-		it('non operator should not be able to set minStakeAmtInWei', async () => {
-			try {
-				await stakeContract.setValue.call(0, 10000, { from: alice });
-				assert.isTrue(false, 'non admin can change minStakeAmtInWei');
-			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
-			}
-		});
-
-		it('operator should be able to set minStakeAmtInWei', async () => {
-			await stakeContract.setValue(0, util.toWei(10000), { from: operator });
-			const minStakeAmt = await stakeContract.minStakeAmtInWei.call();
-			assert.isTrue( util.isEqual(util.fromWei(minStakeAmt.valueOf()), 10000, true), 'not set correctly');
-		});
-
-		it('non operator should not be able to set maxOracleStakeAmtInWei', async () => {
-			try {
-				await stakeContract.setValue.call(1, 10000, { from: alice });
-				assert.isTrue(false, 'non admin can change maxOracleStakeAmtInWei');
-			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
-			}
-		});
-
-		it('operator should be able to set maxOracleStakeAmtInWei', async () => {
-			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
-			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
-			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 10000000), 'not set correctly');
-		});
-		
-		it('operator should not setValue within operation cooldown', async () => {
-			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
-			const currentTs = await stakeContract.timestamp.call();
-			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown - 1);
-			try {
-				await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
-				assert.isTrue(false, 'can setValue within cooldown');
-			} catch (err) {
-				assert.equal(err.message, CST.VM_REVERT_MSG.revert, 'transaction not reverted');
-			}
-		});
-
-		it('operator should only setValue beyond operation cooldown', async () => {
-			await stakeContract.setValue(1, util.toWei(10000000), { from: operator });
-			const currentTs = await stakeContract.timestamp.call();
-			await stakeContract.setTimestamp( currentTs.toNumber() + StakeInit.optCoolDown + 1);
-			await stakeContract.setValue(1, util.toWei(2000000), { from: operator });
-			const maxStakePerPf = await stakeContract.maxOracleStakeAmtInWei.call();
-			assert.isTrue( util.isEqual(util.fromWei(maxStakePerPf.valueOf()), 2000000), 'not set correctly');
-			
-		});
-
-
-	});
 
 });

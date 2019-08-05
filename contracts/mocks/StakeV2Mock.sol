@@ -40,6 +40,11 @@ contract StakeV2Mock is StakeV2 {
 	function setTimestamp(uint ts) public {
 		timestamp = ts;
 	}
+
+	function setBurnAddress(address addr) public {
+		burnAddress = addr;
+	}
+
 	function getNowTimestamp() internal view returns (uint) {
 		return timestamp;
 	}

@@ -41,10 +41,10 @@ contract StakeV2 is Managed {
 	uint public maxOracleStakeAmtInWei = 200000 * 1e18;  // dynamiclly tunable
 	uint public totalRewardsToDistributeInWei = 0;
 
-	RewardLot[] public addRewardStagingList;
-	RewardLot[] public reduceRewardStagingList;
-	QueueIndex addRewardStagingIdx;
-	QueueIndex reduceRewardStagingIdx;
+	mapping(uint => RewardLot) public addRewardStagingList;
+	mapping(uint => RewardLot) public reduceRewardStagingList;
+	QueueIndex public addRewardStagingIdx;
+	QueueIndex public reduceRewardStagingIdx;
 
 	address[] public users;
 	mapping (address => uint) public existingUsers;
@@ -116,13 +116,17 @@ contract StakeV2 is Managed {
 		require(stakingEnabled, "staking is not enabled");
 		require(amtInWei >= minStakeAmtInWei, "staking amt less than min amt required");
 		address sender = msg.sender;
-		stakeInternal(sender, oracleAddr, amtInWei);
+		stakeInternal(false, sender, oracleAddr, amtInWei);
 		return true;
 	}
 
-	function stakeInternal(address sender, address oracleAddr, uint amtInWei) internal returns(bool) {
+	function stakeInternal(bool isAutoRoll, address sender, address oracleAddr, uint amtInWei) internal returns(bool) {
 		require(totalStakAmtInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
-		require(duoTokenContract.transferFrom(sender, burnAddress == address(0) ? address(this) : burnAddress, amtInWei), "not enough duo balance");
+		if (!isAutoRoll){
+			require(duoTokenContract.transferFrom(sender, burnAddress == address(0) ? address(this) : burnAddress, amtInWei), "not enough duo balance");
+		} else if(isAutoRoll && burnAddress != address(0)) {
+			require(duoTokenContract.transfer( burnAddress, amtInWei), "not enough duo reward");
+		} 
 
 		userQueueIdx[sender][oracleAddr].last += 1;
 		if(userQueueIdx[sender][oracleAddr].first == 0)
@@ -238,11 +242,21 @@ contract StakeV2 is Managed {
 		return true;
 	}
 
+	function resetStagingAwards() public only(operator) returns(bool) {
+		addRewardStagingIdx.first = 0;
+		addRewardStagingIdx.last = 0;
+		reduceRewardStagingIdx.first = 0;
+		reduceRewardStagingIdx.last = 0;
+		return true;
+	}
+
 	function autoRoll(address oracleAddress, uint amtInWei) public returns(bool) {
 		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
 		uint amtToStakeInWei = amtInWei > rewardsInWei[sender]? rewardsInWei[sender]:amtInWei;
-		stakeInternal(sender, oracleAddress, amtToStakeInWei);
+		rewardsInWei[sender] = rewardsInWei[sender].sub(amtToStakeInWei);
+		totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(amtToStakeInWei);
+		stakeInternal(true, sender, oracleAddress, amtToStakeInWei);
 		return true;
 	}
 
@@ -336,14 +350,6 @@ contract StakeV2 is Managed {
 		require(oracleAddr != address(0));
 		isWhiteListOracle[oracleAddr] = true;
 		oracleList.push(oracleAddr);
-		return true;
-	}
-
-	function resetStagingAwards() public only(operator) returns(bool) {
-		addRewardStagingIdx.first = 0;
-		addRewardStagingIdx.last = 0;
-		reduceRewardStagingIdx.first = 0;
-		reduceRewardStagingIdx.last = 0;
 		return true;
 	}
 
