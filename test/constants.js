@@ -2,7 +2,7 @@ module.exports = {
 	WEI_DENOMINATOR : 1e18,
 	BP_DENOMINATOR : 10000,
 	VM_REVERT_MSG: {
-		canStakeNotSet: 'Returned error: VM Exception while processing transaction: revert canStake is not set -- Reason given: canStake is not set.',
+		canStakeNotSet: 'Returned error: VM Exception while processing transaction: revert staking is not enabled -- Reason given: staking is not enabled.',
 		notWhiteListOracle: 'Returned error: VM Exception while processing transaction: revert not whitelist oracle -- Reason given: not whitelist oracle.',
 		stakeLessThanMinAmt: 'Returned error: VM Exception while processing transaction: revert staking amt less than min amt required -- Reason given: staking amt less than min amt required.',
 		revert: 'Returned error: VM Exception while processing transaction: revert',

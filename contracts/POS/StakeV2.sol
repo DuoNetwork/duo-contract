@@ -50,6 +50,7 @@ contract StakeV2 is Managed {
 	mapping (address => uint) public existingUsers;
 
 	mapping (address => bool) public isWhiteListOracle;
+	// mapping (address => uint) public totalStakedAmtInWei;
 	mapping (address => mapping(address => QueueIndex)) public userQueueIdx; // useraddress => oracle => queueIdx
 	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => oracle => stakeOrder => Stakelot
 	mapping (address => uint) public totalStakAmtInWei;
@@ -233,7 +234,7 @@ contract StakeV2 is Managed {
 		reduceRewardStagingIdx.first = first;
 		emit CommitReduceReward(amtToCommitInWei);
 		totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(amtToCommitInWei);
-		require(duoTokenContract.transfer(address(this), amtToCommitInWei), "not enough duo balance to commit add rewards");
+		require(duoTokenContract.transfer(msg.sender, amtToCommitInWei), "not enough duo balance to commit add rewards");
 		return true;
 	}
 
@@ -327,6 +328,13 @@ contract StakeV2 is Managed {
 		address newAddr = roleManager.provideAddress(updater, 1);
 		uploader = newAddr;
 		emit UpdateUploader(updater, newAddr);
+		return true;
+	}
+
+	function addOracle(address oracleAddr) public only(operator) inUpdateWindow() returns (bool success) {
+		require(oracleAddr != address(0));
+		isWhiteListOracle[oracleAddr] = true;
+		oracleList.push(oracleAddr);
 		return true;
 	}
 

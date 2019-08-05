@@ -8,7 +8,8 @@
 		"minStakeTs": 1209600,
 		"optCoolDown": 86400,
 		"minStakeAmt": 500,
-		"maxStakePerPf": 200000
+		"maxStakePerPf": 200000,
+		"duoBurnAddr": "0xb4bD4885ED177a8328F6034d5E5660C57Aa495e5"
 	},
 	"BTV": {
 		"PPT": {
