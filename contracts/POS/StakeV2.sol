@@ -12,7 +12,7 @@ contract StakeV2 is Managed {
 	/*
      * Struct
      */
-	struct QueueIdx {
+	struct QueueIndex {
 		uint first;
 		uint last;
 	}
@@ -21,8 +21,8 @@ contract StakeV2 is Managed {
 		uint timestamp;
 		uint amtInWei;
 	}
-	
-	struct AwardLot {
+
+	struct RewardLot {
 		address user;
 		uint amtInWei;
 	}
@@ -30,37 +30,31 @@ contract StakeV2 is Managed {
 	/*
      * State
      */
-	bool public requireBurn;
-	// bool public canStake;
-	// bool public canUnstake;
 	bool public stakingEnabled;
+	address public burnAddress;
 	address public duoTokenAddress;
 	address public uploader;
 	IERC20 duoTokenContract;
 
 	uint public lockMinTimeInSecond;
-	uint public minStakeAmtInWei = 500 * 1e18; // dynamiclly tunable
+	uint public minStakeAmtInWei = 1e18; // dynamiclly tunable
 	uint public maxOracleStakeAmtInWei = 200000 * 1e18;  // dynamiclly tunable
-	uint public totalAwardsToDistributeInWei = 0;
+	uint public totalRewardsToDistributeInWei = 0;
 
-	AwardLot[] public stagedAddAwardList;
-	AwardLot[] public stagedReduceAwardList;
-	uint addAwardListFirstIdx;
-	uint addAwardListLastIdx;
-	uint reduceAwardListFirstIdx;
-	uint reduceAwardListLastIdx;
-
-	// mapping (address => uint) public stagedUserAwardInWei;
+	RewardLot[] public addRewardStagingList;
+	RewardLot[] public reduceRewardStagingList;
+	QueueIndex addRewardStagingIdx;
+	QueueIndex reduceRewardStagingIdx;
 
 	address[] public users;
 	mapping (address => uint) public existingUsers;
 
 	mapping (address => bool) public isWhiteListOracle;
-	mapping (address => mapping(address => QueueIdx)) public userQueueIdx; // useraddress => oracle => queueIdx
+	mapping (address => mapping(address => QueueIndex)) public userQueueIdx; // useraddress => oracle => queueIdx
 	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => oracle => stakeOrder => Stakelot
 	mapping (address => uint) public totalStakAmtInWei;
 	address[] public oracleList;
-	mapping (address => uint) public awardsInWei;
+	mapping (address => uint) public rewardsInWei;
 
 	/*
      * Modifier
@@ -76,20 +70,17 @@ contract StakeV2 is Managed {
 	event AddStake(address indexed from, address indexed oracle, uint amtInWei);
 	event Unstake(address indexed from, address indexed oracle, uint amtInWei);
 	event SetValue(uint index, uint oldValue, uint newValue);
-	event StageAddAward(address user, uint awardAmtInWei);
-	event StageReduceAward(address user, uint awardAmtInWei);
-	event CommitAddAward(address user, uint awardAmtInWei);
-	event CommitReduceAward(address user, uint awardAmtInWei);
-	event ClaimAward(address claimer, uint awardAmtInWei);
+	event CommitAddReward(uint rewardAmtInWei);
+	event CommitReduceReward(uint rewardAmtInWei);
+	event ClaimReward(address claimer, uint rewardAmtInWei);
 	event UpdateUploader(address updater, address newUploader);
-
 
 	/*
      * Constructor
      */
 	constructor(
-		bool needsBurnStakedDuo,
 		address duoTokenAddr,
+		address duoBurnAddr,
 		address[] memory oracleAddrList,
 		uint lockTime,
 		uint minStakeAmt,
@@ -102,11 +93,11 @@ contract StakeV2 is Managed {
 		public
 		Managed(roleManagerAddr, opt, optCoolDown)
 	{
-		requireBurn = needsBurnStakedDuo;
-		uploader = upl;
 		duoTokenAddress = duoTokenAddr;
 		duoTokenContract = IERC20(duoTokenAddr);
-		for(uint i = 0; i<oracleAddrList.length; i++) {
+		burnAddress = duoBurnAddr;
+		uploader = upl;
+		for(uint i = 0; i < oracleAddrList.length; i++) {
 			isWhiteListOracle[oracleAddrList[i]] = true;
 			oracleList.push(oracleAddrList[i]);
 		}
@@ -114,7 +105,6 @@ contract StakeV2 is Managed {
 		minStakeAmtInWei = minStakeAmt;
 		maxOracleStakeAmtInWei = maxStakePerOracle;
 		stakingEnabled = false;
-		// canUnstake = false;
 	}
 
 
@@ -131,8 +121,7 @@ contract StakeV2 is Managed {
 
 	function stakeInternal(address sender, address oracleAddr, uint amtInWei) internal returns(bool) {
 		require(totalStakAmtInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
-
-		require(duoTokenContract.transferFrom(sender, requireBurn? duoTokenAddress: address(this), amtInWei), "not enough duo balance");
+		require(duoTokenContract.transferFrom(sender, burnAddress == address(0) ? address(this) : burnAddress, amtInWei), "not enough duo balance");
 
 		userQueueIdx[sender][oracleAddr].last += 1;
 		if(userQueueIdx[sender][oracleAddr].first == 0)
@@ -144,141 +133,136 @@ contract StakeV2 is Managed {
 	}
 
 	function unstake(address oracleAddr) public returns(bool) {
-		require(stakingEnabled, "staking is not enabled");
+		require(stakingEnabled && burnAddress == address(0), "staking is not enabled");
 		address sender = msg.sender;
 		require(
 			userQueueIdx[sender][oracleAddr].last >= userQueueIdx[sender][oracleAddr].first && userQueueIdx[sender][oracleAddr].first > 0, "empty queue"
 		);  // non-empty queue
-		StakeLot memory stake = userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
-		require(getNowTimestamp().sub(stake.timestamp).sub(lockMinTimeInSecond) > 0, "staking period not passed");
+		StakeLot memory stakeLot = userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
+		require(getNowTimestamp().sub(stakeLot.timestamp).sub(lockMinTimeInSecond) > 0, "staking period not passed");
 		delete userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
 		userQueueIdx[sender][oracleAddr].first += 1;
-		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].sub(stake.amtInWei);
-		emit Unstake(sender, oracleAddr, stake.amtInWei);
-		require(duoTokenContract.transfer(sender, stake.amtInWei), "token transfer failure");
+		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].sub(stakeLot.amtInWei);
+		emit Unstake(sender, oracleAddr, stakeLot.amtInWei);
+		require(duoTokenContract.transfer(sender, stakeLot.amtInWei), "token transfer failure");
 		checkUser(sender);
 		return true;
 	}
 
-	function stageAddAwards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
+	function stageAddRewards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 
-		if(addAwardListFirstIdx == 0)
-			addAwardListFirstIdx += 1;
+		if(addRewardStagingIdx.first == 0)
+			addRewardStagingIdx.first += 1;
 
-		for(uint i = 0;i<addrsList.length; i++) {
+		uint last = addRewardStagingIdx.last;
+		for(uint i = 0;i < addrsList.length; i++) {
 			address user = addrsList[i];
-			uint awardInWei = amtInWeiList[i];
-			addAwardListLastIdx += 1;
-			// stagedUserAwardInWei[user]= stagedUserAwardInWei[user].add(awardInWei);
-			stagedAddAwardList[addAwardListLastIdx] = AwardLot(user, awardInWei);
-			emit StageAddAward(user, awardInWei);
+			uint rewardInWei = amtInWeiList[i];
+			last += 1;
+			addRewardStagingList[last] = RewardLot(user, rewardInWei);
 		}
+		addRewardStagingIdx.last = last;
 		return true;
 	}
 
-	function stageReduceAwards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
+	function stageReduceRewards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 
-		if(reduceAwardListFirstIdx == 0)
-			reduceAwardListFirstIdx += 1;
+		if(reduceRewardStagingIdx.first == 0)
+			reduceRewardStagingIdx.first += 1;
 
-		for(uint i = 0;i<addrsList.length; i++) {
+		uint last = reduceRewardStagingIdx.last;
+		for(uint i = 0;i < addrsList.length; i++) {
 			address user = addrsList[i];
-			uint awardInWei = amtInWeiList[i];
-			reduceAwardListLastIdx += 1;
-			// stagedUserAwardInWei[user]= stagedUserAwardInWei[user].sub(awardInWei);
-			stagedReduceAwardList[reduceAwardListLastIdx] = AwardLot(user, awardInWei);
-			emit StageReduceAward(user, awardInWei);
+			uint rewardInWei = amtInWeiList[i];
+			last += 1;
+			reduceRewardStagingList[last] = RewardLot(user, rewardInWei);
 		}
+		reduceRewardStagingIdx.last = last;
 		return true;
 	}
 
-	function commitAward(uint numOfAwards) public only(operator) returns(bool) {
+	function commitAddRewards(uint numOfRewards) public only(operator) returns(bool) {
 		require(!stakingEnabled, "staking is enabled");
-		uint numOfAwardsToAdd = addAwardListLastIdx - addAwardListFirstIdx + 1;
-		uint numOfAwardsToReduce = reduceAwardListLastIdx - reduceAwardListFirstIdx + 1;
-		if (numOfAwards == 0 || numOfAwards >= (numOfAwardsToAdd + numOfAwardsToReduce)) { //commit all staged awards
-			commitAddAwards(addAwardListLastIdx);
-			commitReduceAwards(reduceAwardListLastIdx);
-		} else if (numOfAwards <= numOfAwardsToAdd) {
-			commitAddAwards(addAwardListFirstIdx + numOfAwards - 1);
-		} else if (numOfAwards > numOfAwardsToAdd && numOfAwards <(numOfAwardsToAdd + numOfAwardsToReduce) ){
-			commitAddAwards(addAwardListLastIdx);
-			commitReduceAwards(numOfAwards - numOfAwardsToAdd + reduceAwardListFirstIdx - 1);
+		uint first = addRewardStagingIdx.first;
+		uint last = addRewardStagingIdx.last;
+		uint numOfRewardsToCommit = last - first + 1;
+		uint endIdx = numOfRewards == 0 || numOfRewards >= numOfRewardsToCommit ? last : first + numOfRewards - 1;
+		uint amtToCommitInWei = 0;
+		while(first <= endIdx) {
+			RewardLot memory reward = addRewardStagingList[first];
+			address user = reward.user;
+			uint rewardInWei = reward.amtInWei;
+			rewardsInWei[user] = rewardsInWei[user].add(rewardInWei);
+			amtToCommitInWei = amtToCommitInWei.add(rewardInWei);
+			delete addRewardStagingList[first];
+			first += 1;
 		}
-		require(duoTokenContract.balanceOf(address(this)) >= totalAwardsToDistributeInWei, "not enough balance to give awards");
+		if (first > last) {
+			first = 0;
+			addRewardStagingIdx.last = 0;
+		}
+		addRewardStagingIdx.first = first;
+		emit CommitAddReward(amtToCommitInWei);
+		totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.add(amtToCommitInWei);
+		require(duoTokenContract.transferFrom(msg.sender, address(this), amtToCommitInWei), "not enough duo balance to commit add rewards");
 		return true;
-
 	}
 
-	function commitAddAwards(uint endIdx) internal {
-		uint lastIdx = endIdx >addAwardListLastIdx? addAwardListLastIdx :endIdx;
-		for(uint i = addAwardListFirstIdx;i<=lastIdx; i++) {
-			AwardLot memory award = stagedAddAwardList[i];
-			address user = award.user;
-			uint awardInWei= award.amtInWei;
-			awardsInWei[user] = awardsInWei[user].add(awardInWei);
-			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.add(awardInWei);
-			addAwardListFirstIdx += 1;
-			delete stagedAddAwardList[i];
-			emit CommitAddAward(user, awardInWei);
-			if (addAwardListFirstIdx >addAwardListLastIdx){
-				addAwardListFirstIdx = 0;
-				addAwardListLastIdx = 0;
-				break;
-			}
+	function commitReduceRewards(uint numOfRewards) public only(operator) returns(bool) {
+		require(!stakingEnabled, "staking is enabled");
+		uint first = reduceRewardStagingIdx.first;
+		uint last = reduceRewardStagingIdx.last;
+		uint numOfRewardsToCommit = last - first + 1;
+		uint endIdx = numOfRewards == 0 || numOfRewards >= numOfRewardsToCommit ? last : first + numOfRewards - 1;
+		uint amtToCommitInWei = 0;
+		while(first <= endIdx) {
+			RewardLot memory reward = reduceRewardStagingList[first];
+			address user = reward.user;
+			uint rewardInWei = reward.amtInWei;
+			rewardsInWei[user] = rewardsInWei[user].sub(rewardInWei);
+			amtToCommitInWei = amtToCommitInWei.add(rewardInWei);
+			delete reduceRewardStagingList[first];
+			first += 1;
 		}
-
-	}
-
-	function commitReduceAwards(uint endIdx) internal {
-		uint lastIdx = endIdx >reduceAwardListLastIdx? reduceAwardListLastIdx :endIdx;
-		for(uint i = reduceAwardListLastIdx;i<=lastIdx; i++) {
-			AwardLot memory award = stagedReduceAwardList[i];
-			address user = award.user;
-			uint awardInWei= award.amtInWei;
-			awardsInWei[user] = awardsInWei[user].sub(awardInWei);
-			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(awardInWei);
-			reduceAwardListLastIdx += 1;
-			delete stagedReduceAwardList[i];
-			emit CommitReduceAward(user, awardInWei);
-			if (reduceAwardListLastIdx >reduceAwardListLastIdx){
-				reduceAwardListLastIdx = 0;
-				reduceAwardListLastIdx = 0;
-				break;
-			}
+		if (first > last) {
+			first = 0;
+			reduceRewardStagingIdx.last = 0;
 		}
-
+		reduceRewardStagingIdx.first = first;
+		emit CommitReduceReward(amtToCommitInWei);
+		totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(amtToCommitInWei);
+		require(duoTokenContract.transfer(address(this), amtToCommitInWei), "not enough duo balance to commit add rewards");
+		return true;
 	}
 
 	function autoRoll(address oracleAddress, uint amtInWei) public returns(bool) {
 		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
-		uint amtToStakeInWei = amtInWei> awardsInWei[sender]? awardsInWei[sender]:amtInWei;
+		uint amtToStakeInWei = amtInWei > rewardsInWei[sender]? rewardsInWei[sender]:amtInWei;
 		stakeInternal(sender, oracleAddress, amtToStakeInWei);
 		return true;
 	}
 
-
-	function claimAward(bool isAll, uint amtInWei) public returns(bool) {
+	function claimReward(bool isAll, uint amtInWei) public returns(bool) {
 		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
-		if(isAll && awardsInWei[sender] > 0) {
-			uint awardToClaim = awardsInWei[sender];
-			awardsInWei[sender] = 0;
-			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(awardToClaim);
-			duoTokenContract.transfer(sender, awardToClaim);
-			emit ClaimAward(sender, awardToClaim);
+		if(isAll && rewardsInWei[sender] > 0) {
+			uint rewardToClaim = rewardsInWei[sender];
+			rewardsInWei[sender] = 0;
+			totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(rewardToClaim);
+			duoTokenContract.transfer(sender, rewardToClaim);
+			emit ClaimReward(sender, rewardToClaim);
 			return true;
-		} else if (!isAll && amtInWei > 0 && amtInWei <= awardsInWei[sender]){
-			awardsInWei[sender] = awardsInWei[sender].sub(amtInWei);
-			totalAwardsToDistributeInWei = totalAwardsToDistributeInWei.sub(amtInWei);
+		} else if (!isAll && amtInWei > 0 && amtInWei <= rewardsInWei[sender]){
+			rewardsInWei[sender] = rewardsInWei[sender].sub(amtInWei);
+			totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(amtInWei);
 			duoTokenContract.transfer(sender, amtInWei);
-			emit ClaimAward(sender, amtInWei);
+			emit ClaimReward(sender, amtInWei);
 			return true;
 		} else {
-			revert();
+			revert("no reward");
 		}
 	}
 
@@ -288,10 +272,9 @@ contract StakeV2 is Managed {
 	}
 
 	function checkUser(address user) internal {
-
 		bool isUser = false;
 		for(uint i = 0; i < oracleList.length; i ++){
-			QueueIdx memory queueIdx = userQueueIdx[user][oracleList[i]];
+			QueueIndex memory queueIdx = userQueueIdx[user][oracleList[i]];
 
 			if(queueIdx.last >= queueIdx.first && queueIdx.first > 0){
 				isUser = true;
@@ -333,11 +316,7 @@ contract StakeV2 is Managed {
 		return now;
 	}
 
-	function updateUploaderByOperator(address newUploader) 
-		public
-		only(operator)
-		inUpdateWindow() 
-	returns (bool) {
+	function updateUploaderByOperator(address newUploader) public only(operator) inUpdateWindow() returns (bool) {
 		uploader = newUploader;
 		emit UpdateUploader(operator, uploader);
 		return true;
@@ -351,14 +330,7 @@ contract StakeV2 is Managed {
 		return true;
 	}
 
-	function setValue(
-		uint idx,
-		uint newValue
-	)
-		public
-		only(operator)
-		inUpdateWindow()
-	returns (bool success) {
+	function setValue(uint idx, uint newValue) public only(operator) inUpdateWindow() returns (bool success) {
 		uint oldValue;
 		if (idx == 0) {
 			oldValue = minStakeAmtInWei;
@@ -367,7 +339,7 @@ contract StakeV2 is Managed {
 			oldValue = maxOracleStakeAmtInWei;
 			maxOracleStakeAmtInWei = newValue;
 		}  else {
-			revert();
+			revert("invalid index");
 		}
 
 		emit SetValue(idx, oldValue, newValue);
