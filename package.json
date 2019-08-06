@@ -20,7 +20,7 @@
     "cross-env": "^5.2.0",
     "eslint": "^6.1.0",
     "eslint-plugin-mocha": "^6.0.0",
-    "ganache-cli": "^6.5.1",
+    "ganache-cli": "6.2.5",
     "moment": "^2.24.0",
     "rimraf": "^2.6.3",
     "solidity-coverage": "^0.6.4",
