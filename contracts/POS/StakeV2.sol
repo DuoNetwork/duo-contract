@@ -50,10 +50,9 @@ contract StakeV2 is Managed {
 	mapping (address => uint) public existingUsers;
 
 	mapping (address => bool) public isWhiteListOracle;
-	// mapping (address => uint) public totalStakedAmtInWei;
 	mapping (address => mapping(address => QueueIndex)) public userQueueIdx; // useraddress => oracle => queueIdx
 	mapping (address => mapping (address => mapping(uint => StakeLot))) public userStakeQueue; // useraddress => oracle => stakeOrder => Stakelot
-	mapping (address => uint) public totalStakAmtInWei;
+	mapping (address => uint) public totalStakeInWei;
 	address[] public oracleList;
 	mapping (address => uint) public rewardsInWei;
 
@@ -116,23 +115,23 @@ contract StakeV2 is Managed {
 		require(stakingEnabled, "staking is not enabled");
 		require(amtInWei >= minStakeAmtInWei, "staking amt less than min amt required");
 		address sender = msg.sender;
-		stakeInternal(false, sender, oracleAddr, amtInWei);
+		stakeInternal(sender, oracleAddr, amtInWei, false);
 		return true;
 	}
 
-	function stakeInternal(bool isAutoRoll, address sender, address oracleAddr, uint amtInWei) internal returns(bool) {
-		require(totalStakAmtInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
-		if (!isAutoRoll){
+	function stakeInternal(address sender, address oracleAddr, uint amtInWei, bool isAutoRoll) internal returns(bool) {
+		require(totalStakeInWei[oracleAddr].add(amtInWei) <= maxOracleStakeAmtInWei, "exceeding the maximum amt allowed");
+		if (!isAutoRoll) {
 			require(duoTokenContract.transferFrom(sender, burnAddress == address(0) ? address(this) : burnAddress, amtInWei), "not enough duo balance");
 		} else if(isAutoRoll && burnAddress != address(0)) {
-			require(duoTokenContract.transfer( burnAddress, amtInWei), "not enough duo reward");
-		} 
+			require(duoTokenContract.transfer(burnAddress, amtInWei), "not enough duo reward");
+		}
 
 		userQueueIdx[sender][oracleAddr].last += 1;
 		if(userQueueIdx[sender][oracleAddr].first == 0)
 			userQueueIdx[sender][oracleAddr].first += 1;
 		userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].last] = StakeLot(getNowTimestamp(), amtInWei);
-		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].add(amtInWei);
+		totalStakeInWei[oracleAddr] = totalStakeInWei[oracleAddr].add(amtInWei);
 		checkUser(sender);
 		emit AddStake(sender, oracleAddr, amtInWei);
 	}
@@ -147,7 +146,7 @@ contract StakeV2 is Managed {
 		require(getNowTimestamp().sub(stakeLot.timestamp).sub(lockMinTimeInSecond) > 0, "staking period not passed");
 		delete userStakeQueue[sender][oracleAddr][userQueueIdx[sender][oracleAddr].first];
 		userQueueIdx[sender][oracleAddr].first += 1;
-		totalStakAmtInWei[oracleAddr] = totalStakAmtInWei[oracleAddr].sub(stakeLot.amtInWei);
+		totalStakeInWei[oracleAddr] = totalStakeInWei[oracleAddr].sub(stakeLot.amtInWei);
 		emit Unstake(sender, oracleAddr, stakeLot.amtInWei);
 		require(duoTokenContract.transfer(sender, stakeLot.amtInWei), "token transfer failure");
 		checkUser(sender);
@@ -253,10 +252,10 @@ contract StakeV2 is Managed {
 	function autoRoll(address oracleAddress, uint amtInWei) public returns(bool) {
 		require(stakingEnabled, "staking is not enabled");
 		address sender = msg.sender;
-		uint amtToStakeInWei = amtInWei > rewardsInWei[sender]? rewardsInWei[sender]:amtInWei;
+		uint amtToStakeInWei = amtInWei > rewardsInWei[sender] ? rewardsInWei[sender] : amtInWei;
 		rewardsInWei[sender] = rewardsInWei[sender].sub(amtToStakeInWei);
 		totalRewardsToDistributeInWei = totalRewardsToDistributeInWei.sub(amtToStakeInWei);
-		stakeInternal(true, sender, oracleAddress, amtToStakeInWei);
+		stakeInternal(sender, oracleAddress, amtToStakeInWei, true);
 		return true;
 	}
 
@@ -347,7 +346,7 @@ contract StakeV2 is Managed {
 	}
 
 	function addOracle(address oracleAddr) public only(operator) inUpdateWindow() returns (bool success) {
-		require(oracleAddr != address(0));
+		require(oracleAddr != address(0), "invalid oracle address");
 		isWhiteListOracle[oracleAddr] = true;
 		oracleList.push(oracleAddr);
 		return true;
