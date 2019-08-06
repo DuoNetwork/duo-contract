@@ -16,19 +16,18 @@
     "deployLive": "cross-env CONTRACT_TYPE=VVD TENOR= truffle migrate --reset --compile-all --network live"
   },
   "devDependencies": {
-    "coveralls": "^3.0.2",
+    "coveralls": "^3.0.5",
     "cross-env": "^5.2.0",
-    "eslint": "^5.12.1",
-    "eslint-plugin-mocha": "^5.2.1",
-    "ethereumjs-testrpc-sc": "git+https://github.com/leapdao/testrpc-sc.git#a32549b8c58080b016f10688874a18f66d08a6b6",
-    "ganache-cli": "^6.2.5",
+    "eslint": "^6.1.0",
+    "eslint-plugin-mocha": "^6.0.0",
+    "ganache-cli": "^6.5.1",
     "moment": "^2.24.0",
     "rimraf": "^2.6.3",
-    "solidity-coverage": "git+https://github.com/leapdao/solidity-coverage.git",
-    "solium": "^1.2.2"
+    "solidity-coverage": "^0.6.4",
+    "solium": "^1.2.4"
   },
   "dependencies": {
     "truffle": "5.0.2",
-    "web3": "^1.0.0-beta.37"
+    "web3": "1.0.0-beta.37"
   }
 }
