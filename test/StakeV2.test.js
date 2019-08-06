@@ -19,7 +19,7 @@ const EVENT_UPDATE_UPLOADER = 'UpdateUploader';
 const EVENT_COMMIT_ADD_REWARD = 'CommitAddReward';
 const EVENT_COMMIT_REDUCE_REWARD = 'CommitReduceReward';
 
-contract.only('StakeV2', accounts => {
+contract('StakeV2', accounts => {
 	let duoContract, stakeContract, roleManagerContract, custodianContracct;
 	let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
