@@ -19,7 +19,7 @@ const EVENT_UPDATE_UPLOADER = 'UpdateUploader';
 const EVENT_COMMIT_ADD_REWARD = 'CommitAddReward';
 const EVENT_COMMIT_REDUCE_REWARD = 'CommitReduceReward';
 
-contract('StakeV2', accounts => {
+contract.only('StakeV2', accounts => {
 	let duoContract, stakeContract, roleManagerContract, custodianContracct;
 	let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
@@ -272,8 +272,8 @@ contract('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
-				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
+					util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
+					util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				'event logs not emitted correctly'
 			);
 
@@ -328,8 +328,8 @@ contract('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
-				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
+					util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
+					util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				'event logs not emitted correctly'
 			);
 
@@ -435,8 +435,8 @@ contract('StakeV2', accounts => {
 			const eventArgs = tx.logs[0].args;
 			assert.isTrue(
 				eventArgs.from === alice &&
-				eventArgs.oracle === pf1 &&
-				util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2),
+					eventArgs.oracle === pf1 &&
+					util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2),
 				'event args wrong'
 			);
 
@@ -525,7 +525,7 @@ contract('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 1) &&
-				util.isEqual(addRewardStagingIdx.last, 2),
+					util.isEqual(addRewardStagingIdx.last, 2),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -538,10 +538,10 @@ contract('StakeV2', accounts => {
 
 				assert.isTrue(
 					userReward.user === addr &&
-					util.isEqual(
-						util.fromWei(userReward.amtInWei.valueOf()),
-						util.fromWei(reward)
-					),
+						util.isEqual(
+							util.fromWei(userReward.amtInWei.valueOf()),
+							util.fromWei(reward)
+						),
 
 					'reward updated wrongly'
 				);
@@ -611,7 +611,7 @@ contract('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(reduceRewardStagingIdx.first, 1) &&
-				util.isEqual(reduceRewardStagingIdx.last, 2),
+					util.isEqual(reduceRewardStagingIdx.last, 2),
 				'staging reduce reward pointer not set correctly'
 			);
 
@@ -624,10 +624,10 @@ contract('StakeV2', accounts => {
 
 				assert.isTrue(
 					userReward.user === addr &&
-					util.isEqual(
-						util.fromWei(userReward.amtInWei.valueOf()),
-						util.fromWei(reward)
-					),
+						util.isEqual(
+							util.fromWei(userReward.amtInWei.valueOf()),
+							util.fromWei(reward)
+						),
 
 					'reward updated wrongly'
 				);
@@ -715,7 +715,7 @@ contract('StakeV2', accounts => {
 			const addRewardStagingIdx = await stakeContract.addRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 0) &&
-				util.isEqual(addRewardStagingIdx.last, 0),
+					util.isEqual(addRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -751,7 +751,9 @@ contract('StakeV2', accounts => {
 		});
 
 		it('should commitAddReward, more than all', async () => {
-			const tx = await stakeContract.commitAddRewards(addrList.length + 1, { from: operator });
+			const tx = await stakeContract.commitAddRewards(addrList.length + 1, {
+				from: operator
+			});
 			await checkAllCommit(tx);
 		});
 
@@ -777,10 +779,10 @@ contract('StakeV2', accounts => {
 						addRewardStagingIdx.first,
 						i === addrList.length - 1 ? 0 : ++pointer
 					) &&
-					util.isEqual(
-						addRewardStagingIdx.last,
-						i === addrList.length - 1 ? 0 : addrList.length
-					),
+						util.isEqual(
+							addRewardStagingIdx.last,
+							i === addrList.length - 1 ? 0 : addrList.length
+						),
 					'staging add reward pointer not set correctly'
 				);
 
@@ -879,7 +881,7 @@ contract('StakeV2', accounts => {
 			const reduceRewardStagingIdx = await stakeContract.reduceRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(reduceRewardStagingIdx.first, 0) &&
-				util.isEqual(reduceRewardStagingIdx.last, 0),
+					util.isEqual(reduceRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -946,10 +948,10 @@ contract('StakeV2', accounts => {
 						reduceRewardStagingIdx.first,
 						i === addrList.length - 1 ? 0 : ++pointer
 					) &&
-					util.isEqual(
-						reduceRewardStagingIdx.last,
-						i === addrList.length - 1 ? 0 : addrList.length
-					),
+						util.isEqual(
+							reduceRewardStagingIdx.last,
+							i === addrList.length - 1 ? 0 : addrList.length
+						),
 					'staging add reward pointer not set correctly'
 				);
 
@@ -1025,9 +1027,9 @@ contract('StakeV2', accounts => {
 			const reduceRewardStagingIdx = await stakeContract.reduceRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 0) &&
-				util.isEqual(addRewardStagingIdx.last, 0) &&
-				util.isEqual(reduceRewardStagingIdx.first, 0) &&
-				util.isEqual(reduceRewardStagingIdx.last, 0),
+					util.isEqual(addRewardStagingIdx.last, 0) &&
+					util.isEqual(reduceRewardStagingIdx.first, 0) &&
+					util.isEqual(reduceRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 		});
@@ -1045,7 +1047,7 @@ contract('StakeV2', accounts => {
 		function autoRollTest(autoRollRatio) {
 			beforeEach(async () => {
 				await initContracts();
-	
+
 				// const reduceRewardList = [util.toWei(10), util.toWei(20)];
 				await stakeContract.stageAddRewards(
 					addrList,
@@ -1065,7 +1067,7 @@ contract('StakeV2', accounts => {
 					from: autoRollUser
 				});
 			});
-	
+
 			it('should not auto roll when staking not enabled', async () => {
 				await stakeContract.setStakeFlag(false, { from: operator });
 				try {
@@ -1079,10 +1081,8 @@ contract('StakeV2', accounts => {
 					);
 				}
 			});
-	
+
 			it('shouldAutoRoll', async () => {
-				
-		
 				autoRollRatio = autoRollRatio > 1 ? 1 : autoRollRatio;
 				await stakeContract.autoRoll(pf1, util.toWei(reward * autoRollRatio), {
 					from: autoRollUser
@@ -1104,70 +1104,51 @@ contract('StakeV2', accounts => {
 					),
 					'total reward not updated correctly'
 				);
-				
 			});
 
 			it('shouldAutoRoll, with setBurnAddress', async () => {
-				await stakeContract.setBurnAddress(duoBurnAddr, { from: operator })
-		
-				
-					autoRollRatio = autoRollRatio > 1 ? 1 : autoRollRatio;
-					await stakeContract.autoRoll(pf1, util.toWei(reward * autoRollRatio), {
-						from: autoRollUser
-					});
-					const rewardsInWei = await stakeContract.rewardsInWei.call(autoRollUser);
-					const totalRewardsToDistributeInWei = await stakeContract.totalRewardsToDistributeInWei.call();
-	
-					assert.isTrue(
-						util.isEqual(
-							util.fromWei(rewardsInWei.valueOf()),
-							reward * (1 - autoRollRatio)
-						),
-						'remaining reward not updated correctly'
-					);
-					assert.isTrue(
-						util.isEqual(
-							util.fromWei(totalRewardsToDistributeInWei.valueOf()),
-							INITIAL_ADDED_RewardS - reward * autoRollRatio
-						),
-						'total reward not updated correctly'
-					);
-	
-					const balanceOfBurnAddr = await duoContract.balanceOf.call(duoBurnAddr);
-					assert.isTrue(
-						util.isEqual(
-							util.fromWei(balanceOfBurnAddr.valueOf()),
-							reward * autoRollRatio
-						),
-						"duo balance is worng"
-	
-					)
-	
-	
-				
-			});
+				await stakeContract.setBurnAddress(duoBurnAddr, { from: operator });
+				autoRollRatio = autoRollRatio > 1 ? 1 : autoRollRatio;
+				await stakeContract.autoRoll(pf1, util.toWei(reward * autoRollRatio), {
+					from: autoRollUser
+				});
+				const rewardsInWei = await stakeContract.rewardsInWei.call(autoRollUser);
+				const totalRewardsToDistributeInWei = await stakeContract.totalRewardsToDistributeInWei.call();
 
+				assert.isTrue(
+					util.isEqual(
+						util.fromWei(rewardsInWei.valueOf()),
+						reward * (1 - autoRollRatio)
+					),
+					'remaining reward not updated correctly'
+				);
+				assert.isTrue(
+					util.isEqual(
+						util.fromWei(totalRewardsToDistributeInWei.valueOf()),
+						INITIAL_ADDED_RewardS - reward * autoRollRatio
+					),
+					'total reward not updated correctly'
+				);
+
+				const balanceOfBurnAddr = await duoContract.balanceOf.call(duoBurnAddr);
+				assert.isTrue(
+					util.isEqual(util.fromWei(balanceOfBurnAddr.valueOf()), reward * autoRollRatio),
+					'duo balance is worng'
+				);
+			});
 		}
 
 		describe('paritial autoRoll, 0.5', () => {
-			autoRollTest(
-				0.5
-			);
+			autoRollTest(0.5);
 		});
 
 		describe('exact autoRoll, 1', () => {
-			autoRollTest(
-				1
-			);
+			autoRollTest(1);
 		});
 
 		describe('more than all autoRoll, 1.2', () => {
-			autoRollTest(
-				1.2
-			);
+			autoRollTest(1.2);
 		});
-
-
 	});
 
 	describe('claimReward', () => {
@@ -1234,10 +1215,10 @@ contract('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.claimer.valueOf() === alice &&
-				util.isEqual(
-					util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()),
-					util.fromWei(totalRewardOfAlice.valueOf())
-				),
+					util.isEqual(
+						util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()),
+						util.fromWei(totalRewardOfAlice.valueOf())
+					),
 				'event args wrongly'
 			);
 
@@ -1245,7 +1226,7 @@ contract('StakeV2', accounts => {
 				util.isEqual(
 					util.fromWei(totalRewardsToDistributeInWei.valueOf()),
 					Number(util.fromWei(totalRewardsToDistributeInWeiAfter.valueOf())) +
-					Number(util.fromWei(totalRewardOfAlice))
+						Number(util.fromWei(totalRewardOfAlice))
 				),
 				'totalReward updated worngly'
 			);
@@ -1254,7 +1235,7 @@ contract('StakeV2', accounts => {
 				util.isEqual(
 					util.fromWei(totalDuoBlance.valueOf()),
 					Number(util.fromWei(totalDuoBlanceAfter.valueOf())) +
-					Number(util.fromWei(totalRewardOfAlice))
+						Number(util.fromWei(totalRewardOfAlice))
 				),
 				'total DUO balance updated worngly'
 			);
@@ -1285,7 +1266,7 @@ contract('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.claimer.valueOf() === alice &&
-				util.isEqual(util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()), 50),
+					util.isEqual(util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()), 50),
 				'event args wrongly'
 			);
 
@@ -1462,7 +1443,7 @@ contract('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.updater === alice &&
-				tx.logs[0].args.newUploader === newUplAdddress.valueOf(),
+					tx.logs[0].args.newUploader === newUplAdddress.valueOf(),
 				'wrong event args'
 			);
 		});
