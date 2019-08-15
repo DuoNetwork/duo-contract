@@ -154,6 +154,7 @@ contract StakeV2 is Managed {
 	}
 
 	function stageAddRewards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
+		require(stakingEnabled, "staking is not enabled");
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 
 		if(addRewardStagingIdx.first == 0)
@@ -171,6 +172,7 @@ contract StakeV2 is Managed {
 	}
 
 	function stageReduceRewards(address[] memory addrsList, uint[] memory amtInWeiList) public only(uploader) returns(bool) {
+		require(stakingEnabled, "staking is not enabled");
 		require(addrsList.length == amtInWeiList.length && addrsList.length > 0, "input parameters wrong");
 
 		if(reduceRewardStagingIdx.first == 0)

@@ -19,7 +19,7 @@ const EVENT_UPDATE_UPLOADER = 'UpdateUploader';
 const EVENT_COMMIT_ADD_REWARD = 'CommitAddReward';
 const EVENT_COMMIT_REDUCE_REWARD = 'CommitReduceReward';
 
-contract.only('StakeV2', accounts => {
+contract('StakeV2', accounts => {
 	let duoContract, stakeContract, roleManagerContract, custodianContracct;
 	let validHotPool = Pool[1].map(addr => util.toChecksumAddress(addr));
 
@@ -272,8 +272,8 @@ contract.only('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-					util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
-					util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
+				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				'event logs not emitted correctly'
 			);
 
@@ -328,8 +328,8 @@ contract.only('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(tx.logs[0].args.from.valueOf(), alice) &&
-					util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
-					util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
+				util.isEqual(tx.logs[0].args.oracle.valueOf(), pf1) &&
+				util.isEqual(tx.logs[0].args.amtInWei.valueOf(), util.toWei(1000)),
 				'event logs not emitted correctly'
 			);
 
@@ -435,8 +435,8 @@ contract.only('StakeV2', accounts => {
 			const eventArgs = tx.logs[0].args;
 			assert.isTrue(
 				eventArgs.from === alice &&
-					eventArgs.oracle === pf1 &&
-					util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2),
+				eventArgs.oracle === pf1 &&
+				util.isEqual(util.fromWei(eventArgs.amtInWei), StakeInit.minStakeAmt * 2),
 				'event args wrong'
 			);
 
@@ -467,6 +467,24 @@ contract.only('StakeV2', accounts => {
 		beforeEach(async () => {
 			await initContracts();
 			await stakeContract.setStakeFlag(true, { from: operator });
+		});
+
+		it('should not add when staking is disabled ', async () => {
+			await stakeContract.setStakeFlag(false, { from: operator });
+			try {
+				const addrList = [alice, bob];
+				const RewardList = [util.toWei(100), util.toWei(200)];
+				await stakeContract.stageAddRewards(addrList, RewardList, {
+					from: uploader
+				});
+				assert.isTrue(false, 'can stage add when disabled');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					CST.VM_REVERT_MSG.stakingNotEnabled,
+					'transaction not reverted'
+				);
+			}
 		});
 
 		it('should not add empty reward list', async () => {
@@ -525,7 +543,7 @@ contract.only('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 1) &&
-					util.isEqual(addRewardStagingIdx.last, 2),
+				util.isEqual(addRewardStagingIdx.last, 2),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -538,10 +556,10 @@ contract.only('StakeV2', accounts => {
 
 				assert.isTrue(
 					userReward.user === addr &&
-						util.isEqual(
-							util.fromWei(userReward.amtInWei.valueOf()),
-							util.fromWei(reward)
-						),
+					util.isEqual(
+						util.fromWei(userReward.amtInWei.valueOf()),
+						util.fromWei(reward)
+					),
 
 					'reward updated wrongly'
 				);
@@ -553,6 +571,24 @@ contract.only('StakeV2', accounts => {
 		beforeEach(async () => {
 			await initContracts();
 			await stakeContract.setStakeFlag(true, { from: operator });
+		});
+
+		it('should not reduce when staking is disabled ', async () => {
+			await stakeContract.setStakeFlag(false, { from: operator });
+			try {
+				const addrList = [alice, bob];
+				const RewardList = [util.toWei(100), util.toWei(200)];
+				await stakeContract.stageReduceRewards(addrList, RewardList, {
+					from: uploader
+				});
+				assert.isTrue(false, 'can stage reduce when disabled');
+			} catch (err) {
+				assert.equal(
+					err.message,
+					CST.VM_REVERT_MSG.stakingNotEnabled,
+					'transaction not reverted'
+				);
+			}
 		});
 
 		it('should not add empty reward list', async () => {
@@ -611,7 +647,7 @@ contract.only('StakeV2', accounts => {
 
 			assert.isTrue(
 				util.isEqual(reduceRewardStagingIdx.first, 1) &&
-					util.isEqual(reduceRewardStagingIdx.last, 2),
+				util.isEqual(reduceRewardStagingIdx.last, 2),
 				'staging reduce reward pointer not set correctly'
 			);
 
@@ -624,10 +660,10 @@ contract.only('StakeV2', accounts => {
 
 				assert.isTrue(
 					userReward.user === addr &&
-						util.isEqual(
-							util.fromWei(userReward.amtInWei.valueOf()),
-							util.fromWei(reward)
-						),
+					util.isEqual(
+						util.fromWei(userReward.amtInWei.valueOf()),
+						util.fromWei(reward)
+					),
 
 					'reward updated wrongly'
 				);
@@ -647,7 +683,7 @@ contract.only('StakeV2', accounts => {
 			await duoContract.transfer(operator, util.toWei(INITIAL_BALANCE_OF_OPT), {
 				from: creator
 			});
-			await stakeContract.setStakeFlag(false, { from: operator });
+			await stakeContract.setStakeFlag(true, { from: operator });
 
 			// const reduceRewardList = [util.toWei(10), util.toWei(20)];
 			await stakeContract.stageAddRewards(
@@ -657,6 +693,8 @@ contract.only('StakeV2', accounts => {
 					from: uploader
 				}
 			);
+
+			await stakeContract.setStakeFlag(false, { from: operator });
 
 			// await stakeContract.stageReduceRewards(addrList, reduceRewardList, {
 			// 	from: uploader
@@ -715,7 +753,7 @@ contract.only('StakeV2', accounts => {
 			const addRewardStagingIdx = await stakeContract.addRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 0) &&
-					util.isEqual(addRewardStagingIdx.last, 0),
+				util.isEqual(addRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -779,10 +817,10 @@ contract.only('StakeV2', accounts => {
 						addRewardStagingIdx.first,
 						i === addrList.length - 1 ? 0 : ++pointer
 					) &&
-						util.isEqual(
-							addRewardStagingIdx.last,
-							i === addrList.length - 1 ? 0 : addrList.length
-						),
+					util.isEqual(
+						addRewardStagingIdx.last,
+						i === addrList.length - 1 ? 0 : addrList.length
+					),
 					'staging add reward pointer not set correctly'
 				);
 
@@ -830,7 +868,7 @@ contract.only('StakeV2', accounts => {
 			await duoContract.transfer(operator, util.toWei(INITIAL_BALANCE_OF_OPT), {
 				from: creator
 			});
-			await stakeContract.setStakeFlag(false, { from: operator });
+			await stakeContract.setStakeFlag(true, { from: operator });
 
 			await stakeContract.stageAddRewards(
 				addrList,
@@ -839,6 +877,7 @@ contract.only('StakeV2', accounts => {
 					from: uploader
 				}
 			);
+
 			await stakeContract.stageReduceRewards(
 				addrList,
 				reduceRewardList.map(value => util.toWei(value)),
@@ -846,6 +885,7 @@ contract.only('StakeV2', accounts => {
 					from: uploader
 				}
 			);
+			await stakeContract.setStakeFlag(false, { from: operator });
 			await stakeContract.commitAddRewards(0, { from: operator });
 		});
 
@@ -881,7 +921,7 @@ contract.only('StakeV2', accounts => {
 			const reduceRewardStagingIdx = await stakeContract.reduceRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(reduceRewardStagingIdx.first, 0) &&
-					util.isEqual(reduceRewardStagingIdx.last, 0),
+				util.isEqual(reduceRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 
@@ -948,10 +988,10 @@ contract.only('StakeV2', accounts => {
 						reduceRewardStagingIdx.first,
 						i === addrList.length - 1 ? 0 : ++pointer
 					) &&
-						util.isEqual(
-							reduceRewardStagingIdx.last,
-							i === addrList.length - 1 ? 0 : addrList.length
-						),
+					util.isEqual(
+						reduceRewardStagingIdx.last,
+						i === addrList.length - 1 ? 0 : addrList.length
+					),
 					'staging add reward pointer not set correctly'
 				);
 
@@ -999,7 +1039,7 @@ contract.only('StakeV2', accounts => {
 			await duoContract.transfer(operator, util.toWei(INITIAL_BALANCE_OF_OPT), {
 				from: creator
 			});
-			await stakeContract.setStakeFlag(false, { from: operator });
+			await stakeContract.setStakeFlag(true, { from: operator });
 
 			// const reduceRewardList = [util.toWei(10), util.toWei(20)];
 			await stakeContract.stageAddRewards(
@@ -1009,6 +1049,8 @@ contract.only('StakeV2', accounts => {
 					from: uploader
 				}
 			);
+			await stakeContract.setStakeFlag(false, { from: operator });
+
 		});
 
 		it('non operator should not reset staging Rewards', async () => {
@@ -1027,9 +1069,9 @@ contract.only('StakeV2', accounts => {
 			const reduceRewardStagingIdx = await stakeContract.reduceRewardStagingIdx.call();
 			assert.isTrue(
 				util.isEqual(addRewardStagingIdx.first, 0) &&
-					util.isEqual(addRewardStagingIdx.last, 0) &&
-					util.isEqual(reduceRewardStagingIdx.first, 0) &&
-					util.isEqual(reduceRewardStagingIdx.last, 0),
+				util.isEqual(addRewardStagingIdx.last, 0) &&
+				util.isEqual(reduceRewardStagingIdx.first, 0) &&
+				util.isEqual(reduceRewardStagingIdx.last, 0),
 				'staging add reward pointer not set correctly'
 			);
 		});
@@ -1047,7 +1089,7 @@ contract.only('StakeV2', accounts => {
 		function autoRollTest(autoRollRatio) {
 			beforeEach(async () => {
 				await initContracts();
-
+				await stakeContract.setStakeFlag(true, { from: operator });
 				// const reduceRewardList = [util.toWei(10), util.toWei(20)];
 				await stakeContract.stageAddRewards(
 					addrList,
@@ -1164,7 +1206,7 @@ contract.only('StakeV2', accounts => {
 			await duoContract.transfer(operator, util.toWei(INITIAL_BALANCE_OF_OPT), {
 				from: creator
 			});
-			await stakeContract.setStakeFlag(false, { from: operator });
+			await stakeContract.setStakeFlag(true, { from: operator });
 
 			await stakeContract.stageAddRewards(
 				addrList,
@@ -1180,6 +1222,7 @@ contract.only('StakeV2', accounts => {
 					from: uploader
 				}
 			);
+			await stakeContract.setStakeFlag(false, { from: operator });
 			await stakeContract.commitAddRewards(0, { from: operator });
 			await stakeContract.setStakeFlag(true, { from: operator });
 		});
@@ -1215,10 +1258,10 @@ contract.only('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.claimer.valueOf() === alice &&
-					util.isEqual(
-						util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()),
-						util.fromWei(totalRewardOfAlice.valueOf())
-					),
+				util.isEqual(
+					util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()),
+					util.fromWei(totalRewardOfAlice.valueOf())
+				),
 				'event args wrongly'
 			);
 
@@ -1226,7 +1269,7 @@ contract.only('StakeV2', accounts => {
 				util.isEqual(
 					util.fromWei(totalRewardsToDistributeInWei.valueOf()),
 					Number(util.fromWei(totalRewardsToDistributeInWeiAfter.valueOf())) +
-						Number(util.fromWei(totalRewardOfAlice))
+					Number(util.fromWei(totalRewardOfAlice))
 				),
 				'totalReward updated worngly'
 			);
@@ -1235,7 +1278,7 @@ contract.only('StakeV2', accounts => {
 				util.isEqual(
 					util.fromWei(totalDuoBlance.valueOf()),
 					Number(util.fromWei(totalDuoBlanceAfter.valueOf())) +
-						Number(util.fromWei(totalRewardOfAlice))
+					Number(util.fromWei(totalRewardOfAlice))
 				),
 				'total DUO balance updated worngly'
 			);
@@ -1266,7 +1309,7 @@ contract.only('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.claimer.valueOf() === alice &&
-					util.isEqual(util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()), 50),
+				util.isEqual(util.fromWei(tx.logs[0].args.rewardAmtInWei.valueOf()), 50),
 				'event args wrongly'
 			);
 
@@ -1443,7 +1486,7 @@ contract.only('StakeV2', accounts => {
 			);
 			assert.isTrue(
 				tx.logs[0].args.updater === alice &&
-					tx.logs[0].args.newUploader === newUplAdddress.valueOf(),
+				tx.logs[0].args.newUploader === newUplAdddress.valueOf(),
 				'wrong event args'
 			);
 		});
