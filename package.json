@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "DUO Contract",
-  "author": "FinBook Pte Ltd",
+  "author": "Duo Network",
   "scripts": {
     "test": "cross-env GANACHE_PORT=8550 truffle test",
     "coverage": "cross-env SOLIDITY_COVERAGE=true GANACHE_PORT=8555 solidity-coverage",
