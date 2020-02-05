@@ -1,5 +1,3 @@
-[![CircleCI](https://circleci.com/gh/FinBook/duo-contract.svg?style=svg&circle-token=6d0357847fa6cc8078323d1282dcb365e0ad09e8)](https://circleci.com/gh/FinBook/duo-contract)
-[![Coverage Status](https://coveralls.io/repos/github/FinBook/duo-contract/badge.svg?branch=master&t=qZnIyS)](https://coveralls.io/github/FinBook/duo-contract?branch=master)
 # Introduction
 
 ## DUO Network Token Contract
